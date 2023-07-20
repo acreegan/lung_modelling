@@ -31,12 +31,10 @@ def main():
 
     # Create a scene
     scene = region.getScene()
-    scene.beginChange()
     graphics = scene.createGraphics(Graphics.TYPE_SURFACES)
-    coordinate_field = getDefaultCoordinateField(scene)
+    coordinate_field = get_default_coordinate_field(scene)
     if coordinate_field is not None:
         graphics.setCoordinateField(coordinate_field)
-    scene.endChange()
 
     # Export scene
     if not os.path.exists(output_directory):
@@ -47,18 +45,18 @@ def main():
     exporter.export()
 
 
-def getDefaultCoordinateField(scene):
+def get_default_coordinate_field(scene):
     """
     Get the first coordinate field from the current scene
     """
-    if scene:
-        fielditer = scene.getRegion().getFieldmodule().createFielditerator()
+
+    fielditer = scene.getRegion().getFieldmodule().createFielditerator()
+    field = fielditer.next()
+    while field.isValid():
+        if field.isTypeCoordinate() and (field.getValueType() == Field.VALUE_TYPE_REAL) and \
+                (field.getNumberOfComponents() <= 3) and field.castFiniteElement().isValid():
+            return field
         field = fielditer.next()
-        while field.isValid():
-            if field.isTypeCoordinate() and (field.getValueType() == Field.VALUE_TYPE_REAL) and \
-                    (field.getNumberOfComponents() <= 3) and field.castFiniteElement().isValid():
-                return field
-            field = fielditer.next()
     return None
 
 
