@@ -159,5 +159,9 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 
-data/
+# Large example files
+example_data/covid_lung_lobe_segmentation
+
+# Local files
+local_data/
 output/

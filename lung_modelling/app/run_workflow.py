@@ -3,6 +3,7 @@ from tkinter.filedialog import askdirectory
 from pathlib import Path
 from multiprocess.pool import Pool
 from lung_modelling.workflow_manager import WorkflowManager
+from lung_modelling.app.tasks import GroomLungsDataset
 from loguru import logger
 import hydra
 from hydra.core.hydra_config import HydraConfig
@@ -38,7 +39,7 @@ def run_cli(hydra_cfg: DictConfig):
         mpool = None
 
     workflow_manager = WorkflowManager(cfg.dataset_root, cfg, mpool, show_progress=True)
-    for task in []:  # Todo add tasks here
+    for task in [GroomLungsDataset]:
         workflow_manager.register_task(task)
     workflow_manager.run_workflow(cfg.run_tasks)
 

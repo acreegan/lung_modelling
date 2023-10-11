@@ -24,7 +24,7 @@ config:
       skip_dirs: []
       select_dirs: []
 
-    groom:
+    groom_lungs:
       task_name: "groom_lungs"
       mesh_filenames: { lul: "left_lower", lll: "left_upper", rul: "right_upper", rml: "right_middle", rll: "right_lower" }
       params: {}

@@ -38,6 +38,11 @@ class GroomLungsDataset(EachItemTask):
             os.makedirs(output_directory)
 
         # Todo: groom files here
+        # - Load images
+        # - Antialias, resample (Maybe save this)
+        # - Convert to mesh (so we can extract shared boundary and find landmarks)
+        # ------------------------------------------------
+        # - Extract shared boundaries (Needs to be in an AllItemsTask)
         groomed_files = []
 
         relative_files = [str(dataloc.to_relative(Path(file))) for file in groomed_files]
