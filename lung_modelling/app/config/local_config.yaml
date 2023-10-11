@@ -1,0 +1,16 @@
+dataset_root: null
+
+use_multiprocessing: True
+
+tasks:
+  initialize:
+    task_name: "initialize"
+    dataset_config_filename: "dataset_config.json"
+    use_directory_index: False
+    skip_dirs: []
+    select_dirs: []
+
+  logging:
+    task_name: "logging"
+
+run_tasks: []
