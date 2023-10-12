@@ -334,7 +334,7 @@ def get_unique_file_name(path: Path):
 
 def print_results(results: dict):
     for task_name, result in results.items():
-        if "errors" in result and result["errors"]:
+        if "errors" in result and len(result["errors"]) > 0:
             logger.info(f"{task_name} errors {result['errors']}")
         else:
             logger.info(f"{task_name} completed successfully")

@@ -2,6 +2,9 @@ from lung_modelling.workflow_manager import EachItemTask, DatasetLocator
 from pathlib import Path
 from omegaconf import DictConfig
 import os
+import shapeworks as sw
+from glob import glob
+import pyvista as pv
 
 
 class SmoothLungLobesSW(EachItemTask):
@@ -37,16 +40,25 @@ class SmoothLungLobesSW(EachItemTask):
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
 
-        # Todo: groom files here. Use shapeworks!
-        # - Load images
-        # - Antialias, resample (Maybe save this)
-        # - Convert to mesh (so we can extract shared boundary and find landmarks)
-        # ------------------------------------------------
-        # - Extract shared boundaries (Needs to be in an AllItemsTask) (No it doesn't. It's all lobes, not all subjects,
-        #  AllItemsTasks will be things like finding a reference mesh to register all others against
-        groomed_files = []
+        image_file = glob(str(dataloc.abs_primary / source_directory / dataset_config.lung_image_glob))[0]
+        shape_seg = sw.Image(image_file)
 
-        relative_files = [str(dataloc.to_relative(Path(file))) for file in groomed_files]
+        suffix = Path(image_file).suffix
+
+        smoothed_lobes = []
+        for lobe, name in task_config.output_filenames.items():
+            s = shape_seg.copy()  # Copy because extractLabel is destructive
+            lobe_image = s.extractLabel(dataset_config.lobe_mapping[lobe])
+            iso_spacing = [1, 1, 1]
+            lobe_image.antialias(task_config.params.numberOfIterations, task_config.params.maximumRMSError).resample(
+                iso_spacing, sw.InterpolationType.Linear).binarize()
+
+            filename = f"{str(output_directory / name)}{suffix}"
+            lobe_image.write(filename)
+
+            smoothed_lobes.append(filename)
+
+        relative_files = [str(dataloc.to_relative(Path(file))) for file in smoothed_lobes]
 
         return relative_files
 

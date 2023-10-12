@@ -21,7 +21,7 @@ def run_cli(primary_config: DictConfig):
     """
     Run command line interface
     """
-    logger.enable("lung_annotations")
+    logger.enable("lung_modelling")
     if primary_config.initialize_user_config:
         initialize_user_config()
         exit()

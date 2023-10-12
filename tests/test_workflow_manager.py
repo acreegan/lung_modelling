@@ -11,7 +11,7 @@ def test_gather_directories():
     correct_1 = [Path(r"a\c"), Path(r"a\d"), Path(r"b\c"), Path(r"b\d")]
     assert len(correct_1) == len(dirs1)
     for c1, d1 in zip(correct_1, [dir[0] for dir in dirs1]):
-        assert c1 == d1
+        assert c1.as_posix() == d1.as_posix()
 
     dirs2 = gather_directories(parent_dir / "test_data" / "test_dir_structure", data_folder_depth=3, skip_dirs=["*b*"],
                                select_dirs=None, index_list=None, show_progress=False)
@@ -19,7 +19,7 @@ def test_gather_directories():
     correct_2 = [Path(r"a\c"), Path(r"a\d")]
     assert len(correct_2) == len(dirs2)
     for c1, d1 in zip(correct_2, [dir[0] for dir in dirs2]):
-        assert c1 == d1
+        assert c1.as_posix() == d1.as_posix()
 
     dirs3 = gather_directories(parent_dir / "test_data" / "test_dir_structure", data_folder_depth=3, skip_dirs=None,
                                select_dirs=["*b*"], index_list=None, show_progress=False)
@@ -27,7 +27,7 @@ def test_gather_directories():
     correct_3 = [Path(r"b\c"), Path(r"b\d")]
     assert len(correct_3) == len(dirs3)
     for c1, d1 in zip(correct_3, [dir[0] for dir in dirs3]):
-        assert c1 == d1
+        assert c1.as_posix() == d1.as_posix()
 
     dirs4 = gather_directories(parent_dir / "test_data" / "test_dir_structure", data_folder_depth=3, skip_dirs=["*b*"],
                                select_dirs=["*c*"], index_list=None, show_progress=False)
@@ -35,7 +35,7 @@ def test_gather_directories():
     correct_4 = [Path(r"a\c")]
     assert len(correct_4) == len(dirs4)
     for c1, d1 in zip(correct_4, [dir[0] for dir in dirs4]):
-        assert c1 == d1
+        assert c1.as_posix() == d1.as_posix()
 
 
 def test_dataloc():

@@ -12,8 +12,8 @@ tasks:
 
   smooth_lung_lobes:
     task_name: "smooth_lung_lobes"
-    mesh_filenames: { lul: "left_lower", lll: "left_upper", rul: "right_upper", rml: "right_middle", rll: "right_lower" }
-    params: { }
+    output_filenames: { lul: "left_lower", lll: "left_upper", rul: "right_upper", rml: "right_middle", rll: "right_lower" }
+    params: { maximumRMSError: 0.002, numberOfIterations: 60 }
 
   logging:
     task_name: "logging"
