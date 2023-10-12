@@ -35,11 +35,11 @@ html_sidebars = {
     ]
 }
 
-html_theme_options = {
-    "sidebar_width": "250px",
-    "page_width": "95%",
-    "fixed_sidebar": True
-}
+# html_theme_options = {
+#     "sidebar_width": "250px",
+#     "page_width": "95%",
+#     "fixed_sidebar": True
+# }
 
 autodoc_default_options = {
     'member-order': 'bysource'
