@@ -4,17 +4,17 @@ from omegaconf import DictConfig
 import os
 
 
-class SmoothLungLobes(EachItemTask):
+class SmoothLungLobesSW(EachItemTask):
 
     @property
     def name(self):
-        return "smooth_lung_lobes"
+        return "smooth_lung_lobes_sw"
 
     @staticmethod
     def work(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig,
              source_directory: Path) -> list:
         """
-        smooth_lung_lobes
+        smooth_lung_lobes_sw
 
         Parameters
         ----------
@@ -37,7 +37,7 @@ class SmoothLungLobes(EachItemTask):
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
 
-        # Todo: groom files here
+        # Todo: groom files here. Use shapeworks!
         # - Load images
         # - Antialias, resample (Maybe save this)
         # - Convert to mesh (so we can extract shared boundary and find landmarks)
@@ -51,4 +51,4 @@ class SmoothLungLobes(EachItemTask):
         return relative_files
 
 
-all_tasks = [SmoothLungLobes]
+all_tasks = [SmoothLungLobesSW]

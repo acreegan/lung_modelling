@@ -1,0 +1,15 @@
+defaults:
+  - _self_
+  - default_config: standard
+  - optional user_config: standard
+  - override hydra/hydra_logging: disabled
+  - override hydra/job_logging: disabled
+
+hydra:
+  searchpath:
+    - file://.
+  output_subdir: null
+  run:
+    dir: .
+
+initialize_user_config: False

@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Callable
 from abc import ABCMeta, abstractmethod
 import pandas as pd
-import importlib_metadata
+import importlib.metadata
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
@@ -285,7 +285,7 @@ def log_workflow(dataloc: DatasetLocator, cfg: DictConfig, task_config: DictConf
     log_platform = platform.platform()
     log_python_version = sys.version
 
-    distributions = list(importlib_metadata.distributions())
+    distributions = list(importlib.metadata.distributions())
     dependencies = [{"name": dist.name, "version": dist.version} for dist in distributions]
 
     log = {"log_time": log_time, "platform": log_platform, "python_version": log_python_version,

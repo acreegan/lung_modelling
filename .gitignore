@@ -165,3 +165,4 @@ example_data/covid_lung_lobe_segmentation
 # Local files
 local_data/
 output/
+user_config

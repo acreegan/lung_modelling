@@ -1,6 +1,6 @@
 dataset_root: null
 
-use_multiprocessing: True
+use_multiprocessing: False
 
 tasks:
   initialize:
@@ -10,8 +10,8 @@ tasks:
     skip_dirs: []
     select_dirs: []
 
-  groom_lungs:
-    task_name: "groom_lungs"
+  smooth_lung_lobes:
+    task_name: "smooth_lung_lobes"
     mesh_filenames: { lul: "left_lower", lll: "left_upper", rul: "right_upper", rml: "right_middle", rll: "right_lower" }
     params: { }
 
