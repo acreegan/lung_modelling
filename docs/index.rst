@@ -4,7 +4,6 @@
 
    self
    installation
-   examples
    user_guide
    module_reference
 

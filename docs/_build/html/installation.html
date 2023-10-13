@@ -33,6 +33,32 @@
             
   <section id="installation">
 <h1>Installation<a class="headerlink" href="#installation" title="Link to this heading">¶</a></h1>
+<p>To use the statistical shape modelling features of this package, you must first install
+Shapeworks. See the <a class="reference external" href="http://sciinstitute.github.io/ShapeWorks/latest/">Shapeworks website</a>
+for a guide on how to do this.</p>
+<p>Once you have an activated conda environment with Shapworks installed, (if not
+using the Shapeworks features you can use a fresh conda or venv environment), lung_modelling
+can be installed as follows.</p>
+<section id="developer-environment">
+<h2>Developer Environment<a class="headerlink" href="#developer-environment" title="Link to this heading">¶</a></h2>
+<p>To install a developer environment, clone the git repository:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/acreegan/lung_modelling
+<span class="nb">cd</span><span class="w"> </span>lung_modelling
+</pre></div>
+</div>
+<p>and install with dev requirements in editable mode:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.<span class="o">[</span>dev<span class="o">]</span>
+</pre></div>
+</div>
+</section>
+<section id="user-installation">
+<h2>User Installation<a class="headerlink" href="#user-installation" title="Link to this heading">¶</a></h2>
+<p>If you just want to use the app with existing workflow tasks (parameters can still be
+modified), simply install the package:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>git+https://github.com/acreegan/lung_modelling
+</pre></div>
+</div>
+</section>
 </section>
 
 
@@ -54,7 +80,11 @@
 <h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="index.html">Lung Modelling</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#developer-environment">Developer Environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#user-installation">User Installation</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="user_guide.html">User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="module_reference.html">Module Reference</a></li>
