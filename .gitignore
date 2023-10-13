@@ -166,3 +166,6 @@ example_data/covid_lung_lobe_segmentation
 local_data/
 output/
 user_config
+
+# Hydra
+multirun/

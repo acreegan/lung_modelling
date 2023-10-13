@@ -1,6 +1,6 @@
 dataset_root: null
 
-use_multiprocessing: False
+use_multiprocessing: True
 
 tasks:
   initialize:
@@ -13,9 +13,15 @@ tasks:
   smooth_lung_lobes_sw:
     task_name: "smooth_lung_lobes_sw"
     output_filenames: { lul: "left_lower", lll: "left_upper", rul: "right_upper", rml: "right_middle", rll: "right_lower" }
-    params: { maximumRMSError: 0.002, numberOfIterations: 60 }
+    params: { maximumRMSError: 0.009999999776482582, numberOfIterations: 30 }
+
+  create_meshes_sw:
+    task_name: "create_meshes_sw"
+    source_directory: "smooth_lung_lobes_sw"
+    results_directory: "create_meshes_sw"
+    params: {remesh: False, remesh_percentage: 0.99, adaptivity: 1, smooth: True, smooth_iterations: 10, relaxation: 1, fill_holes: True, hole_size: 100}
 
   logging:
     task_name: "logging"
 
-run_tasks: ["smooth_lung_lobes_sw"]
+run_tasks: ["smooth_lung_lobes_sw", "create_meshes_sw"]

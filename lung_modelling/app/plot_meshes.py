@@ -11,11 +11,15 @@ if __name__ == "__main__":
         exit()
     directory = Path(directory)
     filename_glob = "*.stl"
+    filename_glob2 = "*.vtk"
 
-    files = glob(str(directory / filename_glob))
+    files1 = glob(str(directory / filename_glob))
+    files2 = glob(str(directory / filename_glob2))
+
+    files = [*files1, *files2]
 
     if not files:
-        print("No .stl files found. Did you select the right directory?")
+        print("No mesh files found. Did you select the right directory?")
         exit()
 
     meshes = []
