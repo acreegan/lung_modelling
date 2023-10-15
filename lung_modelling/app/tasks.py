@@ -18,33 +18,38 @@ class SmoothLungLobes(EachItemTask):
         return "smooth_lung_lobes"
 
     @staticmethod
-    def work(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig,
-             source_directory: Path) -> list:
+    def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
+             dataset_config: DictConfig, task_config: DictConfig) -> list[Path]:
         """
-        smooth_lung_lobes
+        Pre-process lung lobe images by applying antialiasing.
 
         Parameters
         ----------
-        dataloc
-            DatasetLocator
+        source_directory_primary
+            Absolute path of the source directory in the primary folder of the dataset
+        source_directory_derivative
+            Absolute path of the source directory in the derivative folder of the dataset
+        output_directory
+            Directory in which to save results of the work
         dataset_config
-            Dataset config
+            Config relating to the entire dataset
         task_config
-            Task config
-        source_directory
-            Source directory
+            results_directory: subdirectory for results
+
+            output_filenames: dict providing a mapping from lobe mapping (in dataset config) to output filenames
+
+            params: (Dict)
+                maximumRMSError, numberOfIterations:
+                    Parameters to apply to SimpleITK.AntiAliasBinary
 
         Returns
         -------
-        relative_files
-            List of generated filenames relative to the dataset root
-
+        list of Path objects representing the files created.
         """
-        output_directory = dataloc.abs_derivative / source_directory / task_config.task_name
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
 
-        image_file = glob(str(dataloc.abs_primary / source_directory / dataset_config.lung_image_glob))[0]
+        image_file = glob(str(source_directory_primary / dataset_config.lung_image_glob))[0]
         image_data, header = medpy.io.load(image_file)
 
         suffix = Path(image_file).suffix
@@ -62,11 +67,9 @@ class SmoothLungLobes(EachItemTask):
 
             output_filename = f"{str(output_directory / task_config.output_filenames[lobe])}{suffix}"
             medpy.io.save(lobe_array, output_filename, hdr=header, use_compression=True)
-            smoothed_files.append(output_filename)
+            smoothed_files.append(Path(output_filename))
 
-        relative_files = [str(dataloc.to_relative(Path(file))) for file in smoothed_files]
-
-        return relative_files
+        return smoothed_files
 
 
 class CreateMeshes(EachItemTask):
@@ -76,33 +79,49 @@ class CreateMeshes(EachItemTask):
         return "create_meshes"
 
     @staticmethod
-    def work(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig,
-             source_directory: Path) -> list:
+    def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
+             dataset_config: DictConfig, task_config: DictConfig) -> list[Path]:
         """
-        create meshes
+        Convert medical image files to meshes and apply smoothing.
 
         Parameters
         ----------
-        dataloc
-            DatasetLocator
+        source_directory_primary
+            Absolute path of the source directory in the primary folder of the dataset
+        source_directory_derivative
+            Absolute path of the source directory in the derivative folder of the dataset
+        output_directory
+            Directory in which to save results of the work
         dataset_config
-            Dataset config
+            Config relating to the entire dataset
         task_config
-            Task config
-        source_directory
-            Source directory
+            source_directory: subdirectory within derivative source folder to find source files
+
+            results_directory: subdirectory for results
+
+            params: (Dict)
+                n_iter, feature_smoothing, edge_angle, feature_angle, relaxation_factor:
+                    Params for pyvista smooth
+
+                target_reduction, volume_preservation:
+                    Params for pyvista decimate
+
+                hole_size:
+                    Param for pyvista fill_holes
+
+                fix_mesh:
+                    Option to fix mesh
+
 
         Returns
         -------
-        relative_files
-            List of generated filenames relative to the dataset root
-
+        list of Path objects representing the files created.
         """
-        output_directory = dataloc.abs_derivative / source_directory / task_config.task_name
+
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
 
-        image_files = glob(str(dataloc.abs_derivative / source_directory / task_config.source_directory / "*"))
+        image_files = glob(str(source_directory_derivative / task_config.source_directory / "*"))
 
         if len(image_files) == 0:
             raise RuntimeError("No files found")
@@ -117,11 +136,9 @@ class CreateMeshes(EachItemTask):
 
             output_filename = str(output_directory / Path(image_file).stem) + '.stl'
             refined_mesh.save(output_filename)
-            mesh_files.append(output_filename)
+            mesh_files.append(Path(output_filename))
 
-        relative_files = [str(dataloc.to_relative(Path(file))) for file in mesh_files]
-
-        return relative_files
+        return mesh_files
 
 
 all_tasks = [SmoothLungLobes, CreateMeshes]

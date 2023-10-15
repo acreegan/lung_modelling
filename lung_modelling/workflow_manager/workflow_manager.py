@@ -44,25 +44,60 @@ class DatasetLocator:
 
 
 class EachItemTask:
+    """
+    A class providing an interface for tasks that should be applied to each item in a list of sources.
+
+    """
     __metaclass___ = ABCMeta
+
+    # Todo: Initialize method to be called before multiprocessing to load data required by all items
 
     @property
     @abstractmethod
     def name(self):
+        """
+        The name for the derived implementation of this class. This is used to match the task to its task_config
+        """
         pass
 
     @staticmethod
     @abstractmethod
-    def work(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig,
-             source_directory: Path) -> list:
+    def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
+             dataset_config: DictConfig, task_config: DictConfig) -> list[Path]:
+        """
+        The work function fo the implementation of this class. Defines work to be done on a set of sources specified by
+        the source directory parameters. This function should not attempt to access files outside these directories
+        because this function will be run in parallel for all workflow sources.
+
+        Results of the work should be saved in the output directory. The return type should be a list of Path objects
+        representing the files created.
+
+        Parameters
+        ----------
+        source_directory_primary
+            Absolute path of the source directory in the primary folder of the dataset
+        source_directory_derivative
+            Absolute path of the source directory in the derivative folder of the dataset
+        output_directory
+            Directory in which to save results of the work
+        dataset_config
+            Config relating to the entire dataset
+        task_config
+            Task specific config
+
+        Returns
+        -------
+        list of Path objects representing the files created.
+        """
         pass
 
 
 def initialize(dataset_root: Path, task_config: DictConfig, show_progress=True) -> Tuple[
     DatasetLocator, DictConfig, list]:
     """
-    Initialization task for processing a dataset directory structure. Loads the dataset config and runs
-    gather_directories.
+    Initialization task for processing a dataset directory structure. This is run first when
+    WorkflowManager.run_workflow is called. Loads the dataset config and runs gather_directories, which gathers a list
+    of source directories which tasks will act on.
 
     Parameters
     ----------
@@ -70,11 +105,25 @@ def initialize(dataset_root: Path, task_config: DictConfig, show_progress=True) 
         Root directory of the dataset
     task_config
         Configuration dict for this task
+
+        Params
+            dataset_config_filename
+                Filename for the dataset configuration file. This should be directly inside the dataset_root directory.
+            use_directory_index
+                Option to use pre-build index of the source directory instead of iterating through with os.walk.
+            skip_dirs:
+                List of glob strings to match directories to skip. The whole path relative to the dataset_root is tested,
+                so slashes can be included to specify depth to match. This takes precedence over select_dirs
+            select_dirs:
+                List of glob strings to match directories to select. If empty, all valid source directories are selected.
+                If not, only valid source directories that match one of these are selected.
     show_progress
         Option to show progress
 
     Returns
     -------
+    dataloc
+        DatasetLocator object
     dataset_config
         DatasetConfig object
     dirs_list
@@ -95,6 +144,9 @@ def initialize(dataset_root: Path, task_config: DictConfig, show_progress=True) 
 
     dirs_list = gather_directories(dataloc.abs_primary, dataset_config.data_folder_depth, task_config.skip_dirs,
                                    task_config.select_dirs, index_list, show_progress)
+
+    if len(dirs_list) == 0:
+        raise ValueError("No valid source directories found")
 
     return dataloc, dataset_config, dirs_list
 
@@ -179,9 +231,12 @@ def exception_monitor(func, callback, logger):
 
     """
 
-    def exception_monitor_wrapper(dataloc, dataset_config, task_config, source_directory):
+    def exception_monitor_wrapper(source_directory, source_directory_primary: Path, source_directory_derivative: Path,
+                                  output_directory: Path, dataset_config: DictConfig, task_config: DictConfig):
         try:
-            result = (str(source_directory), func(dataloc, dataset_config, task_config, source_directory))
+            result = (str(source_directory),
+                      func(source_directory_primary, source_directory_derivative, output_directory, dataset_config,
+                           task_config))
             error = None
         except Exception as e:
             error = (str(source_directory), e)
@@ -223,44 +278,50 @@ def apply_to_dataset(func: Callable) -> Callable:
 
     @functools.wraps(func)
     def wrapper_apply_to_dataset(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig,
-                                 dirs_list, mpool=None, show_progress=False):
+                                 task_name, dirs_list, mpool=None, show_progress=False):
 
-        def exception_warning(source_dir, e, logger, task=task_config.task_name):
+        def exception_warning(source_dir, e, logger, task=task_name):
             logger.warning(f"Task: {task} resulted in exception for {source_dir}, message: {e}")
 
         if mpool is None:
             results = []
             errors = []
-            for source_directory, _, _ in tqdm(dirs_list, desc=f"Running: {task_config.task_name}",
+            for source_directory, _, _ in tqdm(dirs_list, desc=f"Running: {task_name}",
                                                disable=not show_progress):
                 try:
-                    result = func(dataloc, dataset_config, task_config, source_directory)
+                    output_directory = dataloc.abs_derivative / source_directory / task_config.results_directory
+                    result = func(dataloc.abs_primary / source_directory, dataloc.abs_derivative / source_directory,
+                                  output_directory, dataset_config, task_config)
                     results.append((str(source_directory), result))
                 except Exception as e:
                     exception_warning(source_directory, e, logger)
                     errors.append((str(source_directory), e))
         else:
-            args = ((dataloc, dataset_config, task_config, source_directory) for source_directory, _, _ in
-                    dirs_list)
+            args = ((source_directory, dataloc.abs_primary / source_directory, dataloc.abs_derivative / source_directory,
+             dataloc.abs_derivative / source_directory / task_config.results_directory, dataset_config,
+             task_config) for source_directory, _, _ in dirs_list)
             monitored = exception_monitor(func, exception_warning, logger)
             unpacked = args_unpacker(monitored)
             imap_results = list(
-                tqdm(mpool.imap(unpacked, args), desc=f"Running: {task_config.task_name}", disable=not show_progress,
+                tqdm(mpool.imap(unpacked, args), desc=f"Running: {task_name}", disable=not show_progress,
                      total=len(dirs_list)))
 
             results, errors = list(zip(*imap_results))
             results = [r for r in results if r is not None]
             errors = [e for e in errors if e is not None]
 
-        combined = {"results": results, "errors": errors}
+        relative_files = [str(dataloc.to_relative(Path(result))) if isinstance(result, Path) else result for result in
+                          results]
+        combined = {"results": relative_files, "errors": errors}
         return combined
 
     return wrapper_apply_to_dataset
 
 
-def log_workflow(dataloc: DatasetLocator, cfg: DictConfig, task_config: DictConfig, results):
+def log_workflow(dataloc: DatasetLocator, cfg: DictConfig, task_config: DictConfig, task_name, results):
     """
-    Workflow task for logging the result of a workflow.
+    Workflow task for logging the result of a workflow. Runs after all tasks are complete in
+    WorkflowManager.run_workflow.
 
     Parameters
     ----------
@@ -270,11 +331,12 @@ def log_workflow(dataloc: DatasetLocator, cfg: DictConfig, task_config: DictConf
         DatasetConfig object
     task_config
         Configuration dict for this task
+        No parameters are currently in use for this task_config
     results
         Results of workflow tasks to log
 
     """
-    output_directory = dataloc.root / task_config.task_name
+    output_directory = dataloc.root / task_name
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
 
@@ -409,12 +471,14 @@ class WorkflowManager:
         if any([task not in self.registered_tasks.keys() for task in task_list]):
             raise ValueError("Cannot run a task that is not registered")
 
-        for task in task_list:
-            self.results[task] = apply_to_dataset(self.registered_tasks[task].work)(self.dataloc, self.dataset_config,
-                                                                                    self.cfg.tasks[task],
-                                                                                    self.dirs_list, self.mpool,
-                                                                                    self.show_progress)
+        for task_name in task_list:
+            self.results[task_name] = apply_to_dataset(self.registered_tasks[task_name].work)(self.dataloc,
+                                                                                              self.dataset_config,
+                                                                                              self.cfg.tasks[task_name],
+                                                                                              task_name, self.dirs_list,
+                                                                                              self.mpool,
+                                                                                              self.show_progress)
 
-        log_workflow(self.dataloc, self.cfg, self.cfg.tasks.logging, results=self.results)
+        log_workflow(self.dataloc, self.cfg, self.cfg.tasks.logging, "logging", results=self.results)
 
         print_results(self.results)

@@ -4,18 +4,16 @@ use_multiprocessing: False
 
 tasks:
   initialize:
-    task_name: "initialize"
     dataset_config_filename: "dataset_config.json"
     use_directory_index: False
     skip_dirs: []
     select_dirs: []
 
   smooth_lung_lobes:
-    task_name: "smooth_lung_lobes"
+    results_directory: "smooth_lung_lobes"
     output_filenames: { lul: "left_lower", lll: "left_upper", rul: "right_upper", rml: "right_middle", rll: "right_lower" }
     params: { maximumRMSError: 0.002, numberOfIterations: 60 }
 
   logging:
-    task_name: "logging"
 
 run_tasks: []

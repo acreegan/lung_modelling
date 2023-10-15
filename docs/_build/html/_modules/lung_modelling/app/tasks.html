@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>lung_modelling.app.tasks &#8212; Lung Modelling  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b3523f8e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=039e1c02" />
+    <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for lung_modelling.app.tasks</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">lung_modelling.workflow_manager</span> <span class="kn">import</span> <span class="n">EachItemTask</span><span class="p">,</span> <span class="n">DatasetLocator</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">omegaconf</span> <span class="kn">import</span> <span class="n">DictConfig</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">glob</span> <span class="kn">import</span> <span class="n">glob</span>
+<span class="kn">from</span> <span class="nn">lung_modelling</span> <span class="kn">import</span> <span class="n">extract_section</span><span class="p">,</span> <span class="n">voxel_to_mesh</span><span class="p">,</span> <span class="n">refine_mesh</span>
+<span class="kn">import</span> <span class="nn">medpy.io</span>
+<span class="kn">import</span> <span class="nn">SimpleITK</span> <span class="k">as</span> <span class="nn">sitk</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pyacvd</span>
+<span class="kn">import</span> <span class="nn">cc3d</span>
+
+
+<div class="viewcode-block" id="SmoothLungLobes">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.SmoothLungLobes">[docs]</a>
+<span class="k">class</span> <span class="nc">SmoothLungLobes</span><span class="p">(</span><span class="n">EachItemTask</span><span class="p">):</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;smooth_lung_lobes&quot;</span>
+
+<div class="viewcode-block" id="SmoothLungLobes.work">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.SmoothLungLobes.work">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">source_directory_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+             <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Pre-process lung lobe images by applying antialiasing.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        source_directory_primary</span>
+<span class="sd">            Absolute path of the source directory in the primary folder of the dataset</span>
+<span class="sd">        source_directory_derivative</span>
+<span class="sd">            Absolute path of the source directory in the derivative folder of the dataset</span>
+<span class="sd">        output_directory</span>
+<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">            Config relating to the entire dataset</span>
+<span class="sd">        task_config</span>
+<span class="sd">            results_directory: subdirectory for results</span>
+
+<span class="sd">            output_filenames: dict providing a mapping from lobe mapping (in dataset config) to output filenames</span>
+
+<span class="sd">            params: (Dict)</span>
+<span class="sd">                maximumRMSError, numberOfIterations:</span>
+<span class="sd">                    Parameters to apply to SimpleITK.AntiAliasBinary</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list of Path objects representing the files created.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_directory</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_directory</span><span class="p">)</span>
+
+        <span class="n">image_file</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">source_directory_primary</span> <span class="o">/</span> <span class="n">dataset_config</span><span class="o">.</span><span class="n">lung_image_glob</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">image_data</span><span class="p">,</span> <span class="n">header</span> <span class="o">=</span> <span class="n">medpy</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">image_file</span><span class="p">)</span>
+
+        <span class="n">suffix</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">image_file</span><span class="p">)</span><span class="o">.</span><span class="n">suffix</span>
+
+        <span class="n">smoothed_files</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">lobe</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">task_config</span><span class="o">.</span><span class="n">output_filenames</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">lobe_array</span> <span class="o">=</span> <span class="n">extract_section</span><span class="p">(</span><span class="n">image_data</span><span class="p">,</span> <span class="n">dataset_config</span><span class="o">.</span><span class="n">lobe_mapping</span><span class="p">[</span><span class="n">lobe</span><span class="p">])</span>
+
+            <span class="n">im</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">GetImageFromArray</span><span class="p">(</span><span class="n">lobe_array</span><span class="p">)</span>
+            <span class="n">im_aa</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">AntiAliasBinary</span><span class="p">(</span><span class="n">im</span><span class="p">,</span> <span class="n">maximumRMSError</span><span class="o">=</span><span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">maximumRMSError</span><span class="p">,</span>
+                                         <span class="n">numberOfIterations</span><span class="o">=</span><span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">numberOfIterations</span><span class="p">)</span>
+            <span class="n">im_rs</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">Resample</span><span class="p">(</span><span class="n">im_aa</span><span class="p">)</span>
+            <span class="n">im_bin</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">BinaryThreshold</span><span class="p">(</span><span class="n">im_rs</span><span class="p">)</span>
+            <span class="n">lobe_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sitk</span><span class="o">.</span><span class="n">GetArrayFromImage</span><span class="p">(</span><span class="n">im_bin</span><span class="p">))</span>
+
+            <span class="n">output_filename</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">output_directory</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">task_config</span><span class="o">.</span><span class="n">output_filenames</span><span class="p">[</span><span class="n">lobe</span><span class="p">])</span><span class="si">}{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">medpy</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">lobe_array</span><span class="p">,</span> <span class="n">output_filename</span><span class="p">,</span> <span class="n">hdr</span><span class="o">=</span><span class="n">header</span><span class="p">,</span> <span class="n">use_compression</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">smoothed_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">output_filename</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">smoothed_files</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="CreateMeshes">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.CreateMeshes">[docs]</a>
+<span class="k">class</span> <span class="nc">CreateMeshes</span><span class="p">(</span><span class="n">EachItemTask</span><span class="p">):</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;create_meshes&quot;</span>
+
+<div class="viewcode-block" id="CreateMeshes.work">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.CreateMeshes.work">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">source_directory_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+             <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Convert medical image files to meshes and apply smoothing.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        source_directory_primary</span>
+<span class="sd">            Absolute path of the source directory in the primary folder of the dataset</span>
+<span class="sd">        source_directory_derivative</span>
+<span class="sd">            Absolute path of the source directory in the derivative folder of the dataset</span>
+<span class="sd">        output_directory</span>
+<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">            Config relating to the entire dataset</span>
+<span class="sd">        task_config</span>
+<span class="sd">            source_directory: subdirectory within derivative source folder to find source files</span>
+
+<span class="sd">            results_directory: subdirectory for results</span>
+
+<span class="sd">            params: (Dict)</span>
+<span class="sd">                n_iter, feature_smoothing, edge_angle, feature_angle, relaxation_factor:</span>
+<span class="sd">                    Params for pyvista smooth</span>
+
+<span class="sd">                target_reduction, volume_preservation:</span>
+<span class="sd">                    Params for pyvista decimate</span>
+
+<span class="sd">                hole_size:</span>
+<span class="sd">                    Param for pyvista fill_holes</span>
+
+<span class="sd">                fix_mesh:</span>
+<span class="sd">                    Option to fix mesh</span>
+
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list of Path objects representing the files created.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_directory</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_directory</span><span class="p">)</span>
+
+        <span class="n">image_files</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">source_directory_derivative</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory</span> <span class="o">/</span> <span class="s2">&quot;*&quot;</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">image_files</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;No files found&quot;</span><span class="p">)</span>
+
+        <span class="n">mesh_files</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">image_file</span> <span class="ow">in</span> <span class="n">image_files</span><span class="p">:</span>
+            <span class="n">image_data</span><span class="p">,</span> <span class="n">header</span> <span class="o">=</span> <span class="n">medpy</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">image_file</span><span class="p">)</span>
+            <span class="c1"># id = cc3d.dust(image_data, threshold=100)</span>
+            <span class="n">mesh</span> <span class="o">=</span> <span class="n">voxel_to_mesh</span><span class="p">(</span><span class="n">image_data</span><span class="p">,</span> <span class="n">spacing</span><span class="o">=</span><span class="n">header</span><span class="o">.</span><span class="n">spacing</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="n">header</span><span class="o">.</span><span class="n">direction</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="n">header</span><span class="o">.</span><span class="n">offset</span><span class="p">)</span>
+
+            <span class="n">refined_mesh</span> <span class="o">=</span> <span class="n">refine_mesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+
+            <span class="n">output_filename</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">output_directory</span> <span class="o">/</span> <span class="n">Path</span><span class="p">(</span><span class="n">image_file</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.stl&#39;</span>
+            <span class="n">refined_mesh</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">output_filename</span><span class="p">)</span>
+            <span class="n">mesh_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">output_filename</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">mesh_files</span></div>
+</div>
+
+
+
+<span class="n">all_tasks</span> <span class="o">=</span> <span class="p">[</span><span class="n">SmoothLungLobes</span><span class="p">,</span> <span class="n">CreateMeshes</span><span class="p">]</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">Lung Modelling</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Lung Modelling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../task_reference.html">Task Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../module_reference.html">Module Reference</a></li>
+</ul>
+
+
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, Andrew Creegan.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.2.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

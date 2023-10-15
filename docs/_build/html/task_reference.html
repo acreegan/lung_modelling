@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Task Reference &#8212; Lung Modelling  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b3523f8e" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=039e1c02" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Module Reference" href="module_reference.html" />
+    <link rel="prev" title="Workflow Manager" href="workflow_manager.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="task-reference">
+<h1>Task Reference<a class="headerlink" href="#task-reference" title="Link to this heading">¶</a></h1>
+<section id="module-lung_modelling.workflow_manager">
+<span id="workflow-manager-tasks"></span><h2>Workflow Manager Tasks<a class="headerlink" href="#module-lung_modelling.workflow_manager" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="lung_modelling.workflow_manager.initialize">
+<span class="sig-prename descclassname"><span class="pre">lung_modelling.workflow_manager.</span></span><span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset_root</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/workflow_manager/workflow_manager.html#initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.workflow_manager.initialize" title="Link to this definition">¶</a></dt>
+<dd><p>Initialization task for processing a dataset directory structure. This is run first when
+WorkflowManager.run_workflow is called. Loads the dataset config and runs gather_directories, which gathers a list
+of source directories which tasks will act on.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset_root</strong> (<em>Path</em>) – Root directory of the dataset</p></li>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – <p>Configuration dict for this task</p>
+<dl class="simple">
+<dt>Params</dt><dd><dl class="simple">
+<dt>dataset_config_filename</dt><dd><p>Filename for the dataset configuration file. This should be directly inside the dataset_root directory.</p>
+</dd>
+<dt>use_directory_index</dt><dd><p>Option to use pre-build index of the source directory instead of iterating through with os.walk.</p>
+</dd>
+<dt>skip_dirs:</dt><dd><p>List of glob strings to match directories to skip. The whole path relative to the dataset_root is tested,
+so slashes can be included to specify depth to match. This takes precedence over select_dirs</p>
+</dd>
+<dt>select_dirs:</dt><dd><p>List of glob strings to match directories to select. If empty, all valid source directories are selected.
+If not, only valid source directories that match one of these are selected.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</p></li>
+<li><p><strong>show_progress</strong> – Option to show progress</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><em>dataloc</em> – DatasetLocator object</p></li>
+<li><p><em>dataset_config</em> – DatasetConfig object</p></li>
+<li><p><em>dirs_list</em> – Record of data folders with list of files</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>Tuple</em>[<em>DatasetLocator</em>, <em>DictConfig</em>, list]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="lung_modelling.workflow_manager.log_workflow">
+<span class="sig-prename descclassname"><span class="pre">lung_modelling.workflow_manager.</span></span><span class="sig-name descname"><span class="pre">log_workflow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cfg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">results</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/workflow_manager/workflow_manager.html#log_workflow"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.workflow_manager.log_workflow" title="Link to this definition">¶</a></dt>
+<dd><p>Workflow task for logging the result of a workflow. Runs after all tasks are complete in
+WorkflowManager.run_workflow.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataloc</strong> (<em>DatasetLocator</em>) – Dataset locator</p></li>
+<li><p><strong>cfg</strong> (<em>DictConfig</em>) – DatasetConfig object</p></li>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – Configuration dict for this task
+No parameters are currently in use for this task_config</p></li>
+<li><p><strong>results</strong> – Results of workflow tasks to log</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-lung_modelling.app.tasks">
+<span id="standard-tasks"></span><h2>Standard Tasks<a class="headerlink" href="#module-lung_modelling.app.tasks" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="lung_modelling.app.tasks.SmoothLungLobes">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.tasks.</span></span><span class="sig-name descname"><span class="pre">SmoothLungLobes</span></span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#SmoothLungLobes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.SmoothLungLobes" title="Link to this definition">¶</a></dt>
+<dd><dl class="py property">
+<dt class="sig sig-object py" id="lung_modelling.app.tasks.SmoothLungLobes.name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#lung_modelling.app.tasks.SmoothLungLobes.name" title="Link to this definition">¶</a></dt>
+<dd><p>The name for the derived implementation of this class. This is used to match the task to its task_config</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.app.tasks.SmoothLungLobes.work">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_directory_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_directory_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#SmoothLungLobes.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.SmoothLungLobes.work" title="Link to this definition">¶</a></dt>
+<dd><p>Pre-process lung lobe images by applying antialiasing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>source_directory_primary</strong> (<em>Path</em>) – Absolute path of the source directory in the primary folder of the dataset</p></li>
+<li><p><strong>source_directory_derivative</strong> (<em>Path</em>) – Absolute path of the source directory in the derivative folder of the dataset</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – <p>results_directory: subdirectory for results</p>
+<p>output_filenames: dict providing a mapping from lobe mapping (in dataset config) to output filenames</p>
+<dl class="simple">
+<dt>params: (Dict)</dt><dd><dl class="simple">
+<dt>maximumRMSError, numberOfIterations:</dt><dd><p>Parameters to apply to SimpleITK.AntiAliasBinary</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>list of Path objects representing the files created.</em></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[<em>Path</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lung_modelling.app.tasks.CreateMeshes">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.tasks.</span></span><span class="sig-name descname"><span class="pre">CreateMeshes</span></span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#CreateMeshes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.CreateMeshes" title="Link to this definition">¶</a></dt>
+<dd><dl class="py property">
+<dt class="sig sig-object py" id="lung_modelling.app.tasks.CreateMeshes.name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#lung_modelling.app.tasks.CreateMeshes.name" title="Link to this definition">¶</a></dt>
+<dd><p>The name for the derived implementation of this class. This is used to match the task to its task_config</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.app.tasks.CreateMeshes.work">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_directory_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_directory_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#CreateMeshes.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.CreateMeshes.work" title="Link to this definition">¶</a></dt>
+<dd><p>Convert medical image files to meshes and apply smoothing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>source_directory_primary</strong> (<em>Path</em>) – Absolute path of the source directory in the primary folder of the dataset</p></li>
+<li><p><strong>source_directory_derivative</strong> (<em>Path</em>) – Absolute path of the source directory in the derivative folder of the dataset</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – <p>source_directory: subdirectory within derivative source folder to find source files</p>
+<p>results_directory: subdirectory for results</p>
+<dl class="simple">
+<dt>params: (Dict)</dt><dd><dl class="simple">
+<dt>n_iter, feature_smoothing, edge_angle, feature_angle, relaxation_factor:</dt><dd><p>Params for pyvista smooth</p>
+</dd>
+<dt>target_reduction, volume_preservation:</dt><dd><p>Params for pyvista decimate</p>
+</dd>
+<dt>hole_size:</dt><dd><p>Param for pyvista fill_holes</p>
+</dd>
+<dt>fix_mesh:</dt><dd><p>Option to fix mesh</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>list of Path objects representing the files created.</em></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[<em>Path</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-lung_modelling.app.shapeworks_tasks">
+<span id="shapeworks-tasks"></span><h2>Shapeworks Tasks<a class="headerlink" href="#module-lung_modelling.app.shapeworks_tasks" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.SmoothLungLobesSW">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.shapeworks_tasks.</span></span><span class="sig-name descname"><span class="pre">SmoothLungLobesSW</span></span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#SmoothLungLobesSW"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.SmoothLungLobesSW" title="Link to this definition">¶</a></dt>
+<dd><dl class="py property">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.SmoothLungLobesSW.name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.SmoothLungLobesSW.name" title="Link to this definition">¶</a></dt>
+<dd><p>The name for the derived implementation of this class. This is used to match the task to its task_config</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.SmoothLungLobesSW.work">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_directory_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_directory_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#SmoothLungLobesSW.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.SmoothLungLobesSW.work" title="Link to this definition">¶</a></dt>
+<dd><p>Pre-process lung lobe images by applying antialiasing using Shapeworks libraries</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>source_directory_primary</strong> (<em>Path</em>) – Absolute path of the source directory in the primary folder of the dataset</p></li>
+<li><p><strong>source_directory_derivative</strong> (<em>Path</em>) – Absolute path of the source directory in the derivative folder of the dataset</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – <p>results_directory: subdirectory for results</p>
+<p>output_filenames: dict providing a mapping from lobe mapping (in dataset config) to output filenames</p>
+<dl class="simple">
+<dt>params: (Dict)</dt><dd><dl class="simple">
+<dt>maximumRMSError, numberOfIterations:</dt><dd><p>Parameters to apply to SimpleITK.AntiAliasBinary</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>list of Path objects representing the files created.</em></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[<em>Path</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.CreateMeshesSW">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.shapeworks_tasks.</span></span><span class="sig-name descname"><span class="pre">CreateMeshesSW</span></span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#CreateMeshesSW"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.CreateMeshesSW" title="Link to this definition">¶</a></dt>
+<dd><dl class="py property">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.CreateMeshesSW.name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.CreateMeshesSW.name" title="Link to this definition">¶</a></dt>
+<dd><p>The name for the derived implementation of this class. This is used to match the task to its task_config</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.CreateMeshesSW.work">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_directory_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_directory_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#CreateMeshesSW.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.CreateMeshesSW.work" title="Link to this definition">¶</a></dt>
+<dd><p>Convert medical image files to meshes and apply smoothing using Shapeworks libraries.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>source_directory_primary</strong> (<em>Path</em>) – Absolute path of the source directory in the primary folder of the dataset</p></li>
+<li><p><strong>source_directory_derivative</strong> (<em>Path</em>) – Absolute path of the source directory in the derivative folder of the dataset</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – <p>source_directory: subdirectory within derivative source folder to find source files</p>
+<p>results_directory: subdirectory for results</p>
+<p>params: (Dict)</p>
+<blockquote>
+<div><dl class="simple">
+<dt>remesh, remesh_percentage, adaptivity:</dt><dd><p>Option to remesh and parameters for shapeworks remesh</p>
+</dd>
+<dt>smooth, smooth_iterations, relaxation:</dt><dd><p>Option to smooth and parameters for shapeworks smooth</p>
+</dd>
+<dt>fill_holes, hole_size:</dt><dd><p>Option to fill holes nad parameters for shapeworks fill_holes}</p>
+</dd>
+</dl>
+</div></blockquote>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>list of Path objects representing the files created.</em></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[<em>Path</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Lung Modelling</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="index.html">Lung Modelling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">User Guide</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Task Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-lung_modelling.workflow_manager">Workflow Manager Tasks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-lung_modelling.app.tasks">Standard Tasks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-lung_modelling.app.shapeworks_tasks">Shapeworks Tasks</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="module_reference.html">Module Reference</a></li>
+</ul>
+
+
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, Andrew Creegan.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.2.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="_sources/task_reference.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -14,33 +14,39 @@ class SmoothLungLobesSW(EachItemTask):
         return "smooth_lung_lobes_sw"
 
     @staticmethod
-    def work(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig,
-             source_directory: Path) -> list:
+    def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
+             dataset_config: DictConfig, task_config: DictConfig) -> list[Path]:
         """
-        smooth_lung_lobes_sw
+        Pre-process lung lobe images by applying antialiasing using Shapeworks libraries
 
         Parameters
         ----------
-        dataloc
-            DatasetLocator
+        source_directory_primary
+            Absolute path of the source directory in the primary folder of the dataset
+        source_directory_derivative
+            Absolute path of the source directory in the derivative folder of the dataset
+        output_directory
+            Directory in which to save results of the work
         dataset_config
-            Dataset config
+            Config relating to the entire dataset
         task_config
-            Task config
-        source_directory
-            Source directory
+            results_directory: subdirectory for results
+
+            output_filenames: dict providing a mapping from lobe mapping (in dataset config) to output filenames
+
+            params: (Dict)
+                maximumRMSError, numberOfIterations:
+                    Parameters to apply to SimpleITK.AntiAliasBinary
 
         Returns
         -------
-        relative_files
-            List of generated filenames relative to the dataset root
-
+        list of Path objects representing the files created.
         """
-        output_directory = dataloc.abs_derivative / source_directory / task_config.task_name
+
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
 
-        image_file = glob(str(dataloc.abs_primary / source_directory / dataset_config.lung_image_glob))[0]
+        image_file = glob(str(source_directory_primary / dataset_config.lung_image_glob))[0]
         shape_seg = sw.Image(image_file)
 
         suffix = Path(image_file).suffix
@@ -55,12 +61,10 @@ class SmoothLungLobesSW(EachItemTask):
 
             filename = f"{str(output_directory / name)}{suffix}"
             lobe_image.write(filename)
+            smoothed_lobes.append(Path(filename))
 
-            smoothed_lobes.append(filename)
+        return smoothed_lobes
 
-        relative_files = [str(dataloc.to_relative(Path(file))) for file in smoothed_lobes]
-
-        return relative_files
 
 class CreateMeshesSW(EachItemTask):
 
@@ -69,34 +73,45 @@ class CreateMeshesSW(EachItemTask):
         return "create_meshes_sw"
 
     @staticmethod
-    def work(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig,
-             source_directory: Path) -> list:
+    def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
+             dataset_config: DictConfig, task_config: DictConfig) -> list[Path]:
         """
-        create meshes
+        Convert medical image files to meshes and apply smoothing using Shapeworks libraries.
 
         Parameters
         ----------
-        dataloc
-            DatasetLocator
+        source_directory_primary
+            Absolute path of the source directory in the primary folder of the dataset
+        source_directory_derivative
+            Absolute path of the source directory in the derivative folder of the dataset
+        output_directory
+            Directory in which to save results of the work
         dataset_config
-            Dataset config
+            Config relating to the entire dataset
         task_config
-            Task config
-        source_directory
-            Source directory
+            source_directory: subdirectory within derivative source folder to find source files
+
+            results_directory: subdirectory for results
+
+            params: (Dict)
+
+                remesh, remesh_percentage, adaptivity:
+                    Option to remesh and parameters for shapeworks remesh
+                smooth, smooth_iterations, relaxation:
+                    Option to smooth and parameters for shapeworks smooth
+                fill_holes, hole_size:
+                    Option to fill holes nad parameters for shapeworks fill_holes}
 
         Returns
         -------
-        relative_files
-            List of generated filenames relative to the dataset root
-
+        list of Path objects representing the files created.
         """
         params = task_config.params
-        output_directory = dataloc.abs_derivative / source_directory / task_config.task_name
+
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
 
-        image_files = glob(str(dataloc.abs_derivative / source_directory / task_config.source_directory / "*"))
+        image_files = glob(str(source_directory_derivative / task_config.source_directory / "*"))
 
         if len(image_files) == 0:
             raise RuntimeError("No files found")
@@ -107,21 +122,19 @@ class CreateMeshesSW(EachItemTask):
             mesh = image_data.toMesh(1)  # Seems to get the mesh in the right orientation without manual realignment
 
             # Shapeworks remeshing uses ACVD (vtkIsotropicDiscreteRemeshing). Should be the same as pyACVD with pyvista
-            mesh_rm = mesh.remeshPercent(percentage=params.remesh_percentage, adaptivity=params.adaptivity) if params.remesh else mesh
+            mesh_rm = mesh.remeshPercent(percentage=params.remesh_percentage,
+                                         adaptivity=params.adaptivity) if params.remesh else mesh
             # Shapeworks smooth uses vtkSmothPolyData. Should be the same as pyVista
-            mesh_sm = mesh_rm.smooth(iterations=params.smooth_iterations, relaxation=params.relaxation) if params.smooth else mesh_rm
+            mesh_sm = mesh_rm.smooth(iterations=params.smooth_iterations,
+                                     relaxation=params.relaxation) if params.smooth else mesh_rm
             # Shapeworks fillHoles uses vtkFillHolesFilter. Should be the same as pyVista
             mesh_fh = mesh_sm.fillHoles(hole_size=params.hole_size) if params.fill_holes else mesh_sm
 
             output_filename = str(output_directory / Path(image_file).stem) + '.vtk'
             mesh_fh.write(output_filename)
-            mesh_files.append(output_filename)
+            mesh_files.append(Path(output_filename))
 
-        relative_files = [str(dataloc.to_relative(Path(file))) for file in mesh_files]
-
-        return relative_files
-
-
+        return mesh_files
 
 
 all_tasks = [SmoothLungLobesSW, CreateMeshesSW]
