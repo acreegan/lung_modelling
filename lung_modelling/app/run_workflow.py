@@ -1,3 +1,4 @@
+import fnmatch
 import tkinter as tk
 from tkinter.filedialog import askdirectory
 from pathlib import Path
@@ -55,15 +56,16 @@ def run_cli(primary_config: DictConfig):
     workflow_manager = WorkflowManager(cfg.dataset_root, cfg, mpool, show_progress=True)
 
     # Register tasks
-    if config_choice == "standard":
-        from lung_modelling.app.tasks import all_tasks
-        for task in all_tasks:
+    from lung_modelling.app.tasks import all_tasks
+    for task in all_tasks:
+        if task().name in cfg.run_tasks:
             workflow_manager.register_task(task)
 
-    if config_choice == "shapeworks":
+    if len(fnmatch.filter([config_choice], "*shapeworks*")) > 0:
         from lung_modelling.app.shapeworks_tasks import all_tasks as all_sw_tasks
         for task in all_sw_tasks:
-            workflow_manager.register_task(task)
+            if task().name in cfg.run_tasks:
+                workflow_manager.register_task(task)
 
     workflow_manager.run_workflow(cfg.run_tasks)
 

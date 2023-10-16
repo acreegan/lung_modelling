@@ -21,7 +21,7 @@ class SmoothLungLobes(EachItemTask):
     def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
              dataset_config: DictConfig, task_config: DictConfig) -> list[Path]:
         """
-        Pre-process lung lobe images by applying antialiasing.
+        Pre-process lung lobe segmentation by extracting lobe labels and applying antialiasing.
 
         Parameters
         ----------
@@ -66,6 +66,70 @@ class SmoothLungLobes(EachItemTask):
             lobe_array = np.array(sitk.GetArrayFromImage(im_bin))
 
             output_filename = f"{str(output_directory / task_config.output_filenames[lobe])}{suffix}"
+            medpy.io.save(lobe_array, output_filename, hdr=header, use_compression=True)
+            smoothed_files.append(Path(output_filename))
+
+        return smoothed_files
+
+
+class SmoothWholeLungs(EachItemTask):
+
+    @property
+    def name(self):
+        return "smooth_whole_lungs"
+
+    @staticmethod
+    def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
+             dataset_config: DictConfig, task_config: DictConfig) -> list[Path]:
+        """
+        Pre-process lung segmentation by extracting whole lung and applying antialiasing.
+
+        Parameters
+        ----------
+        source_directory_primary
+            Absolute path of the source directory in the primary folder of the dataset
+        source_directory_derivative
+            Absolute path of the source directory in the derivative folder of the dataset
+        output_directory
+            Directory in which to save results of the work
+        dataset_config
+            Config relating to the entire dataset
+        task_config
+            results_directory: subdirectory for results
+
+            output_filenames: dict providing a mapping from lobe mapping (in dataset config) to output filenames
+
+            params: (Dict)
+                maximumRMSError, numberOfIterations:
+                    Parameters to apply to SimpleITK.AntiAliasBinary
+
+        Returns
+        -------
+        list of Path objects representing the files created.
+        """
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
+
+        image_file = glob(str(source_directory_primary / dataset_config.lung_image_glob))[0]
+        image_data, header = medpy.io.load(image_file)
+
+        suffix = Path(image_file).suffix
+
+        smoothed_files = []
+        for name, lobes in task_config.output_filenames.items():
+            lobe_arrays = [extract_section(image_data, dataset_config.lobe_mapping[lobe]) for lobe in lobes]
+            merged = lobe_arrays[0]
+            for array in lobe_arrays:
+                merged = np.logical_or(merged, array).astype(int)
+
+            im = sitk.GetImageFromArray(merged)
+            im_aa = sitk.AntiAliasBinary(im, maximumRMSError=task_config.params.maximumRMSError,
+                                         numberOfIterations=task_config.params.numberOfIterations)
+            im_rs = sitk.Resample(im_aa)
+            im_bin = sitk.BinaryThreshold(im_rs)
+            lobe_array = np.array(sitk.GetArrayFromImage(im_bin))
+
+            output_filename = f"{str(output_directory / name)}{suffix}"
             medpy.io.save(lobe_array, output_filename, hdr=header, use_compression=True)
             smoothed_files.append(Path(output_filename))
 
@@ -141,4 +205,4 @@ class CreateMeshes(EachItemTask):
         return mesh_files
 
 
-all_tasks = [SmoothLungLobes, CreateMeshes]
+all_tasks = [SmoothLungLobes, CreateMeshes, SmoothWholeLungs]
