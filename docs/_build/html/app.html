@@ -88,6 +88,7 @@ dataset_config.json for the example dataset is as follows:</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;primary_directory&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;primary&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;derivative_directory&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;derivative&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;pooled_derivative_directory&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pooled_derivative&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;directory_index_glob&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;directory_index*.csv&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;data_folder_depth&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;lung_image_glob&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;*.nii&quot;</span><span class="p">,</span>
@@ -100,6 +101,8 @@ dataset_config.json for the example dataset is as follows:</p>
 data in the dataset.</p>
 <p><strong>derivative_directory</strong> refers to the name of the directory in which to place
 generated data.</p>
+<p><strong>pooled_derivative_directory</strong> refers to the name of the directory in which to place
+data generated from two or more samples combined into a single output file.</p>
 <p><strong>directory_index_glob</strong> refers to a glob used to find a pre-built directory
 index of the dataset if it exists.</p>
 <p><strong>data_folder_depth</strong> is the number of folders between the top level dataset

@@ -29,13 +29,14 @@
           <div class="body" role="main">
             
   <h1>Source code for lung_modelling.app.shapeworks_tasks</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">lung_modelling.workflow_manager</span> <span class="kn">import</span> <span class="n">EachItemTask</span><span class="p">,</span> <span class="n">DatasetLocator</span>
+<span></span><span class="kn">from</span> <span class="nn">lung_modelling.workflow_manager</span> <span class="kn">import</span> <span class="n">EachItemTask</span><span class="p">,</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">AllItemsTask</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span> <span class="nn">omegaconf</span> <span class="kn">import</span> <span class="n">DictConfig</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">shapeworks</span> <span class="k">as</span> <span class="nn">sw</span>
 <span class="kn">from</span> <span class="nn">glob</span> <span class="kn">import</span> <span class="n">glob</span>
 <span class="kn">import</span> <span class="nn">pyvista</span> <span class="k">as</span> <span class="nn">pv</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 
 <div class="viewcode-block" id="SmoothLungLobesSW">
@@ -71,7 +72,7 @@
 
 <span class="sd">            **params**: (Dict)</span>
 <span class="sd">                **maximumRMSError**, **numberOfIterations**:</span>
-<span class="sd">                    Parameters to apply to SimpleITK.AntiAliasBinary</span>
+<span class="sd">                    Parameters to apply to antialias</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -182,7 +183,149 @@
 
 
 
-<span class="n">all_tasks</span> <span class="o">=</span> <span class="p">[</span><span class="n">SmoothLungLobesSW</span><span class="p">,</span> <span class="n">CreateMeshesSW</span><span class="p">]</span>
+<div class="viewcode-block" id="SmoothWholeLungsSW">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.SmoothWholeLungsSW">[docs]</a>
+<span class="k">class</span> <span class="nc">SmoothWholeLungsSW</span><span class="p">(</span><span class="n">EachItemTask</span><span class="p">):</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;smooth_whole_lungs_sw&quot;</span>
+
+<div class="viewcode-block" id="SmoothWholeLungsSW.work">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.SmoothWholeLungsSW.work">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">source_directory_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+             <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Pre-process lung segmentation by extracting whole lung and applying antialiasing using Shapeworks libraries.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        source_directory_primary</span>
+<span class="sd">            Absolute path of the source directory in the primary folder of the dataset</span>
+<span class="sd">        source_directory_derivative</span>
+<span class="sd">            Absolute path of the source directory in the derivative folder of the dataset</span>
+<span class="sd">        output_directory</span>
+<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">            Config relating to the entire dataset</span>
+<span class="sd">        task_config</span>
+<span class="sd">            **results_directory**: subdirectory for results</span>
+
+<span class="sd">            **output_filenames**: dict providing a mapping from lobe mapping (in dataset config) to output filenames</span>
+
+<span class="sd">            **params**: (Dict)</span>
+<span class="sd">                **maximumRMSError**, **numberOfIterations**:</span>
+<span class="sd">                    Parameters to apply to antialias</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        smoothed_lobes</span>
+<span class="sd">            list of Path objects representing the files created.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_directory</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_directory</span><span class="p">)</span>
+
+        <span class="n">image_file</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">source_directory_primary</span> <span class="o">/</span> <span class="n">dataset_config</span><span class="o">.</span><span class="n">lung_image_glob</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">shape_seg</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">Image</span><span class="p">(</span><span class="n">image_file</span><span class="p">)</span>
+
+        <span class="n">suffix</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">image_file</span><span class="p">)</span><span class="o">.</span><span class="n">suffix</span>
+
+        <span class="n">smoothed_files</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">lobes</span> <span class="ow">in</span> <span class="n">task_config</span><span class="o">.</span><span class="n">output_filenames</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+
+            <span class="n">lobe_images</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">lobe</span> <span class="ow">in</span> <span class="n">lobes</span><span class="p">:</span>
+                <span class="n">s</span> <span class="o">=</span> <span class="n">shape_seg</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                <span class="n">image</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">extractLabel</span><span class="p">(</span><span class="n">dataset_config</span><span class="o">.</span><span class="n">lobe_mapping</span><span class="p">[</span><span class="n">lobe</span><span class="p">])</span>
+                <span class="n">lobe_images</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+
+            <span class="n">merged</span> <span class="o">=</span> <span class="n">lobe_images</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">image</span> <span class="ow">in</span> <span class="n">lobe_images</span><span class="p">:</span>
+                <span class="n">merged</span> <span class="o">=</span> <span class="n">merged</span> <span class="o">+</span> <span class="n">image</span>
+
+            <span class="n">iso_spacing</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="n">merged</span><span class="o">.</span><span class="n">antialias</span><span class="p">(</span><span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">numberOfIterations</span><span class="p">,</span> <span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">maximumRMSError</span><span class="p">)</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span>
+                <span class="n">iso_spacing</span><span class="p">,</span> <span class="n">sw</span><span class="o">.</span><span class="n">InterpolationType</span><span class="o">.</span><span class="n">Linear</span><span class="p">)</span><span class="o">.</span><span class="n">binarize</span><span class="p">()</span>
+
+            <span class="n">filename</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">output_directory</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">name</span><span class="p">)</span><span class="si">}{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">merged</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+            <span class="n">smoothed_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">filename</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">smoothed_files</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="ReferenceSelectionMeshSW">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.ReferenceSelectionMeshSW">[docs]</a>
+<span class="k">class</span> <span class="nc">ReferenceSelectionMeshSW</span><span class="p">(</span><span class="n">AllItemsTask</span><span class="p">):</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;reference_selection_mesh_sw&quot;</span>
+
+<div class="viewcode-block" id="ReferenceSelectionMeshSW.work">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.ReferenceSelectionMeshSW.work">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dirs_list</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span>
+             <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A task to load all meshes at once so the shape closest to the mean can be found and selected as the reference</span>
+
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataloc</span>
+<span class="sd">            Dataset locator for the dataset</span>
+<span class="sd">        dirs_list</span>
+<span class="sd">            List of relative paths to the source directories</span>
+<span class="sd">        output_directory</span>
+<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">            Config relating to the entire dataset</span>
+<span class="sd">        task_config</span>
+<span class="sd">            Task specific config</span>
+
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        reference</span>
+<span class="sd">            Mesh selected as the reference</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_directory</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_directory</span><span class="p">)</span>
+
+        <span class="n">all_mesh_files</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="nb">dir</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">dirs_list</span><span class="p">:</span>
+            <span class="n">mesh_files</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="nb">dir</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory</span> <span class="o">/</span> <span class="s2">&quot;*&quot;</span><span class="p">))</span>
+            <span class="n">all_mesh_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mesh_files</span><span class="p">)</span>
+
+        <span class="n">lengths</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span> <span class="k">for</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">all_mesh_files</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">lengths</span><span class="p">))</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Not all source directories have the same number of meshes&quot;</span><span class="p">)</span>
+
+        <span class="n">domains_per_shape</span> <span class="o">=</span> <span class="n">lengths</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">task_config</span><span class="o">.</span><span class="n">reference_domain</span> <span class="o">&gt;</span> <span class="n">domains_per_shape</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Domain </span><span class="si">{</span><span class="n">task_config</span><span class="o">.</span><span class="n">reference_domain</span><span class="si">}</span><span class="s2"> selected as reference but does not exist&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">task_config</span><span class="o">.</span><span class="n">reference_domain</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">domains_per_shape</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">all_meshes</span> <span class="o">=</span> <span class="p">[</span><span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">file</span><span class="p">)</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">all_mesh_files</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()]</span>
+            <span class="n">ref_index</span><span class="p">,</span> <span class="n">combined_meshes</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">find_reference_mesh_index</span><span class="p">(</span><span class="n">all_meshes</span><span class="p">,</span> <span class="n">domains_per_shape</span><span class="p">)</span>
+            <span class="n">ref_mesh</span> <span class="o">=</span> <span class="n">combined_meshes</span><span class="p">[</span><span class="n">ref_index</span><span class="p">]</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Reference selection based on single domain not implemented&quot;</span><span class="p">)</span>
+
+        <span class="n">output_filename</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="s2">&quot;reference_mesh.vtk&quot;</span>
+        <span class="n">ref_mesh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">output_filename</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="n">output_filename</span><span class="p">]</span></div>
+</div>
+
+
+
+<span class="n">all_tasks</span> <span class="o">=</span> <span class="p">[</span><span class="n">SmoothLungLobesSW</span><span class="p">,</span> <span class="n">CreateMeshesSW</span><span class="p">,</span> <span class="n">SmoothWholeLungsSW</span><span class="p">,</span> <span class="n">ReferenceSelectionMeshSW</span><span class="p">]</span>
 </pre></div>
 
           </div>

@@ -235,6 +235,40 @@ No parameters are currently in use for this task_config</p></li>
 
 </dd></dl>
 
+<dl class="py class">
+<dt class="sig sig-object py" id="lung_modelling.app.tasks.ReferenceSelectionMesh">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.tasks.</span></span><span class="sig-name descname"><span class="pre">ReferenceSelectionMesh</span></span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#ReferenceSelectionMesh"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.ReferenceSelectionMesh" title="Link to this definition">¶</a></dt>
+<dd><dl class="py property">
+<dt class="sig sig-object py" id="lung_modelling.app.tasks.ReferenceSelectionMesh.name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#lung_modelling.app.tasks.ReferenceSelectionMesh.name" title="Link to this definition">¶</a></dt>
+<dd><p>The name for the derived implementation of this class. This is used to match the task to its task_config</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.app.tasks.ReferenceSelectionMesh.work">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dirs_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#ReferenceSelectionMesh.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.ReferenceSelectionMesh.work" title="Link to this definition">¶</a></dt>
+<dd><p>A task to load all meshes at once so the shape closest to the mean can be found and selected as the reference</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataloc</strong> (<a class="reference internal" href="module_reference.html#lung_modelling.workflow_manager.DatasetLocator" title="lung_modelling.workflow_manager.workflow_manager.DatasetLocator"><em>DatasetLocator</em></a>) – Dataset locator for the dataset</p></li>
+<li><p><strong>dirs_list</strong> (<em>Path</em>) – List of relative paths to the source directories</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – Task specific config</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>reference</em> – Mesh selected as the reference</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[<em>Path</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
 </section>
 <section id="module-lung_modelling.app.shapeworks_tasks">
 <span id="shapeworks-tasks"></span><h2>Shapeworks Tasks<a class="headerlink" href="#module-lung_modelling.app.shapeworks_tasks" title="Link to this heading">¶</a></h2>
@@ -262,7 +296,7 @@ No parameters are currently in use for this task_config</p></li>
 <p><strong>output_filenames</strong>: dict providing a mapping from lobe mapping (in dataset config) to output filenames</p>
 <dl class="simple">
 <dt><strong>params</strong>: (Dict)</dt><dd><dl class="simple">
-<dt><strong>maximumRMSError</strong>, <strong>numberOfIterations</strong>:</dt><dd><p>Parameters to apply to SimpleITK.AntiAliasBinary</p>
+<dt><strong>maximumRMSError</strong>, <strong>numberOfIterations</strong>:</dt><dd><p>Parameters to apply to antialias</p>
 </dd>
 </dl>
 </dd>
@@ -319,6 +353,83 @@ No parameters are currently in use for this task_config</p></li>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><em>mesh_files</em> – list of Path objects representing the files created.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[<em>Path</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.SmoothWholeLungsSW">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.shapeworks_tasks.</span></span><span class="sig-name descname"><span class="pre">SmoothWholeLungsSW</span></span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#SmoothWholeLungsSW"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.SmoothWholeLungsSW" title="Link to this definition">¶</a></dt>
+<dd><dl class="py property">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.SmoothWholeLungsSW.name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.SmoothWholeLungsSW.name" title="Link to this definition">¶</a></dt>
+<dd><p>The name for the derived implementation of this class. This is used to match the task to its task_config</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.SmoothWholeLungsSW.work">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_directory_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_directory_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#SmoothWholeLungsSW.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.SmoothWholeLungsSW.work" title="Link to this definition">¶</a></dt>
+<dd><p>Pre-process lung segmentation by extracting whole lung and applying antialiasing using Shapeworks libraries.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>source_directory_primary</strong> (<em>Path</em>) – Absolute path of the source directory in the primary folder of the dataset</p></li>
+<li><p><strong>source_directory_derivative</strong> (<em>Path</em>) – Absolute path of the source directory in the derivative folder of the dataset</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – <p><strong>results_directory</strong>: subdirectory for results</p>
+<p><strong>output_filenames</strong>: dict providing a mapping from lobe mapping (in dataset config) to output filenames</p>
+<dl class="simple">
+<dt><strong>params</strong>: (Dict)</dt><dd><dl class="simple">
+<dt><strong>maximumRMSError</strong>, <strong>numberOfIterations</strong>:</dt><dd><p>Parameters to apply to antialias</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>smoothed_lobes</em> – list of Path objects representing the files created.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[<em>Path</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.ReferenceSelectionMeshSW">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.shapeworks_tasks.</span></span><span class="sig-name descname"><span class="pre">ReferenceSelectionMeshSW</span></span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#ReferenceSelectionMeshSW"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.ReferenceSelectionMeshSW" title="Link to this definition">¶</a></dt>
+<dd><dl class="py property">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.ReferenceSelectionMeshSW.name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.ReferenceSelectionMeshSW.name" title="Link to this definition">¶</a></dt>
+<dd><p>The name for the derived implementation of this class. This is used to match the task to its task_config</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.ReferenceSelectionMeshSW.work">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dirs_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#ReferenceSelectionMeshSW.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.ReferenceSelectionMeshSW.work" title="Link to this definition">¶</a></dt>
+<dd><p>A task to load all meshes at once so the shape closest to the mean can be found and selected as the reference</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataloc</strong> (<a class="reference internal" href="module_reference.html#lung_modelling.workflow_manager.DatasetLocator" title="lung_modelling.workflow_manager.workflow_manager.DatasetLocator"><em>DatasetLocator</em></a>) – Dataset locator for the dataset</p></li>
+<li><p><strong>dirs_list</strong> (<em>Path</em>) – List of relative paths to the source directories</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – Task specific config</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>reference</em> – Mesh selected as the reference</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>list[<em>Path</em>]</p>
