@@ -1,10 +1,11 @@
-from lung_modelling.workflow_manager import EachItemTask, DatasetLocator
+from lung_modelling.workflow_manager import EachItemTask, DatasetLocator, AllItemsTask
 from pathlib import Path
 from omegaconf import DictConfig
 import os
 import shapeworks as sw
 from glob import glob
 import pyvista as pv
+import numpy as np
 
 
 class SmoothLungLobesSW(EachItemTask):
@@ -36,7 +37,7 @@ class SmoothLungLobesSW(EachItemTask):
 
             **params**: (Dict)
                 **maximumRMSError**, **numberOfIterations**:
-                    Parameters to apply to SimpleITK.AntiAliasBinary
+                    Parameters to apply to antialias
 
         Returns
         -------
@@ -139,4 +140,107 @@ class CreateMeshesSW(EachItemTask):
         return mesh_files
 
 
-all_tasks = [SmoothLungLobesSW, CreateMeshesSW]
+class SmoothWholeLungsSW(EachItemTask):
+
+    @property
+    def name(self):
+        return "smooth_whole_lungs_sw"
+
+    @staticmethod
+    def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
+             dataset_config: DictConfig, task_config: DictConfig) -> list[Path]:
+        """
+        Pre-process lung segmentation by extracting whole lung and applying antialiasing using Shapeworks libraries.
+
+        Parameters
+        ----------
+        source_directory_primary
+            Absolute path of the source directory in the primary folder of the dataset
+        source_directory_derivative
+            Absolute path of the source directory in the derivative folder of the dataset
+        output_directory
+            Directory in which to save results of the work
+        dataset_config
+            Config relating to the entire dataset
+        task_config
+            **results_directory**: subdirectory for results
+
+            **output_filenames**: dict providing a mapping from lobe mapping (in dataset config) to output filenames
+
+            **params**: (Dict)
+                **maximumRMSError**, **numberOfIterations**:
+                    Parameters to apply to antialias
+
+        Returns
+        -------
+        smoothed_lobes
+            list of Path objects representing the files created.
+        """
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
+
+        image_file = glob(str(source_directory_primary / dataset_config.lung_image_glob))[0]
+        shape_seg = sw.Image(image_file)
+
+        suffix = Path(image_file).suffix
+
+        smoothed_files = []
+        for name, lobes in task_config.output_filenames.items():
+
+            lobe_images = []
+            for lobe in lobes:
+                s = shape_seg.copy()
+                image = s.extractLabel(dataset_config.lobe_mapping[lobe])
+                lobe_images.append(image)
+
+            merged = lobe_images[0]
+            for image in lobe_images:
+                merged = merged + image
+
+            iso_spacing = [1, 1, 1]
+            merged.antialias(task_config.params.numberOfIterations, task_config.params.maximumRMSError).resample(
+                iso_spacing, sw.InterpolationType.Linear).binarize()
+
+            filename = f"{str(output_directory / name)}{suffix}"
+            merged.write(filename)
+            smoothed_files.append(Path(filename))
+
+        return smoothed_files
+
+
+class ReferenceSelectionMeshSW(AllItemsTask):
+    @property
+    def name(self):
+        return "reference_selection_mesh_sw"
+
+    @staticmethod
+    def work(dataloc: DatasetLocator, dirs_list: Path, output_directory: Path, dataset_config: DictConfig,
+             task_config: DictConfig) -> list[Path]:
+        """
+        A task to load all meshes at once so the shape closest to the mean can be found and selected as the reference
+
+
+        Parameters
+        ----------
+        dataloc
+            Dataset locator for the dataset
+        dirs_list
+            List of relative paths to the source directories
+        output_directory
+            Directory in which to save results of the work
+        dataset_config
+            Config relating to the entire dataset
+        task_config
+            Task specific config
+
+
+        Returns
+        -------
+        reference
+            Mesh selected as the reference
+
+        """
+        raise NotImplementedError("Reference selection not yet implemented")
+
+
+all_tasks = [SmoothLungLobesSW, CreateMeshesSW, SmoothWholeLungsSW, ReferenceSelectionMeshSW]

@@ -1,0 +1,28 @@
+dataset_root: null
+
+use_multiprocessing: True
+
+tasks:
+  initialize:
+    dataset_config_filename: "dataset_config.json"
+    use_directory_index: False
+    skip_dirs: []
+    select_dirs: []
+
+  smooth_whole_lungs_sw:
+    results_directory: "smooth_whole_lungs_sw"
+    output_filenames: { left_lung: ["lul", "lll"], right_lung: ["rul", "rml", "rll"] }
+    params: { maximumRMSError: 0.009999999776482582, numberOfIterations: 30 }
+
+  create_meshes_sw:
+    source_directory: "smooth_whole_lungs_sw"
+    results_directory: "create_meshes_whole_lungs_sw"
+    params: {remesh: False, remesh_percentage: 0.99, adaptivity: 1, smooth: True, smooth_iterations: 10, relaxation: 1, fill_holes: True, hole_size: 100}
+
+  reference_selection_mesh_sw:
+    source_directory: "create_meshes_whole_lungs_sw"
+    results_directory: "reference_selection_mesh_whole_lungs_sw"
+
+  logging:
+
+run_tasks: ["smooth_whole_lungs_sw", "create_meshes_sw", "reference_selection_mesh_sw"]

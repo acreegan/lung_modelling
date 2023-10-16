@@ -1,4 +1,4 @@
-from lung_modelling.workflow_manager import EachItemTask, DatasetLocator
+from lung_modelling.workflow_manager import EachItemTask, DatasetLocator, AllItemsTask
 from pathlib import Path
 from omegaconf import DictConfig
 import os
@@ -208,4 +208,39 @@ class CreateMeshes(EachItemTask):
         return mesh_files
 
 
-all_tasks = [SmoothLungLobes, CreateMeshes, SmoothWholeLungs]
+class ReferenceSelectionMesh(AllItemsTask):
+    @property
+    def name(self):
+        return "reference_selection_mesh"
+
+    @staticmethod
+    def work(dataloc: DatasetLocator, dirs_list: Path, output_directory: Path, dataset_config: DictConfig,
+             task_config: DictConfig) -> list[Path]:
+        """
+        A task to load all meshes at once so the shape closest to the mean can be found and selected as the reference
+
+
+        Parameters
+        ----------
+        dataloc
+            Dataset locator for the dataset
+        dirs_list
+            List of relative paths to the source directories
+        output_directory
+            Directory in which to save results of the work
+        dataset_config
+            Config relating to the entire dataset
+        task_config
+            Task specific config
+
+
+        Returns
+        -------
+        reference
+            Mesh selected as the reference
+
+        """
+        raise NotImplementedError("Reference selection mesh not yet implemented for non shapeworks libs")
+
+
+all_tasks = [SmoothLungLobes, CreateMeshes, SmoothWholeLungs, ReferenceSelectionMesh]

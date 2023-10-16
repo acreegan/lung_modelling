@@ -72,6 +72,7 @@ dataset_config.json for the example dataset is as follows:
     {
       "primary_directory": "primary",
       "derivative_directory": "derivative",
+      "pooled_derivative_directory": "pooled_derivative",
       "directory_index_glob": "directory_index*.csv",
       "data_folder_depth": 2,
       "lung_image_glob": "*.nii",
@@ -84,6 +85,9 @@ data in the dataset.
 
 **derivative_directory** refers to the name of the directory in which to place
 generated data.
+
+**pooled_derivative_directory** refers to the name of the directory in which to place
+data generated from two or more samples combined into a single output file.
 
 **directory_index_glob** refers to a glob used to find a pre-built directory
 index of the dataset if it exists.
