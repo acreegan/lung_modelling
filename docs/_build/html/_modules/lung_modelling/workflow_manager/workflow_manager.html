@@ -50,7 +50,14 @@
 <span class="kn">from</span> <span class="nn">multiprocess.pool</span> <span class="kn">import</span> <span class="n">Pool</span>
 
 
+<div class="viewcode-block" id="DatasetLocator">
+<a class="viewcode-back" href="../../../module_reference.html#lung_modelling.workflow_manager.DatasetLocator">[docs]</a>
 <span class="k">class</span> <span class="nc">DatasetLocator</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A helper class to convert paths for SPARC datasets between absolute and relative, and to store primary and</span>
+<span class="sd">    derivative directories</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">root</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">rel_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">rel_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">rel_primary</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">rel_primary</span><span class="p">)</span>
@@ -71,9 +78,12 @@
             <span class="k">elif</span> <span class="n">parent</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">rel_derivative</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
                 <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">rel_derivative</span> <span class="o">/</span> <span class="n">path</span><span class="o">.</span><span class="n">relative_to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abs_derivative</span><span class="p">)</span>
 
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Neither primary nor derivative found in input path&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Neither primary nor derivative found in input path&quot;</span><span class="p">)</span></div>
 
 
+
+<div class="viewcode-block" id="EachItemTask">
+<a class="viewcode-back" href="../../../module_reference.html#lung_modelling.workflow_manager.EachItemTask">[docs]</a>
 <span class="k">class</span> <span class="nc">EachItemTask</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A class providing an interface for tasks that should be applied to each item in a list of sources.</span>
@@ -91,6 +101,8 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">pass</span>
 
+<div class="viewcode-block" id="EachItemTask.work">
+<a class="viewcode-back" href="../../../module_reference.html#lung_modelling.workflow_manager.EachItemTask.work">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">source_directory_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
@@ -120,7 +132,9 @@
 <span class="sd">        -------</span>
 <span class="sd">        list of Path objects representing the files created.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">pass</span>
+        <span class="k">pass</span></div>
+</div>
+
 
 
 <div class="viewcode-block" id="initialize">
@@ -139,15 +153,15 @@
 <span class="sd">    task_config</span>
 <span class="sd">        Configuration dict for this task</span>
 
-<span class="sd">        Params</span>
-<span class="sd">            dataset_config_filename</span>
+<span class="sd">        **params**</span>
+<span class="sd">            **dataset_config_filename**</span>
 <span class="sd">                Filename for the dataset configuration file. This should be directly inside the dataset_root directory.</span>
-<span class="sd">            use_directory_index</span>
+<span class="sd">            **use_directory_index**</span>
 <span class="sd">                Option to use pre-build index of the source directory instead of iterating through with os.walk.</span>
-<span class="sd">            skip_dirs:</span>
+<span class="sd">            **skip_dirs**:</span>
 <span class="sd">                List of glob strings to match directories to skip. The whole path relative to the dataset_root is tested,</span>
 <span class="sd">                so slashes can be included to specify depth to match. This takes precedence over select_dirs</span>
-<span class="sd">            select_dirs:</span>
+<span class="sd">            **select_dirs**:</span>
 <span class="sd">                List of glob strings to match directories to select. If empty, all valid source directories are selected.</span>
 <span class="sd">                If not, only valid source directories that match one of these are selected.</span>
 <span class="sd">    show_progress</span>
@@ -247,6 +261,8 @@
     <span class="k">return</span> <span class="n">dirs_list</span>
 
 
+<div class="viewcode-block" id="exception_monitor">
+<a class="viewcode-back" href="../../../module_reference.html#lung_modelling.workflow_manager.exception_monitor">[docs]</a>
 <span class="k">def</span> <span class="nf">exception_monitor</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">callback</span><span class="p">,</span> <span class="n">logger</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Decorator to catch exceptions from multiprocessing tasks</span>
@@ -280,9 +296,12 @@
         <span class="k">return</span> <span class="n">result</span><span class="p">,</span> <span class="n">error</span>
 
     <span class="n">functools</span><span class="o">.</span><span class="n">update_wrapper</span><span class="p">(</span><span class="n">exception_monitor_wrapper</span><span class="p">,</span> <span class="n">func</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">exception_monitor_wrapper</span>
+    <span class="k">return</span> <span class="n">exception_monitor_wrapper</span></div>
 
 
+
+<div class="viewcode-block" id="args_unpacker">
+<a class="viewcode-back" href="../../../module_reference.html#lung_modelling.workflow_manager.args_unpacker">[docs]</a>
 <span class="k">def</span> <span class="nf">args_unpacker</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Decorator to unpack tuple of arguments from multiprocessing methods such as imap</span>
@@ -297,9 +316,12 @@
         <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
 
     <span class="n">functools</span><span class="o">.</span><span class="n">update_wrapper</span><span class="p">(</span><span class="n">unpack</span><span class="p">,</span> <span class="n">func</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">unpack</span>
+    <span class="k">return</span> <span class="n">unpack</span></div>
 
 
+
+<div class="viewcode-block" id="apply_to_dataset">
+<a class="viewcode-back" href="../../../module_reference.html#lung_modelling.workflow_manager.apply_to_dataset">[docs]</a>
 <span class="k">def</span> <span class="nf">apply_to_dataset</span><span class="p">(</span><span class="n">func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Decorator to apply a function to each subject in a dataset, with optional multiprocessing.</span>
@@ -349,7 +371,8 @@
         <span class="n">combined</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;results&quot;</span><span class="p">:</span> <span class="n">relative_files</span><span class="p">,</span> <span class="s2">&quot;errors&quot;</span><span class="p">:</span> <span class="n">errors</span><span class="p">}</span>
         <span class="k">return</span> <span class="n">combined</span>
 
-    <span class="k">return</span> <span class="n">wrapper_apply_to_dataset</span>
+    <span class="k">return</span> <span class="n">wrapper_apply_to_dataset</span></div>
+
 
 
 <div class="viewcode-block" id="log_workflow">
@@ -405,6 +428,8 @@
 
 
 
+<div class="viewcode-block" id="get_unique_file_name">
+<a class="viewcode-back" href="../../../module_reference.html#lung_modelling.workflow_manager.get_unique_file_name">[docs]</a>
 <span class="k">def</span> <span class="nf">get_unique_file_name</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get a unique filename by adding an addition to the end</span>
@@ -428,17 +453,30 @@
         <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">1000000</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Could not find unique filename&quot;</span><span class="p">)</span>
 
-    <span class="k">return</span> <span class="n">path</span>
+    <span class="k">return</span> <span class="n">path</span></div>
 
 
+
+<div class="viewcode-block" id="print_results">
+<a class="viewcode-back" href="../../../module_reference.html#lung_modelling.workflow_manager.print_results">[docs]</a>
 <span class="k">def</span> <span class="nf">print_results</span><span class="p">(</span><span class="n">results</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Print the results dict to the logger.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    results</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">task_name</span><span class="p">,</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="k">if</span> <span class="s2">&quot;errors&quot;</span> <span class="ow">in</span> <span class="n">result</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">&quot;errors&quot;</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">task_name</span><span class="si">}</span><span class="s2"> errors </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;errors&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">task_name</span><span class="si">}</span><span class="s2"> completed successfully&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">task_name</span><span class="si">}</span><span class="s2"> completed successfully&quot;</span><span class="p">)</span></div>
 
 
+
+<div class="viewcode-block" id="WorkflowManager">
+<a class="viewcode-back" href="../../../module_reference.html#lung_modelling.workflow_manager.WorkflowManager">[docs]</a>
 <span class="k">class</span> <span class="nc">WorkflowManager</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A class to manage worflows consisting of a list of tasks to run on a collection of data. This class is designed to</span>
@@ -467,6 +505,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">registered_tasks</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="p">{}</span>
 
+<div class="viewcode-block" id="WorkflowManager.register_task">
+<a class="viewcode-back" href="../../../module_reference.html#lung_modelling.workflow_manager.WorkflowManager.register_task">[docs]</a>
     <span class="k">def</span> <span class="nf">register_task</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">EachItemTask</span><span class="p">]):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Register a task that can be run by the workflow manager. Registered tasks cannot be duplicates or &quot;initialize&quot;</span>
@@ -486,8 +526,11 @@
             <span class="c1"># Because we don&#39;t know if a task can handle it</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot register a task with no matching task configuration&quot;</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">registered_tasks</span><span class="p">[</span><span class="n">task</span><span class="p">()</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">task</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">registered_tasks</span><span class="p">[</span><span class="n">task</span><span class="p">()</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">task</span></div>
 
+
+<div class="viewcode-block" id="WorkflowManager.run_workflow">
+<a class="viewcode-back" href="../../../module_reference.html#lung_modelling.workflow_manager.WorkflowManager.run_workflow">[docs]</a>
     <span class="k">def</span> <span class="nf">run_workflow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Run all desired tasks, then log the results. If task list is provided, tasks will be run in that order.</span>
@@ -518,7 +561,9 @@
 
         <span class="n">log_workflow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataloc</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">tasks</span><span class="o">.</span><span class="n">logging</span><span class="p">,</span> <span class="s2">&quot;logging&quot;</span><span class="p">,</span> <span class="n">results</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="p">)</span>
 
-        <span class="n">print_results</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="p">)</span>
+        <span class="n">print_results</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="p">)</span></div>
+</div>
+
 </pre></div>
 
           </div>

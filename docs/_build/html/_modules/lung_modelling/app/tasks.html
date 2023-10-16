@@ -56,7 +56,7 @@
     <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">source_directory_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
              <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Pre-process lung lobe images by applying antialiasing.</span>
+<span class="sd">        Pre-process lung lobe segmentation by extracting lobe labels and applying antialiasing.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -69,17 +69,18 @@
 <span class="sd">        dataset_config</span>
 <span class="sd">            Config relating to the entire dataset</span>
 <span class="sd">        task_config</span>
-<span class="sd">            results_directory: subdirectory for results</span>
+<span class="sd">            **results_directory**: subdirectory for results</span>
 
-<span class="sd">            output_filenames: dict providing a mapping from lobe mapping (in dataset config) to output filenames</span>
+<span class="sd">            **output_filenames**: dict providing a mapping from lobe mapping (in dataset config) to output filenames</span>
 
-<span class="sd">            params: (Dict)</span>
-<span class="sd">                maximumRMSError, numberOfIterations:</span>
+<span class="sd">            **params**: (Dict)</span>
+<span class="sd">                **maximumRMSError**, **numberOfIterations**:</span>
 <span class="sd">                    Parameters to apply to SimpleITK.AntiAliasBinary</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        list of Path objects representing the files created.</span>
+<span class="sd">        smoothed_files</span>
+<span class="sd">            list of Path objects representing the files created.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_directory</span><span class="p">):</span>
             <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_directory</span><span class="p">)</span>
@@ -101,6 +102,77 @@
             <span class="n">lobe_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sitk</span><span class="o">.</span><span class="n">GetArrayFromImage</span><span class="p">(</span><span class="n">im_bin</span><span class="p">))</span>
 
             <span class="n">output_filename</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">output_directory</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">task_config</span><span class="o">.</span><span class="n">output_filenames</span><span class="p">[</span><span class="n">lobe</span><span class="p">])</span><span class="si">}{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">medpy</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">lobe_array</span><span class="p">,</span> <span class="n">output_filename</span><span class="p">,</span> <span class="n">hdr</span><span class="o">=</span><span class="n">header</span><span class="p">,</span> <span class="n">use_compression</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">smoothed_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">output_filename</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">smoothed_files</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="SmoothWholeLungs">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.SmoothWholeLungs">[docs]</a>
+<span class="k">class</span> <span class="nc">SmoothWholeLungs</span><span class="p">(</span><span class="n">EachItemTask</span><span class="p">):</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;smooth_whole_lungs&quot;</span>
+
+<div class="viewcode-block" id="SmoothWholeLungs.work">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.SmoothWholeLungs.work">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">source_directory_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+             <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Pre-process lung segmentation by extracting whole lung and applying antialiasing.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        source_directory_primary</span>
+<span class="sd">            Absolute path of the source directory in the primary folder of the dataset</span>
+<span class="sd">        source_directory_derivative</span>
+<span class="sd">            Absolute path of the source directory in the derivative folder of the dataset</span>
+<span class="sd">        output_directory</span>
+<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">            Config relating to the entire dataset</span>
+<span class="sd">        task_config</span>
+<span class="sd">            **results_directory**: subdirectory for results</span>
+
+<span class="sd">            **output_filenames**: dict providing a mapping from lobe mapping (in dataset config) to output filenames</span>
+
+<span class="sd">            **params**: (Dict)</span>
+<span class="sd">                **maximumRMSError**, **umberOfIterations**:</span>
+<span class="sd">                    Parameters to apply to SimpleITK.AntiAliasBinary</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        smoothed_files</span>
+<span class="sd">            list of Path objects representing the files created.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_directory</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_directory</span><span class="p">)</span>
+
+        <span class="n">image_file</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">source_directory_primary</span> <span class="o">/</span> <span class="n">dataset_config</span><span class="o">.</span><span class="n">lung_image_glob</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">image_data</span><span class="p">,</span> <span class="n">header</span> <span class="o">=</span> <span class="n">medpy</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">image_file</span><span class="p">)</span>
+
+        <span class="n">suffix</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">image_file</span><span class="p">)</span><span class="o">.</span><span class="n">suffix</span>
+
+        <span class="n">smoothed_files</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">lobes</span> <span class="ow">in</span> <span class="n">task_config</span><span class="o">.</span><span class="n">output_filenames</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">lobe_arrays</span> <span class="o">=</span> <span class="p">[</span><span class="n">extract_section</span><span class="p">(</span><span class="n">image_data</span><span class="p">,</span> <span class="n">dataset_config</span><span class="o">.</span><span class="n">lobe_mapping</span><span class="p">[</span><span class="n">lobe</span><span class="p">])</span> <span class="k">for</span> <span class="n">lobe</span> <span class="ow">in</span> <span class="n">lobes</span><span class="p">]</span>
+            <span class="n">merged</span> <span class="o">=</span> <span class="n">lobe_arrays</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">array</span> <span class="ow">in</span> <span class="n">lobe_arrays</span><span class="p">:</span>
+                <span class="n">merged</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_or</span><span class="p">(</span><span class="n">merged</span><span class="p">,</span> <span class="n">array</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+            <span class="n">im</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">GetImageFromArray</span><span class="p">(</span><span class="n">merged</span><span class="p">)</span>
+            <span class="n">im_aa</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">AntiAliasBinary</span><span class="p">(</span><span class="n">im</span><span class="p">,</span> <span class="n">maximumRMSError</span><span class="o">=</span><span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">maximumRMSError</span><span class="p">,</span>
+                                         <span class="n">numberOfIterations</span><span class="o">=</span><span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">numberOfIterations</span><span class="p">)</span>
+            <span class="n">im_rs</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">Resample</span><span class="p">(</span><span class="n">im_aa</span><span class="p">)</span>
+            <span class="n">im_bin</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">BinaryThreshold</span><span class="p">(</span><span class="n">im_rs</span><span class="p">)</span>
+            <span class="n">lobe_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sitk</span><span class="o">.</span><span class="n">GetArrayFromImage</span><span class="p">(</span><span class="n">im_bin</span><span class="p">))</span>
+
+            <span class="n">output_filename</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">output_directory</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">name</span><span class="p">)</span><span class="si">}{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="n">medpy</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">lobe_array</span><span class="p">,</span> <span class="n">output_filename</span><span class="p">,</span> <span class="n">hdr</span><span class="o">=</span><span class="n">header</span><span class="p">,</span> <span class="n">use_compression</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="n">smoothed_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">output_filename</span><span class="p">))</span>
 
@@ -136,27 +208,28 @@
 <span class="sd">        dataset_config</span>
 <span class="sd">            Config relating to the entire dataset</span>
 <span class="sd">        task_config</span>
-<span class="sd">            source_directory: subdirectory within derivative source folder to find source files</span>
+<span class="sd">            **source_directory**: subdirectory within derivative source folder to find source files</span>
 
-<span class="sd">            results_directory: subdirectory for results</span>
+<span class="sd">            **results_directory**: subdirectory for results</span>
 
-<span class="sd">            params: (Dict)</span>
-<span class="sd">                n_iter, feature_smoothing, edge_angle, feature_angle, relaxation_factor:</span>
+<span class="sd">            **params**: (Dict)</span>
+<span class="sd">                **n_iter**, **feature_smoothing**, **edge_angle**, **feature_angle**, **relaxation_factor**:</span>
 <span class="sd">                    Params for pyvista smooth</span>
 
-<span class="sd">                target_reduction, volume_preservation:</span>
+<span class="sd">                **target_reduction**, **volume_preservation**:</span>
 <span class="sd">                    Params for pyvista decimate</span>
 
-<span class="sd">                hole_size:</span>
+<span class="sd">                **hole_size**:</span>
 <span class="sd">                    Param for pyvista fill_holes</span>
 
-<span class="sd">                fix_mesh:</span>
+<span class="sd">                **fix_mesh**:</span>
 <span class="sd">                    Option to fix mesh</span>
 
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        list of Path objects representing the files created.</span>
+<span class="sd">        mesh_files</span>
+<span class="sd">            list of Path objects representing the files created.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_directory</span><span class="p">):</span>
@@ -184,7 +257,7 @@
 
 
 
-<span class="n">all_tasks</span> <span class="o">=</span> <span class="p">[</span><span class="n">SmoothLungLobes</span><span class="p">,</span> <span class="n">CreateMeshes</span><span class="p">]</span>
+<span class="n">all_tasks</span> <span class="o">=</span> <span class="p">[</span><span class="n">SmoothLungLobes</span><span class="p">,</span> <span class="n">CreateMeshes</span><span class="p">,</span> <span class="n">SmoothWholeLungs</span><span class="p">]</span>
 </pre></div>
 
           </div>

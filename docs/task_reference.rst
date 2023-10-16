@@ -4,6 +4,7 @@ Task Reference
 Workflow Manager Tasks
 ----------------------
 .. automodule:: lung_modelling.workflow_manager
+    :no-index:
     :members: initialize, log_workflow
 
 Standard Tasks

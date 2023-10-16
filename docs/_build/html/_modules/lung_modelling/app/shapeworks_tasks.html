@@ -65,17 +65,18 @@
 <span class="sd">        dataset_config</span>
 <span class="sd">            Config relating to the entire dataset</span>
 <span class="sd">        task_config</span>
-<span class="sd">            results_directory: subdirectory for results</span>
+<span class="sd">            **results_directory**: subdirectory for results</span>
 
-<span class="sd">            output_filenames: dict providing a mapping from lobe mapping (in dataset config) to output filenames</span>
+<span class="sd">            **output_filenames**: dict providing a mapping from lobe mapping (in dataset config) to output filenames</span>
 
-<span class="sd">            params: (Dict)</span>
-<span class="sd">                maximumRMSError, numberOfIterations:</span>
+<span class="sd">            **params**: (Dict)</span>
+<span class="sd">                **maximumRMSError**, **numberOfIterations**:</span>
 <span class="sd">                    Parameters to apply to SimpleITK.AntiAliasBinary</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        list of Path objects representing the files created.</span>
+<span class="sd">        smoothed_lobes</span>
+<span class="sd">            list of Path objects representing the files created.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_directory</span><span class="p">):</span>
@@ -130,22 +131,23 @@
 <span class="sd">        dataset_config</span>
 <span class="sd">            Config relating to the entire dataset</span>
 <span class="sd">        task_config</span>
-<span class="sd">            source_directory: subdirectory within derivative source folder to find source files</span>
+<span class="sd">            **source_directory**: subdirectory within derivative source folder to find source files</span>
 
-<span class="sd">            results_directory: subdirectory for results</span>
+<span class="sd">            **results_directory**: subdirectory for results</span>
 
-<span class="sd">            params: (Dict)</span>
+<span class="sd">            **params**: (Dict)</span>
 
-<span class="sd">                remesh, remesh_percentage, adaptivity:</span>
+<span class="sd">                **remesh**, **remesh_percentage**, **adaptivity**:</span>
 <span class="sd">                    Option to remesh and parameters for shapeworks remesh</span>
-<span class="sd">                smooth, smooth_iterations, relaxation:</span>
+<span class="sd">                **smooth**, **smooth_iterations**, **relaxation**:</span>
 <span class="sd">                    Option to smooth and parameters for shapeworks smooth</span>
-<span class="sd">                fill_holes, hole_size:</span>
+<span class="sd">                **fill_holes**, **hole_size**:</span>
 <span class="sd">                    Option to fill holes nad parameters for shapeworks fill_holes}</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        list of Path objects representing the files created.</span>
+<span class="sd">        mesh_files</span>
+<span class="sd">            list of Path objects representing the files created.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">params</span> <span class="o">=</span> <span class="n">task_config</span><span class="o">.</span><span class="n">params</span>
 

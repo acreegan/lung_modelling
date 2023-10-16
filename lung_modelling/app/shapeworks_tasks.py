@@ -30,17 +30,18 @@ class SmoothLungLobesSW(EachItemTask):
         dataset_config
             Config relating to the entire dataset
         task_config
-            results_directory: subdirectory for results
+            **results_directory**: subdirectory for results
 
-            output_filenames: dict providing a mapping from lobe mapping (in dataset config) to output filenames
+            **output_filenames**: dict providing a mapping from lobe mapping (in dataset config) to output filenames
 
-            params: (Dict)
-                maximumRMSError, numberOfIterations:
+            **params**: (Dict)
+                **maximumRMSError**, **numberOfIterations**:
                     Parameters to apply to SimpleITK.AntiAliasBinary
 
         Returns
         -------
-        list of Path objects representing the files created.
+        smoothed_lobes
+            list of Path objects representing the files created.
         """
 
         if not os.path.exists(output_directory):
@@ -89,22 +90,23 @@ class CreateMeshesSW(EachItemTask):
         dataset_config
             Config relating to the entire dataset
         task_config
-            source_directory: subdirectory within derivative source folder to find source files
+            **source_directory**: subdirectory within derivative source folder to find source files
 
-            results_directory: subdirectory for results
+            **results_directory**: subdirectory for results
 
-            params: (Dict)
+            **params**: (Dict)
 
-                remesh, remesh_percentage, adaptivity:
+                **remesh**, **remesh_percentage**, **adaptivity**:
                     Option to remesh and parameters for shapeworks remesh
-                smooth, smooth_iterations, relaxation:
+                **smooth**, **smooth_iterations**, **relaxation**:
                     Option to smooth and parameters for shapeworks smooth
-                fill_holes, hole_size:
+                **fill_holes**, **hole_size**:
                     Option to fill holes nad parameters for shapeworks fill_holes}
 
         Returns
         -------
-        list of Path objects representing the files created.
+        mesh_files
+            list of Path objects representing the files created.
         """
         params = task_config.params
 

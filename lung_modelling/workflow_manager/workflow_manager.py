@@ -20,6 +20,11 @@ from multiprocess.pool import Pool
 
 
 class DatasetLocator:
+    """
+    A helper class to convert paths for SPARC datasets between absolute and relative, and to store primary and
+    derivative directories
+
+    """
     def __init__(self, root: Path, rel_primary: Path, rel_derivative: Path):
         self.root = Path(root)
         self.rel_primary = Path(rel_primary)
@@ -106,15 +111,15 @@ def initialize(dataset_root: Path, task_config: DictConfig, show_progress=True) 
     task_config
         Configuration dict for this task
 
-        Params
-            dataset_config_filename
+        **params**
+            **dataset_config_filename**
                 Filename for the dataset configuration file. This should be directly inside the dataset_root directory.
-            use_directory_index
+            **use_directory_index**
                 Option to use pre-build index of the source directory instead of iterating through with os.walk.
-            skip_dirs:
+            **skip_dirs**:
                 List of glob strings to match directories to skip. The whole path relative to the dataset_root is tested,
                 so slashes can be included to specify depth to match. This takes precedence over select_dirs
-            select_dirs:
+            **select_dirs**:
                 List of glob strings to match directories to select. If empty, all valid source directories are selected.
                 If not, only valid source directories that match one of these are selected.
     show_progress
@@ -395,6 +400,13 @@ def get_unique_file_name(path: Path):
 
 
 def print_results(results: dict):
+    """
+    Print the results dict to the logger.
+
+    Parameters
+    ----------
+    results
+    """
     for task_name, result in results.items():
         if "errors" in result and len(result["errors"]) > 0:
             logger.info(f"{task_name} errors {result['errors']}")

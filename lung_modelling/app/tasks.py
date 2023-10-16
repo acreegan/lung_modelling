@@ -34,17 +34,18 @@ class SmoothLungLobes(EachItemTask):
         dataset_config
             Config relating to the entire dataset
         task_config
-            results_directory: subdirectory for results
+            **results_directory**: subdirectory for results
 
-            output_filenames: dict providing a mapping from lobe mapping (in dataset config) to output filenames
+            **output_filenames**: dict providing a mapping from lobe mapping (in dataset config) to output filenames
 
-            params: (Dict)
-                maximumRMSError, numberOfIterations:
+            **params**: (Dict)
+                **maximumRMSError**, **numberOfIterations**:
                     Parameters to apply to SimpleITK.AntiAliasBinary
 
         Returns
         -------
-        list of Path objects representing the files created.
+        smoothed_files
+            list of Path objects representing the files created.
         """
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
@@ -95,17 +96,18 @@ class SmoothWholeLungs(EachItemTask):
         dataset_config
             Config relating to the entire dataset
         task_config
-            results_directory: subdirectory for results
+            **results_directory**: subdirectory for results
 
-            output_filenames: dict providing a mapping from lobe mapping (in dataset config) to output filenames
+            **output_filenames**: dict providing a mapping from lobe mapping (in dataset config) to output filenames
 
-            params: (Dict)
-                maximumRMSError, numberOfIterations:
+            **params**: (Dict)
+                **maximumRMSError**, **umberOfIterations**:
                     Parameters to apply to SimpleITK.AntiAliasBinary
 
         Returns
         -------
-        list of Path objects representing the files created.
+        smoothed_files
+            list of Path objects representing the files created.
         """
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
@@ -159,27 +161,28 @@ class CreateMeshes(EachItemTask):
         dataset_config
             Config relating to the entire dataset
         task_config
-            source_directory: subdirectory within derivative source folder to find source files
+            **source_directory**: subdirectory within derivative source folder to find source files
 
-            results_directory: subdirectory for results
+            **results_directory**: subdirectory for results
 
-            params: (Dict)
-                n_iter, feature_smoothing, edge_angle, feature_angle, relaxation_factor:
+            **params**: (Dict)
+                **n_iter**, **feature_smoothing**, **edge_angle**, **feature_angle**, **relaxation_factor**:
                     Params for pyvista smooth
 
-                target_reduction, volume_preservation:
+                **target_reduction**, **volume_preservation**:
                     Params for pyvista decimate
 
-                hole_size:
+                **hole_size**:
                     Param for pyvista fill_holes
 
-                fix_mesh:
+                **fix_mesh**:
                     Option to fix mesh
 
 
         Returns
         -------
-        list of Path objects representing the files created.
+        mesh_files
+            list of Path objects representing the files created.
         """
 
         if not os.path.exists(output_directory):
