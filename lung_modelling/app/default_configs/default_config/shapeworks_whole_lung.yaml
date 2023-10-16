@@ -22,6 +22,7 @@ tasks:
   reference_selection_mesh_sw:
     source_directory: "create_meshes_whole_lungs_sw"
     results_directory: "reference_selection_mesh_whole_lungs_sw"
+    reference_doimain: 0
 
   logging:
 

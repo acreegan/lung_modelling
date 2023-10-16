@@ -240,7 +240,34 @@ class ReferenceSelectionMeshSW(AllItemsTask):
             Mesh selected as the reference
 
         """
-        raise NotImplementedError("Reference selection not yet implemented")
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
+
+        all_mesh_files = []
+        for dir, _, _ in dirs_list:
+            mesh_files = glob(str(dataloc.abs_derivative / dir / task_config.source_directory / "*"))
+            all_mesh_files.append(mesh_files)
+
+        lengths = [len(files) for files in all_mesh_files]
+        if len(set(lengths)) != 1:
+            raise ValueError(f"Not all source directories have the same number of meshes")
+
+        domains_per_shape = lengths[0]
+        if task_config.reference_domain > domains_per_shape:
+            raise ValueError(f"Domain {task_config.reference_domain} selected as reference but does not exist")
+
+        if task_config.reference_domain == 0 and domains_per_shape > 0:
+            all_meshes = [sw.Mesh(file) for file in np.array(all_mesh_files).ravel()]
+            ref_index, combined_meshes = sw.find_reference_mesh_index(all_meshes, domains_per_shape)
+            ref_mesh = combined_meshes[ref_index]
+
+        else:
+            raise NotImplementedError("Reference selection based on single domain not implemented")
+
+        output_filename = output_directory / "reference_mesh.vtk"
+        ref_mesh.write(str(output_filename))
+
+        return [output_filename]
 
 
 all_tasks = [SmoothLungLobesSW, CreateMeshesSW, SmoothWholeLungsSW, ReferenceSelectionMeshSW]

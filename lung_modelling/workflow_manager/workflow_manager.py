@@ -409,6 +409,10 @@ def apply_all_items(func: Callable) -> Callable:
             exception_warning(e, logger)
             errors.append((str(task_name), e))
 
+        relative_files = [str(dataloc.to_relative(Path(result))) if isinstance(result, Path) else result for result in
+                          results]
+        return {"results": relative_files, "errors": errors}
+
     return wrapper_apply_all_items
 
 
@@ -497,6 +501,8 @@ def print_results(results: dict):
     results
     """
     for task_name, result in results.items():
+        if result is None:
+            logger.info(f"No result received from {task_name}")
         if "errors" in result and result["errors"]:
             logger.info(f"{task_name} errors {result['errors']}")
         else:
