@@ -65,8 +65,6 @@ class EachItemTask:
     """
     __metaclass___ = ABCMeta
 
-    # Todo: Initialize method to be called before multiprocessing to load data required by all items
-
     @property
     @abstractmethod
     def name(self):
@@ -77,8 +75,17 @@ class EachItemTask:
 
     @staticmethod
     @abstractmethod
+    def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        """
+        A method to be called before multiprocessing to load data required by all items. This should only be used to
+        load data to avoid multiple simultaneous file access by the work function. It should not create or modify any files.
+        """
+        pass
+
+    @staticmethod
+    @abstractmethod
     def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
-             dataset_config: DictConfig, task_config: DictConfig) -> list[Path]:
+             dataset_config: DictConfig, task_config: DictConfig, initialize_result=None) -> list[Path]:
         """
         The work function fo the implementation of this class. Defines work to be done on a set of sources specified by
         the source directory parameters. This function should not attempt to access files outside these directories
@@ -99,12 +106,149 @@ class EachItemTask:
             Config relating to the entire dataset
         task_config
             Task specific config
+        initialize_result
 
         Returns
         -------
         list of Path objects representing the files created.
         """
         pass
+
+    def apply_to_dataset(self, dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig, dirs_list,
+                         initialize_result=None, mpool=None, show_progress=False) -> dict:
+        """
+        Apply work function to each subject in a dataset, with optional multiprocessing.
+
+        Parameters
+        ----------
+        dataloc
+        dataset_config
+        task_config
+        dirs_list
+        mpool
+        show_progress
+
+        Returns
+        -------
+
+        """
+
+        def exception_warning(source_dir, e, logger, task=self.name):
+            logger.warning(f"Task: {task} resulted in exception for {source_dir}, message: {e}")
+
+        if mpool is None:
+            results = []
+            errors = []
+            for source_directory, _, _ in tqdm(dirs_list, desc=f"Running: {self.name}",
+                                               disable=not show_progress):
+                try:
+                    output_directory = dataloc.abs_derivative / source_directory / task_config.results_directory
+                    result = self.work(dataloc.abs_primary / source_directory,
+                                       dataloc.abs_derivative / source_directory, output_directory, dataset_config,
+                                       task_config, initialize_result)
+                    results.append((str(source_directory), result))
+                except Exception as e:
+                    exception_warning(source_directory, e, logger)
+                    errors.append((str(source_directory), e))
+        else:
+            args = (
+                (source_directory, dataloc.abs_primary / source_directory, dataloc.abs_derivative / source_directory,
+                 dataloc.abs_derivative / source_directory / task_config.results_directory, dataset_config,
+                 task_config, initialize_result) for source_directory, _, _ in dirs_list)
+            monitored = exception_monitor(self.work, exception_warning, logger)
+            unpacked = args_unpacker(monitored)
+            imap_results = list(
+                tqdm(mpool.imap(unpacked, args), desc=f"Running: {self.name}", disable=not show_progress,
+                     total=len(dirs_list)))
+
+            results, errors = list(zip(*imap_results))
+            results = [r for r in results if r is not None]
+            errors = [e for e in errors if e is not None]
+
+        relative_files = [str(dataloc.to_relative(Path(result))) if isinstance(result, Path) else result for result in
+                          results]
+        combined = {"results": relative_files, "errors": errors}
+        return combined
+
+    def apply_initialize(self, dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        """
+
+        Parameters
+        ----------
+        dataloc
+        dataset_config
+        task_config
+
+        Returns
+        -------
+
+        """
+
+        def exception_warning(e, logger, task=self.name):
+            logger.warning(f"Task: {task} resulted in exception, message: {e}")
+
+        result = {}
+        errors = []
+        try:
+            result = self.initialize(dataloc, dataset_config, task_config)
+        except Exception as e:
+            exception_warning(e, logger)
+            errors.append((str(self.name), e))
+
+        return {"result": result, "errors": errors}
+
+
+def exception_monitor(func, callback, logger):
+    """
+    Decorator to catch exceptions from multiprocessing tasks
+
+    Parameters
+    ----------
+    func
+        Function to wrap
+    callback
+        Callback to run if exception occurs
+    logger
+        Loguru logger reference needed for logging from multiprocessing
+
+    Returns
+    -------
+
+    """
+
+    def exception_monitor_wrapper(source_directory, source_directory_primary: Path, source_directory_derivative: Path,
+                                  output_directory: Path, dataset_config: DictConfig, task_config: DictConfig, initialize_result):
+        try:
+            result = (str(source_directory),
+                      func(source_directory_primary, source_directory_derivative, output_directory, dataset_config,
+                           task_config, initialize_result))
+            error = None
+        except Exception as e:
+            error = (str(source_directory), e)
+            result = None
+            callback(source_directory, e, logger)
+
+        return result, error
+
+    functools.update_wrapper(exception_monitor_wrapper, func)
+    return exception_monitor_wrapper
+
+
+def args_unpacker(func):
+    """
+    Decorator to unpack tuple of arguments from multiprocessing methods such as imap
+
+    Parameters
+    ----------
+    func
+        Function to wrap
+    """
+
+    def unpack(args):
+        return func(*args)
+
+    functools.update_wrapper(unpack, func)
+    return unpack
 
 
 class AllItemsTask:
@@ -151,6 +295,40 @@ class AllItemsTask:
         list of Path objects representing the files created.
         """
         pass
+
+    def apply_to_dataset(self, dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig,
+                         dirs_list) -> dict:
+        """
+        Apply work function to all items in a dataset at once.
+
+        Parameters
+        ----------
+        dataloc
+        dataset_config
+        task_config
+        dirs_list
+
+        Returns
+        -------
+
+        """
+
+        def exception_warning(e, logger, task=self.name):
+            logger.warning(f"Task: {task} resulted in exception, message: {e}")
+
+        results = []
+        errors = []
+        try:
+            output_directory = dataloc.abs_pooled_derivative / task_config.results_directory
+            result = self.work(dataloc, dirs_list, output_directory, dataset_config, task_config)
+            results.append((str(self.name), result))
+        except Exception as e:
+            exception_warning(e, logger)
+            errors.append((str(self.name), e))
+
+        relative_files = [str(dataloc.to_relative(Path(result))) if isinstance(result, Path) else result for result in
+                          results]
+        return {"results": relative_files, "errors": errors}
 
 
 def initialize(dataset_root: Path, task_config: DictConfig, show_progress=True) -> Tuple[
@@ -273,147 +451,6 @@ def gather_directories(primary_root: Path, data_folder_depth, skip_dirs=None, se
                 dirs_list.append((relpath, dirnames, files))
 
     return dirs_list
-
-
-def exception_monitor(func, callback, logger):
-    """
-    Decorator to catch exceptions from multiprocessing tasks
-
-    Parameters
-    ----------
-    func
-        Function to wrap
-    callback
-        Callback to run if exception occurs
-    logger
-        Loguru logger reference needed for logging from multiprocessing
-
-    Returns
-    -------
-
-    """
-
-    def exception_monitor_wrapper(source_directory, source_directory_primary: Path, source_directory_derivative: Path,
-                                  output_directory: Path, dataset_config: DictConfig, task_config: DictConfig):
-        try:
-            result = (str(source_directory),
-                      func(source_directory_primary, source_directory_derivative, output_directory, dataset_config,
-                           task_config))
-            error = None
-        except Exception as e:
-            error = (str(source_directory), e)
-            result = None
-            callback(source_directory, e, logger)
-
-        return result, error
-
-    functools.update_wrapper(exception_monitor_wrapper, func)
-    return exception_monitor_wrapper
-
-
-def args_unpacker(func):
-    """
-    Decorator to unpack tuple of arguments from multiprocessing methods such as imap
-
-    Parameters
-    ----------
-    func
-        Function to wrap
-    """
-
-    def unpack(args):
-        return func(*args)
-
-    functools.update_wrapper(unpack, func)
-    return unpack
-
-
-def apply_to_dataset(func: Callable) -> Callable:
-    """
-    Decorator to apply a function to each subject in a dataset, with optional multiprocessing.
-
-    Parameters
-    ----------
-    func
-        Function to wrap
-    """
-
-    @functools.wraps(func)
-    def wrapper_apply_to_dataset(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig,
-                                 task_name, dirs_list, mpool=None, show_progress=False):
-
-        def exception_warning(source_dir, e, logger, task=task_name):
-            logger.warning(f"Task: {task} resulted in exception for {source_dir}, message: {e}")
-
-        if mpool is None:
-            results = []
-            errors = []
-            for source_directory, _, _ in tqdm(dirs_list, desc=f"Running: {task_name}",
-                                               disable=not show_progress):
-                try:
-                    output_directory = dataloc.abs_derivative / source_directory / task_config.results_directory
-                    result = func(dataloc.abs_primary / source_directory, dataloc.abs_derivative / source_directory,
-                                  output_directory, dataset_config, task_config)
-                    results.append((str(source_directory), result))
-                except Exception as e:
-                    exception_warning(source_directory, e, logger)
-                    errors.append((str(source_directory), e))
-        else:
-            args = (
-                (source_directory, dataloc.abs_primary / source_directory, dataloc.abs_derivative / source_directory,
-                 dataloc.abs_derivative / source_directory / task_config.results_directory, dataset_config,
-                 task_config) for source_directory, _, _ in dirs_list)
-            monitored = exception_monitor(func, exception_warning, logger)
-            unpacked = args_unpacker(monitored)
-            imap_results = list(
-                tqdm(mpool.imap(unpacked, args), desc=f"Running: {task_name}", disable=not show_progress,
-                     total=len(dirs_list)))
-
-            results, errors = list(zip(*imap_results))
-            results = [r for r in results if r is not None]
-            errors = [e for e in errors if e is not None]
-
-        relative_files = [str(dataloc.to_relative(Path(result))) if isinstance(result, Path) else result for result in
-                          results]
-        combined = {"results": relative_files, "errors": errors}
-        return combined
-
-    return wrapper_apply_to_dataset
-
-
-def apply_all_items(func: Callable) -> Callable:
-    """
-    Decorator to apply a function to all items in a dataset at once.
-
-    Parameters
-    ----------
-    func
-        Function to wrap
-    """
-
-    @functools.wraps(func)
-    def wrapper_apply_all_items(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig,
-                                task_name, dirs_list):
-
-        def exception_warning(e, logger, task=task_name):
-            logger.warning(f"Task: {task} resulted in exception, message: {e}")
-
-        results = []
-        errors = []
-        logger.info(f"Running {task_name}")
-        try:
-            output_directory = dataloc.abs_pooled_derivative / task_config.results_directory
-            result = func(dataloc, dirs_list, output_directory, dataset_config, task_config)
-            results.append((str(task_name), result))
-        except Exception as e:
-            exception_warning(e, logger)
-            errors.append((str(task_name), e))
-
-        relative_files = [str(dataloc.to_relative(Path(result))) if isinstance(result, Path) else result for result in
-                          results]
-        return {"results": relative_files, "errors": errors}
-
-    return wrapper_apply_all_items
 
 
 def log_workflow(dataloc: DatasetLocator, cfg: DictConfig, task_config: DictConfig, task_name, results):
@@ -581,22 +618,29 @@ class WorkflowManager:
             raise ValueError("Cannot run a task that is not registered")
 
         for task_name in task_list:
+            logger.info(f"Running {task_name}")
             if isinstance(self.registered_tasks[task_name](), EachItemTask):
-                self.results[task_name] = apply_to_dataset(self.registered_tasks[task_name].work)(self.dataloc,
-                                                                                                  self.dataset_config,
-                                                                                                  self.cfg.tasks[
-                                                                                                      task_name],
-                                                                                                  task_name,
-                                                                                                  self.dirs_list,
-                                                                                                  self.mpool,
-                                                                                                  self.show_progress)
+
+                initialize_result = self.registered_tasks[task_name]().apply_initialize(self.dataloc,
+                                                                                        self.dataset_config,
+                                                                                        self.cfg.tasks[task_name])
+
+                work_result = self.registered_tasks[task_name]().apply_to_dataset(self.dataloc,
+                                                                                  self.dataset_config,
+                                                                                  self.cfg.tasks[task_name],
+                                                                                  self.dirs_list,
+                                                                                  initialize_result["result"],
+                                                                                  self.mpool,
+                                                                                  self.show_progress)
+
+                self.results[task_name] = {"results": work_result["results"],
+                                           "errors": [*initialize_result["errors"], *work_result["errors"]]}
+
             elif isinstance(self.registered_tasks[task_name](), AllItemsTask):
-                self.results[task_name] = apply_all_items(self.registered_tasks[task_name].work)(self.dataloc,
-                                                                                                 self.dataset_config,
-                                                                                                 self.cfg.tasks[
-                                                                                                     task_name],
-                                                                                                 task_name,
-                                                                                                 self.dirs_list)
+                self.results[task_name] = self.registered_tasks[task_name]().apply_to_dataset(self.dataloc,
+                                                                                              self.dataset_config,
+                                                                                              self.cfg.tasks[task_name],
+                                                                                              self.dirs_list)
             else:
                 raise ValueError(f"Error executing {task_name}. Unrecognized task type")
 

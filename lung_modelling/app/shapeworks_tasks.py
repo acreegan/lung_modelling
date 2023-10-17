@@ -6,9 +6,15 @@ import shapeworks as sw
 from glob import glob
 import pyvista as pv
 import numpy as np
+import subprocess
+from pyvista_tools import pyvista_faces_to_2d
 
 
 class SmoothLungLobesSW(EachItemTask):
+
+    @staticmethod
+    def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        pass
 
     @property
     def name(self):
@@ -16,7 +22,7 @@ class SmoothLungLobesSW(EachItemTask):
 
     @staticmethod
     def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
-             dataset_config: DictConfig, task_config: DictConfig) -> list[Path]:
+             dataset_config: DictConfig, task_config: DictConfig, initialize_result=None) -> list[Path]:
         """
         Pre-process lung lobe images by applying antialiasing using Shapeworks libraries
 
@@ -70,13 +76,17 @@ class SmoothLungLobesSW(EachItemTask):
 
 class CreateMeshesSW(EachItemTask):
 
+    @staticmethod
+    def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        pass
+
     @property
     def name(self):
         return "create_meshes_sw"
 
     @staticmethod
     def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
-             dataset_config: DictConfig, task_config: DictConfig) -> list[Path]:
+             dataset_config: DictConfig, task_config: DictConfig, initialize_result=None) -> list[Path]:
         """
         Convert medical image files to meshes and apply smoothing using Shapeworks libraries.
 
@@ -142,13 +152,17 @@ class CreateMeshesSW(EachItemTask):
 
 class SmoothWholeLungsSW(EachItemTask):
 
+    @staticmethod
+    def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        pass
+
     @property
     def name(self):
         return "smooth_whole_lungs_sw"
 
     @staticmethod
     def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
-             dataset_config: DictConfig, task_config: DictConfig) -> list[Path]:
+             dataset_config: DictConfig, task_config: DictConfig, initialize_result=None) -> list[Path]:
         """
         Pre-process lung segmentation by extracting whole lung and applying antialiasing using Shapeworks libraries.
 
@@ -253,21 +267,137 @@ class ReferenceSelectionMeshSW(AllItemsTask):
             raise ValueError(f"Not all source directories have the same number of meshes")
 
         domains_per_shape = lengths[0]
-        if task_config.reference_domain > domains_per_shape:
-            raise ValueError(f"Domain {task_config.reference_domain} selected as reference but does not exist")
 
-        if task_config.reference_domain == 0 and domains_per_shape > 0:
-            all_meshes = [sw.Mesh(file) for file in np.array(all_mesh_files).ravel()]
-            ref_index, combined_meshes = sw.find_reference_mesh_index(all_meshes, domains_per_shape)
-            ref_mesh = combined_meshes[ref_index]
+        all_meshes = [sw.Mesh(file) for file in np.array(all_mesh_files).ravel()]
+        ref_index, combined_meshes = sw.find_reference_mesh_index(all_meshes, domains_per_shape)
+        ref_mesh_combined = combined_meshes[ref_index]
+        ref_mesh_combined_filename = output_directory / "combined_reference_mesh.vtk"
+        ref_mesh_combined.write(str(ref_mesh_combined_filename))
 
-        else:
-            raise NotImplementedError("Reference selection based on single domain not implemented")
+        domain_reference_filenames = []
+        for i in range(domains_per_shape):
+            domain_reference_mesh = combined_meshes[ref_index * domains_per_shape + i]
+            domain_reference_name = str(Path(np.array(all_mesh_files).ravel()[ref_index * domains_per_shape + i]).stem)
 
-        output_filename = output_directory / "reference_mesh.vtk"
-        ref_mesh.write(str(output_filename))
+            domain_reference_filename = output_directory / f"{domain_reference_name}_reference_mesh.vtk"
+            domain_reference_mesh.write(str(domain_reference_filename))
+            domain_reference_filenames.append(domain_reference_filename)
 
-        return [output_filename]
+        return [ref_mesh_combined_filename, *domain_reference_filenames]
 
 
-all_tasks = [SmoothLungLobesSW, CreateMeshesSW, SmoothWholeLungsSW, ReferenceSelectionMeshSW]
+class MeshTransformSW(EachItemTask):
+
+    @property
+    def name(self):
+        return "mesh_transform_sw"
+
+    @staticmethod
+    def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+
+        reference_mesh_files = glob(str(dataloc.abs_pooled_derivative / task_config.source_directory_initialize / "*"))
+
+        reference_meshes = {}
+        for file in reference_mesh_files:
+            reference_mesh = pv.read(file)
+            reference_meshes[str(Path(file).stem)] = {"points": np.array(reference_mesh.points),
+                                                      "faces": np.array(pyvista_faces_to_2d(reference_mesh.faces))}
+
+        return {"reference_meshes": reference_meshes}
+
+    @staticmethod
+    def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
+             dataset_config: DictConfig, task_config: DictConfig, initialize_result=None) -> list[Path]:
+
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
+
+        mesh_files = glob(str(source_directory_derivative / task_config.source_directory / "*"))
+
+        if len(mesh_files) == 0:
+            raise RuntimeError("No files found")
+
+        meshes = []
+        for mesh_file in mesh_files:
+            meshes.append(sw.Mesh(mesh_file))
+
+        combined_mesh = meshes[0]
+        for mesh in meshes[1:]:
+            combined_mesh += mesh
+
+        combined_reference_mesh = sw.Mesh(initialize_result["reference_meshes"]["combined_reference_mesh"]["points"],
+                                          initialize_result["reference_meshes"]["combined_reference_mesh"]["faces"])
+        combined_transform = combined_mesh.createTransform(combined_reference_mesh, sw.Mesh.AlignmentType.Rigid,
+                                                           task_config.params.iterations)
+        combined_transform_filename = output_directory / "combined_mesh_transform"
+        np.save(str(combined_transform_filename), combined_transform.flatten())
+
+        domain_transform_filenames = []
+        for mesh, file in zip(meshes, mesh_files):
+            domain_reference_mesh = sw.Mesh(
+                initialize_result["reference_meshes"][f"{str(Path(file).stem)}_reference_mesh"]["points"],
+                initialize_result["reference_meshes"][f"{str(Path(file).stem)}_reference_mesh"]["faces"])
+            domain_transform = mesh.createTransform(domain_reference_mesh, sw.Mesh.AlignmentType.Rigid,
+                                                    task_config.params.iterations)
+            domain_transform_filename = output_directory / f"{str(Path(file).stem)}_transform"
+            np.save(str(domain_transform_filename), domain_transform.flatten())
+            domain_transform_filenames.append(domain_transform_filename)
+
+        return [combined_transform_filename, *domain_transform_filenames]
+
+
+class OptimizeMeshesSW(AllItemsTask):
+
+    @property
+    def name(self):
+        return "optimize_meshes_sw"
+
+    @staticmethod
+    def work(dataloc: DatasetLocator, dirs_list, output_directory: Path, dataset_config: DictConfig,
+             task_config: DictConfig) -> list[Path]:
+
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
+
+        subjects = []
+        for dir, _, _ in dirs_list:
+            subject = sw.Subject()
+            mesh_files = glob(str(dataloc.abs_derivative / dir / task_config.source_directory_mesh / "*"))
+            subject.set_number_of_domains(len(mesh_files))
+            transforms = []
+            for file in mesh_files:
+                glob_string = str(
+                    dataloc.abs_derivative / dir / task_config.source_directory_transform / f"*{Path(file).stem}*")
+                transform_file = glob(glob_string)[0]
+                transform = np.load(transform_file, allow_pickle=True)
+                transforms.append(transform)
+
+            combined_transform_file = \
+                glob(str(dataloc.abs_derivative / dir / task_config.source_directory_transform / "*combined*"))[0]
+            combined_transform = np.load(combined_transform_file)
+            transforms.append(combined_transform)
+            subject.set_groomed_transforms(transforms)
+            subject.set_groomed_filenames(mesh_files)
+            subject.set_original_filenames(mesh_files)
+            subjects.append(subject)
+
+        project = sw.Project()
+        project.set_subjects(subjects)
+        parameters = sw.Parameters()
+        for key, value in task_config.params.items():
+            parameters.set(key, sw.Variant(value))
+
+        project.set_parameters("optimize", parameters)
+
+        spreadsheet_file = output_directory / "shapeworks_project.swproj"
+        project.save(str(spreadsheet_file))
+
+        wd = os.getcwd()
+        os.chdir(output_directory)
+        optimize_cmd = ("shapeworks optimize --progress --name " + str(spreadsheet_file)).split()
+        subprocess.check_call(optimize_cmd)
+        os.chdir(wd)
+
+
+all_tasks = [SmoothLungLobesSW, CreateMeshesSW, SmoothWholeLungsSW, ReferenceSelectionMeshSW, MeshTransformSW,
+             OptimizeMeshesSW]

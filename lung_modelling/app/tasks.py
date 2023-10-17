@@ -13,13 +13,17 @@ import cc3d
 
 class SmoothLungLobes(EachItemTask):
 
+    @staticmethod
+    def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        pass
+
     @property
     def name(self):
         return "smooth_lung_lobes"
 
     @staticmethod
     def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
-             dataset_config: DictConfig, task_config: DictConfig) -> list[Path]:
+             dataset_config: DictConfig, task_config: DictConfig, initialize_result=None) -> list[Path]:
         """
         Pre-process lung lobe segmentation by extracting lobe labels and applying antialiasing.
 
@@ -75,13 +79,17 @@ class SmoothLungLobes(EachItemTask):
 
 class SmoothWholeLungs(EachItemTask):
 
+    @staticmethod
+    def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        pass
+
     @property
     def name(self):
         return "smooth_whole_lungs"
 
     @staticmethod
     def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
-             dataset_config: DictConfig, task_config: DictConfig) -> list[Path]:
+             dataset_config: DictConfig, task_config: DictConfig, initialize_result=None) -> list[Path]:
         """
         Pre-process lung segmentation by extracting whole lung and applying antialiasing.
 
@@ -140,13 +148,17 @@ class SmoothWholeLungs(EachItemTask):
 
 class CreateMeshes(EachItemTask):
 
+    @staticmethod
+    def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        pass
+
     @property
     def name(self):
         return "create_meshes"
 
     @staticmethod
     def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
-             dataset_config: DictConfig, task_config: DictConfig) -> list[Path]:
+             dataset_config: DictConfig, task_config: DictConfig, initialize_result=None) -> list[Path]:
         """
         Convert medical image files to meshes and apply smoothing.
 
