@@ -228,7 +228,7 @@ class ReferenceSelectionMeshSW(AllItemsTask):
         return "reference_selection_mesh_sw"
 
     @staticmethod
-    def work(dataloc: DatasetLocator, dirs_list: Path, output_directory: Path, dataset_config: DictConfig,
+    def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
              task_config: DictConfig) -> list[Path]:
         """
         A task to load all meshes at once so the shape closest to the mean can be found and selected as the reference
@@ -269,19 +269,27 @@ class ReferenceSelectionMeshSW(AllItemsTask):
         domains_per_shape = lengths[0]
 
         all_meshes = [sw.Mesh(file) for file in np.array(all_mesh_files).ravel()]
-        ref_index, combined_meshes = sw.find_reference_mesh_index(all_meshes, domains_per_shape)
-        ref_mesh_combined = combined_meshes[ref_index]
-        ref_mesh_combined_filename = output_directory / "combined_reference_mesh.vtk"
-        ref_mesh_combined.write(str(ref_mesh_combined_filename))
 
         domain_reference_filenames = []
-        for i in range(domains_per_shape):
-            domain_reference_mesh = combined_meshes[ref_index * domains_per_shape + i]
-            domain_reference_name = str(Path(np.array(all_mesh_files).ravel()[ref_index * domains_per_shape + i]).stem)
+        if domains_per_shape == 1:
+            ref_index = sw.find_reference_mesh_index(all_meshes, domains_per_shape)
+            ref_mesh_combined = all_meshes[ref_index]
 
-            domain_reference_filename = output_directory / f"{domain_reference_name}_reference_mesh.vtk"
-            domain_reference_mesh.write(str(domain_reference_filename))
-            domain_reference_filenames.append(domain_reference_filename)
+        else:
+            ref_index, combined_meshes = sw.find_reference_mesh_index(all_meshes, domains_per_shape)
+            ref_mesh_combined = combined_meshes[ref_index]
+
+            for i in range(domains_per_shape):
+                domain_reference_mesh = combined_meshes[ref_index * domains_per_shape + i]
+                domain_reference_name = str(Path(np.array(all_mesh_files).ravel()[ref_index * domains_per_shape + i]).stem)
+
+                domain_reference_filename = output_directory / f"{domain_reference_name}_reference_mesh.vtk"
+                domain_reference_mesh.write(str(domain_reference_filename))
+                domain_reference_filenames.append(domain_reference_filename)
+
+        ref_dir = Path(dirs_list[ref_index][0]).stem
+        ref_mesh_combined_filename = output_directory / f"{ref_dir}_combined_reference_mesh.vtk"
+        ref_mesh_combined.write(str(ref_mesh_combined_filename))
 
         return [ref_mesh_combined_filename, *domain_reference_filenames]
 
@@ -330,18 +338,19 @@ class MeshTransformSW(EachItemTask):
         combined_transform = combined_mesh.createTransform(combined_reference_mesh, sw.Mesh.AlignmentType.Rigid,
                                                            task_config.params.iterations)
         combined_transform_filename = output_directory / "combined_mesh_transform"
-        np.save(str(combined_transform_filename), combined_transform.flatten())
+        np.save(str(combined_transform_filename), combined_transform)
 
         domain_transform_filenames = []
-        for mesh, file in zip(meshes, mesh_files):
-            domain_reference_mesh = sw.Mesh(
-                initialize_result["reference_meshes"][f"{str(Path(file).stem)}_reference_mesh"]["points"],
-                initialize_result["reference_meshes"][f"{str(Path(file).stem)}_reference_mesh"]["faces"])
-            domain_transform = mesh.createTransform(domain_reference_mesh, sw.Mesh.AlignmentType.Rigid,
-                                                    task_config.params.iterations)
-            domain_transform_filename = output_directory / f"{str(Path(file).stem)}_transform"
-            np.save(str(domain_transform_filename), domain_transform.flatten())
-            domain_transform_filenames.append(domain_transform_filename)
+        if len(meshes) > 1:
+            for mesh, file in zip(meshes, mesh_files):
+                domain_reference_mesh = sw.Mesh(
+                    initialize_result["reference_meshes"][f"{str(Path(file).stem)}_reference_mesh"]["points"],
+                    initialize_result["reference_meshes"][f"{str(Path(file).stem)}_reference_mesh"]["faces"])
+                domain_transform = mesh.createTransform(domain_reference_mesh, sw.Mesh.AlignmentType.Rigid,
+                                                        task_config.params.iterations)
+                domain_transform_filename = output_directory / f"{str(Path(file).stem)}_transform"
+                np.save(str(domain_transform_filename), domain_transform)
+                domain_transform_filenames.append(domain_transform_filename)
 
         return [combined_transform_filename, *domain_transform_filenames]
 
@@ -369,12 +378,12 @@ class OptimizeMeshesSW(AllItemsTask):
                 glob_string = str(
                     dataloc.abs_derivative / dir / task_config.source_directory_transform / f"*{Path(file).stem}*")
                 transform_file = glob(glob_string)[0]
-                transform = np.load(transform_file, allow_pickle=True)
+                transform = np.load(transform_file, allow_pickle=True).flatten()
                 transforms.append(transform)
 
             combined_transform_file = \
                 glob(str(dataloc.abs_derivative / dir / task_config.source_directory_transform / "*combined*"))[0]
-            combined_transform = np.load(combined_transform_file)
+            combined_transform = np.load(combined_transform_file).flatten()
             transforms.append(combined_transform)
             subject.set_groomed_transforms(transforms)
             subject.set_groomed_filenames(mesh_files)

@@ -268,7 +268,7 @@ class AllItemsTask:
 
     @staticmethod
     @abstractmethod
-    def work(dataloc: DatasetLocator, dirs_list: Path, output_directory: Path, dataset_config: DictConfig,
+    def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
              task_config: DictConfig) -> list[Path]:
         """
         The work function fo the implementation of this class. Defines work to be done on a set of sources specified by
