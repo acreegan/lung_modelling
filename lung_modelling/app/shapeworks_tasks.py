@@ -207,8 +207,8 @@ class SmoothWholeLungsSW(EachItemTask):
                 image = s.extractLabel(dataset_config.lobe_mapping[lobe])
                 lobe_images.append(image)
 
-            merged = lobe_images[0]
-            for image in lobe_images:
+            merged = lobe_images[0].copy()
+            for image in lobe_images[1:]:
                 merged = merged + image
 
             iso_spacing = [1, 1, 1]
@@ -329,7 +329,8 @@ class MeshTransformSW(EachItemTask):
         for mesh_file in mesh_files:
             meshes.append(sw.Mesh(mesh_file))
 
-        combined_mesh = meshes[0]
+        # Copy so we don't destroy meshes[0] for later!
+        combined_mesh = meshes[0].copy()
         for mesh in meshes[1:]:
             combined_mesh += mesh
 
