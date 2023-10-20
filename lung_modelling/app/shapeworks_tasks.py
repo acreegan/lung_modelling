@@ -7,7 +7,7 @@ from glob import glob
 import pyvista as pv
 import numpy as np
 import subprocess
-from pyvista_tools import pyvista_faces_to_2d
+from pyvista_tools import pyvista_faces_to_2d, remove_shared_faces_with_merge
 
 
 class SmoothLungLobesSW(EachItemTask):
@@ -134,17 +134,32 @@ class CreateMeshesSW(EachItemTask):
             image_data = sw.Image(image_file)
             mesh = image_data.toMesh(1)  # Seems to get the mesh in the right orientation without manual realignment
 
+            if params.decimate:
+                pv_mesh = sw.sw2vtkMesh(mesh)
+                pv_mesh = pv_mesh.decimate(target_reduction=params.target_reduction,
+                                                volume_preservation=params.volume_preservation)
+                mesh = sw.Mesh(pv_mesh.points, pyvista_faces_to_2d(pv_mesh.faces))
+
             # Shapeworks remeshing uses ACVD (vtkIsotropicDiscreteRemeshing). Should be the same as pyACVD with pyvista
             mesh_rm = mesh.remeshPercent(percentage=params.remesh_percentage,
                                          adaptivity=params.adaptivity) if params.remesh else mesh
-            # Shapeworks smooth uses vtkSmothPolyData. Should be the same as pyVista
+            # Shapeworks smooth uses vtkSmoothPolyData. Should be the same as pyVista
             mesh_sm = mesh_rm.smooth(iterations=params.smooth_iterations,
                                      relaxation=params.relaxation) if params.smooth else mesh_rm
             # Shapeworks fillHoles uses vtkFillHolesFilter. Should be the same as pyVista
             mesh_fh = mesh_sm.fillHoles(hole_size=params.hole_size) if params.fill_holes else mesh_sm
 
             output_filename = str(output_directory / Path(image_file).stem) + '.vtk'
-            mesh_fh.write(output_filename)
+            if params.remove_shared_faces:
+                pv_mesh = sw.sw2vtkMesh(mesh_fh)
+                mesh_rsh = remove_shared_faces_with_merge([pv_mesh])
+                if mesh_rsh.n_faces == 0:
+                    raise ValueError("Generated mesh is empty")
+                mesh_rsh.save(output_filename)
+
+            else:
+                mesh_fh.write(output_filename)
+
             mesh_files.append(Path(output_filename))
 
         return mesh_files
