@@ -17,7 +17,19 @@ tasks:
   create_meshes_sw:
     source_directory: "smooth_whole_lungs_sw"
     results_directory: "create_meshes_whole_lungs_sw"
-    params: { remesh: False, remesh_percentage: 0.99, adaptivity: 1, smooth: True, smooth_iterations: 10, relaxation: 1, fill_holes: True, hole_size: 100 }
+    params: {
+      decimate: True,
+      target_reduction: 0.5,
+      volume_preservation: True,
+      remesh: True,
+      remesh_percentage: 0.75,
+      adaptivity: 0,
+      smooth: True,
+      smooth_iterations: 10,
+      relaxation: 1,
+      fill_holes: True,
+      hole_size: 100,
+      remove_shared_faces: True }
 
   reference_selection_mesh_sw:
     source_directory: "create_meshes_whole_lungs_sw"
@@ -40,16 +52,16 @@ tasks:
       optimization_iterations: 200,
       starting_regularization: 1000,
       ending_regularization: 10,
-      relative_weighting: 3,
-      initial_relative_weighting: 0.05,
+      relative_weighting: 4,
+      initial_relative_weighting: 0.03,
       save_init_splits: 0,
       verbosity: 0,
       use_normals: 1,
       normals_strength: 5.0,
-      procrustes: 1,
+      procrustes: 0,
       procrustes_scaling: 1,
       procrustes_rotation_translation: 1,
-      number_of_particles: [ 256,256 ]
+      number_of_particles: [ 128,128 ]
     }
 
   logging:
