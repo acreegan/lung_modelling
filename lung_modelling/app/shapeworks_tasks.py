@@ -8,7 +8,7 @@ import pyvista as pv
 import numpy as np
 import subprocess
 from pyvista_tools import pyvista_faces_to_2d, remove_shared_faces_with_merge
-
+import csv
 
 class SmoothLungLobesSW(EachItemTask):
 
@@ -137,7 +137,7 @@ class CreateMeshesSW(EachItemTask):
             if params.decimate:
                 pv_mesh = sw.sw2vtkMesh(mesh)
                 pv_mesh = pv_mesh.decimate(target_reduction=params.target_reduction,
-                                                volume_preservation=params.volume_preservation)
+                                           volume_preservation=params.volume_preservation)
                 mesh = sw.Mesh(pv_mesh.points, pyvista_faces_to_2d(pv_mesh.faces))
 
             # Shapeworks remeshing uses ACVD (vtkIsotropicDiscreteRemeshing). Should be the same as pyACVD with pyvista
@@ -248,6 +248,7 @@ class ReferenceSelectionMeshSW(AllItemsTask):
         """
         A task to load all meshes at once so the shape closest to the mean can be found and selected as the reference
 
+        The subject that was used as the reference is indicated in the output filename, surrounded by ()
 
         Parameters
         ----------
@@ -289,22 +290,33 @@ class ReferenceSelectionMeshSW(AllItemsTask):
         if domains_per_shape == 1:
             ref_index = sw.find_reference_mesh_index(all_meshes, domains_per_shape)
             ref_mesh_combined = all_meshes[ref_index]
+            ref_dir = Path(dirs_list[ref_index][0]).stem
 
         else:
             ref_index, combined_meshes = sw.find_reference_mesh_index(all_meshes, domains_per_shape)
             ref_mesh_combined = combined_meshes[ref_index]
+            ref_dir = Path(dirs_list[ref_index][0]).stem
+
 
             for i in range(domains_per_shape):
-                domain_reference_mesh = combined_meshes[ref_index * domains_per_shape + i]
-                domain_reference_name = str(Path(np.array(all_mesh_files).ravel()[ref_index * domains_per_shape + i]).stem)
+                # find_reference_mesh_index destroys all_meshes during the combining process. So we have to create them again
+                all_meshes = [sw.Mesh(file) for file in np.array(all_mesh_files).ravel()]
+                domain_reference_mesh = all_meshes[ref_index * domains_per_shape + i]
+                domain_reference_name = str(
+                    Path(np.array(all_mesh_files).ravel()[ref_index * domains_per_shape + i]).stem)
 
                 domain_reference_filename = output_directory / f"{domain_reference_name}_reference_mesh.vtk"
                 domain_reference_mesh.write(str(domain_reference_filename))
                 domain_reference_filenames.append(domain_reference_filename)
 
-        ref_dir = Path(dirs_list[ref_index][0]).stem
-        ref_mesh_combined_filename = output_directory / f"{ref_dir}_combined_reference_mesh.vtk"
+
+        ref_mesh_combined_filename = output_directory / f"combined_reference_mesh.vtk"
         ref_mesh_combined.write(str(ref_mesh_combined_filename))
+
+        ref_dir_filename = output_directory / "ref_dir.txt"
+        with open(str(ref_dir_filename), "w") as ref_dir_file:
+            writer = csv.writer(ref_dir_file)
+            writer.writerow([str(ref_dir)])
 
         return [ref_mesh_combined_filename, *domain_reference_filenames]
 
@@ -318,7 +330,7 @@ class MeshTransformSW(EachItemTask):
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
 
-        reference_mesh_files = glob(str(dataloc.abs_pooled_derivative / task_config.source_directory_initialize / "*"))
+        reference_mesh_files = glob(str(dataloc.abs_pooled_derivative / task_config.source_directory_initialize / "*.vtk"))
 
         reference_meshes = {}
         for file in reference_mesh_files:
@@ -353,8 +365,8 @@ class MeshTransformSW(EachItemTask):
                                           initialize_result["reference_meshes"]["combined_reference_mesh"]["faces"])
         combined_transform = combined_mesh.createTransform(combined_reference_mesh, sw.Mesh.AlignmentType.Rigid,
                                                            task_config.params.iterations)
-        combined_transform_filename = output_directory / "combined_mesh_transform"
-        np.save(str(combined_transform_filename), combined_transform)
+        combined_transform_filename = output_directory / "combined_mesh_transform.txt"
+        np.savetxt(str(combined_transform_filename), combined_transform)
 
         domain_transform_filenames = []
         if len(meshes) > 1:
@@ -364,11 +376,83 @@ class MeshTransformSW(EachItemTask):
                     initialize_result["reference_meshes"][f"{str(Path(file).stem)}_reference_mesh"]["faces"])
                 domain_transform = mesh.createTransform(domain_reference_mesh, sw.Mesh.AlignmentType.Rigid,
                                                         task_config.params.iterations)
-                domain_transform_filename = output_directory / f"{str(Path(file).stem)}_transform"
-                np.save(str(domain_transform_filename), domain_transform)
+
+                # com = mesh.centerOfMass()
+                # centered_mesh = mesh.copy().translate([-com[0], -com[1], -com[2]])
+                # domain_transform = mesh.createTransform(centered_mesh, sw.Mesh.AlignmentType.Rigid, 1)
+
+                domain_transform_filename = output_directory / f"{str(Path(file).stem)}_transform.txt"
+                np.savetxt(str(domain_transform_filename), domain_transform)
                 domain_transform_filenames.append(domain_transform_filename)
 
         return [combined_transform_filename, *domain_transform_filenames]
+
+
+class ApplyMeshTransformSW(EachItemTask):
+
+    @property
+    def name(self):
+        return "apply_mesh_transform_sw"
+
+    @staticmethod
+    def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        pass
+
+    @staticmethod
+    def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
+             dataset_config: DictConfig, task_config: DictConfig, initialize_result=None) -> list[Path]:
+
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
+
+        mesh_files = glob(str(source_directory_derivative / task_config.source_directory / "*"))
+
+        if len(mesh_files) == 0:
+            raise RuntimeError("No files found")
+
+        meshes = []
+        for mesh_file in mesh_files:
+            meshes.append(sw.Mesh(mesh_file))
+
+        # TODO None of these are doing what I want
+        transforms = []
+        if task_config.params.transform == "combined":
+            combined_transform_file = \
+                glob(str(source_directory_derivative / task_config.source_directory_transform / "*combined*"))[0]
+            combined_transform = np.loadtxt(combined_transform_file)
+
+            for _ in range(len(meshes)):
+                transforms.append(combined_transform)
+
+        elif task_config.params.transform == "domain":
+            for mesh, file in zip(meshes, mesh_files):
+                glob_string = str(
+                    source_directory_derivative / task_config.source_directory_transform / f"*{Path(file).stem}*")
+                transform_file = glob(glob_string)[0]
+                transform = np.loadtxt(transform_file)
+                transforms.append(transform)
+
+        elif task_config.params.transform == "center":
+            for mesh in meshes:
+                com = mesh.centerOfMass()
+                centered_mesh = mesh.copy().translate([-com[0], -com[1], -com[2]])
+                transform = mesh.createTransform(centered_mesh, sw.Mesh.AlignmentType.Rigid, 1)
+                transforms.append(transform)
+
+        elif task_config.params.transform == "none":
+            for _ in meshes:
+                transforms.append(np.identity(4))
+        else:
+            raise ValueError(f"Transform type not recognized: {task_config.params.transform}")
+
+        transformed_mesh_files = []
+        for mesh, file, transform in zip(meshes, mesh_files, transforms):
+            mesh.applyTransform(transform)
+            output_filename = str(output_directory / Path(file).stem) + '.vtk'
+            mesh.write(output_filename)
+            transformed_mesh_files.append(Path(output_filename))
+
+        return transformed_mesh_files
 
 
 class OptimizeMeshesSW(AllItemsTask):
@@ -388,22 +472,24 @@ class OptimizeMeshesSW(AllItemsTask):
         for dir, _, _ in dirs_list:
             subject = sw.Subject()
             mesh_files = glob(str(dataloc.abs_derivative / dir / task_config.source_directory_mesh / "*"))
+            original_files = glob(str(dataloc.abs_derivative / dir / task_config.source_directory_original / "*"))
             subject.set_number_of_domains(len(mesh_files))
             transforms = []
             for file in mesh_files:
                 glob_string = str(
                     dataloc.abs_derivative / dir / task_config.source_directory_transform / f"*{Path(file).stem}*")
                 transform_file = glob(glob_string)[0]
-                transform = np.load(transform_file, allow_pickle=True).flatten()
+                transform = np.loadtxt(transform_file).flatten()
                 transforms.append(transform)
 
-            combined_transform_file = \
-                glob(str(dataloc.abs_derivative / dir / task_config.source_directory_transform / "*combined*"))[0]
-            combined_transform = np.load(combined_transform_file).flatten()
-            transforms.append(combined_transform)
+            # combined_transform_file = \
+            #     glob(str(dataloc.abs_derivative / dir / task_config.source_directory_transform / "*combined*"))[0]
+            # combined_transform = np.loadtxt(combined_transform_file).flatten()
+            # transforms.append(combined_transform)
             subject.set_groomed_transforms(transforms)
             subject.set_groomed_filenames(mesh_files)
-            subject.set_original_filenames(mesh_files)
+            subject.set_original_filenames(original_files)
+            subject.set_display_name(str(Path(dir).stem))
             subjects.append(subject)
 
         project = sw.Project()
@@ -425,4 +511,4 @@ class OptimizeMeshesSW(AllItemsTask):
 
 
 all_tasks = [SmoothLungLobesSW, CreateMeshesSW, SmoothWholeLungsSW, ReferenceSelectionMeshSW, MeshTransformSW,
-             OptimizeMeshesSW]
+             ApplyMeshTransformSW, OptimizeMeshesSW]
