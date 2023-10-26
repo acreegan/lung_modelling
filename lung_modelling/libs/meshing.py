@@ -128,7 +128,6 @@ def refine_mesh(mesh: pv.PolyData, params: DictConfig = None):
             {"n_iter": 10, "feature_smoothing": False, "edge_angle": 15, "feature_angle": 45, "relaxation_factor": 1,
              "target_reduction": 0.01, "volume_preservation": True, "hole_size": 100, "fix_mesh": False})
 
-
     # Can try remeshing using pyacvd
     # clus = pyacvd.Clustering(mesh)
     # clus.subdivide(3)
@@ -149,3 +148,105 @@ def refine_mesh(mesh: pv.PolyData, params: DictConfig = None):
     mesh_fixed = mesh_fixed.compute_normals(auto_orient_normals=True)
 
     return mesh_fixed
+
+
+def find_connected_faces(faces: list):
+    current_group = 0
+    grouped_points = {}
+    groups = {}
+    face_groups = {}
+
+    # Go through all faces to make initial groups
+    for i, face in enumerate(faces):
+        for point in face:
+            if point in grouped_points:
+                # All the rest of the points in the face are in the same group
+                group = grouped_points[point]
+                for point in face:
+                    grouped_points[point] = group
+
+                groups[group] = groups[group] + list(face)
+                face_groups[group].append(i)
+                break
+        else:
+            # No point in the face is in an existing group. Start a new one.
+            for point in face:
+                grouped_points[point] = current_group
+
+            groups[current_group] = list(face)
+            face_groups[current_group] = [i]
+            current_group += 1
+
+    # Now we have all our initial groups, we need to merge connected ones
+    num_groups = len(groups)
+    merged_group_keys = {}
+    while (True):
+        groups, new_merged_group_keys = merge_groups(groups)
+
+        # Keep track of all the original groups that were merged
+        for group, keys in new_merged_group_keys.items():
+            if group in merged_group_keys:
+                merged_group_keys[group] += keys
+            else:
+                merged_group_keys[group] = keys
+
+        # If we didn't merge any, we're done
+        if len(groups) == num_groups:
+            break
+        else:
+            num_groups = len(groups)
+
+    # # Get rid of duplicates
+    # for group, points in groups.items():
+    #     groups[group] = list(set(points))
+
+    # Group back into faces
+    merged_face_groups = {}
+    for group, keys in merged_group_keys.items():
+        f = []
+        for key in keys:
+            for face in face_groups[key]:
+                f.append(face)
+            # f.extend(faces[face_groups[key]])
+
+        merged_face_groups[group] = f
+
+    return merged_face_groups
+
+
+def merge_groups(groups):
+    merged_groups = {}
+    merged_group_keys = {}
+    while True:
+        # Loop through like this because we will be removing items from the dict
+        check_group, check_points = next(iter(groups.items()))
+
+        points_to_merge = check_points
+        groups_to_merge = [check_group]
+        # Check each group for intersections with all others, cumulatively adding points
+        for group, points in groups.items():
+            if group == check_group:
+                continue
+
+            if len(np.intersect1d(points_to_merge, points)) > 0:
+                # merge groups:
+                points_to_merge.extend(points)
+                groups_to_merge.append(group)
+
+        merged_group_keys[len(merged_groups)] = groups_to_merge
+        merged_groups[len(merged_groups)] = points_to_merge
+        groups = {group: groups[group] for group in set(list(groups.keys())) - set(groups_to_merge)}
+
+        # If nothing left, break out
+        if len(groups) == 0:
+            break
+        # If we're down to the last group, add it to the merged and get out
+        elif len(groups) == 1:
+            merged_groups[len(merged_groups)] = next(iter(groups.values()))
+            break
+
+    return merged_groups, merged_group_keys
+
+
+def flatten(l):
+    return [item for sublist in l for item in sublist]

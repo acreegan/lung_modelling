@@ -29,7 +29,8 @@ tasks:
       relaxation: 1,
       fill_holes: True,
       hole_size: 100,
-      remove_shared_faces: True }
+      remove_shared_faces: True,
+      isolate_mesh: True  }
 
   reference_selection_mesh_sw:
     source_directory: "create_meshes_whole_lungs_sw"

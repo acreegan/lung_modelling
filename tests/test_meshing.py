@@ -1,8 +1,11 @@
 import numpy as np
 import medpy.io
-from lung_modelling import voxel_to_mesh
+from lung_modelling import voxel_to_mesh, find_connected_faces
 import numpy.testing
 from pathlib import Path
+import matplotlib
+import pyvista as pv
+from pyvista_tools import pyvista_faces_to_2d
 
 parent_dir = Path(__file__).parent
 
@@ -159,3 +162,27 @@ correct_points = np.array([[2.5, -14., 21.],
                            [6.5, -16., 18.],
                            [6.5, -16., 21.],
                            [6.5, -16., 24.]])
+
+
+def test_find_connected_faces():
+    inner = pv.Box(quads=False)
+    outer = pv.Box(quads=False).scale([2, 2, 2])
+
+    merged = pv.merge([inner, outer])
+
+    groups = find_connected_faces(pyvista_faces_to_2d(merged.faces))
+
+    g1 = {0, 1, 2, 3, 4, 5, 6, 7}
+    g2 = {8, 9, 10, 11, 12, 13, 14, 15}
+
+    # p = pv.Plotter()
+    # p.add_mesh(merged.extract_all_edges())
+    # c = matplotlib.colormaps["hsv"]
+    # for group, points in groups.items():
+    #     color = c((group + 1) / (len(groups)))
+    #     p.add_points(merged.points[points], color=color)
+    #
+    # p.show()
+
+    assert set(np.array(groups[0]).ravel()) == g1
+    assert set(np.array(groups[1]).ravel()) == g2
