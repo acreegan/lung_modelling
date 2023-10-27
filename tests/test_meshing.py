@@ -170,7 +170,12 @@ def test_find_connected_faces():
 
     merged = pv.merge([inner, outer])
 
-    groups = find_connected_faces(pyvista_faces_to_2d(merged.faces))
+    connected_faces = find_connected_faces(pyvista_faces_to_2d(merged.faces))
+
+    connected_points = [pyvista_faces_to_2d(merged.faces)[faces] for faces in connected_faces.values()]
+    connected_points = [np.array(points).ravel() for points in connected_points]
+    connected_points = [list(set(points)) for points in connected_points]
+    connected_points.sort(key=len, reverse=True)
 
     g1 = {0, 1, 2, 3, 4, 5, 6, 7}
     g2 = {8, 9, 10, 11, 12, 13, 14, 15}
@@ -184,5 +189,35 @@ def test_find_connected_faces():
     #
     # p.show()
 
-    assert set(np.array(groups[0]).ravel()) == g1
-    assert set(np.array(groups[1]).ravel()) == g2
+    assert set(np.array(connected_points[0]).ravel()) == g1
+    assert set(np.array(connected_points[1]).ravel()) == g2
+
+
+def test_find_connected_faces_lung():
+    mesh = pv.read(str(parent_dir / "test_data/covid_lung_001_right_with_islands.vtk"))
+
+    connected_faces, conected_points_returned = find_connected_faces(pyvista_faces_to_2d(mesh.faces),
+                                                                     return_points=True)
+
+    # connected_points = [pyvista_faces_to_2d(mesh.faces)[faces] for faces in connected_faces.values()]
+    # connected_points = [np.array(points).ravel() for points in connected_points]
+    # connected_points = [list(set(points)) for points in connected_points]
+    # connected_points.sort(key=len, reverse=True)
+
+    connected_points_sorted = sorted([list(set(item)) for item in list(conected_points_returned.values())], key=len,
+                                     reverse=True)
+
+    island_1_points = [22400, 22209, 22210, 22211, 22212, 22213, 22214, 22216, 22217, 22218, 22219, 22399]
+    island_2_points = [22178, 22173, 22174, 22175]
+
+    # p = pv.Plotter()
+    # p.add_mesh(mesh.extract_all_edges())
+    # c = matplotlib.colormaps["hsv"]
+    # for i, points in enumerate(connected_points):
+    #     color = c((i + 1) / (len(connected_points)))
+    #     p.add_points(mesh.points[points], color=color)
+    #
+    # p.show()
+
+    assert np.array_equal(island_1_points, connected_points_sorted[1])
+    assert np.array_equal(island_2_points, connected_points_sorted[2])

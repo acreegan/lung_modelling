@@ -58,11 +58,13 @@ tasks:
       save_init_splits: 0,
       verbosity: 0,
       use_normals: 1,
-      normals_strength: 5.0,
+      normals_strength: 15.0,
       procrustes: 0,
       procrustes_scaling: 1,
       procrustes_rotation_translation: 1,
-      number_of_particles: [ 128,128 ]
+      number_of_particles: [ 128,128 ],
+      use_geodesic_distance: 0,
+
     }
 
   logging:

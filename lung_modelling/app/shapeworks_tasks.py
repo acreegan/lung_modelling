@@ -111,13 +111,20 @@ class CreateMeshesSW(EachItemTask):
             **results_directory**: subdirectory for results
 
             **params**: (Dict)
-
+                **decimate**, **target_reduction**, **volume_preservation**
+                    Option to decimate and parameters for pyvvista mesh decimate
                 **remesh**, **remesh_percentage**, **adaptivity**:
                     Option to remesh and parameters for shapeworks remesh
                 **smooth**, **smooth_iterations**, **relaxation**:
                     Option to smooth and parameters for shapeworks smooth
                 **fill_holes**, **hole_size**:
-                    Option to fill holes nad parameters for shapeworks fill_holes}
+                    Option to fill holes andd parameters for shapeworks fill_holes
+                **remove_shared_faces**:
+                    Option to remove duplicate faces in the mesh
+                **isolate_mesh**:
+                    Option to remove islands leaving only the larges connected region in the mesh.
+                    If use_geodesic_distance is selected in the optimizer, it is essential that the mesh does not
+                    have islands.
 
         Returns
         -------
@@ -140,47 +147,43 @@ class CreateMeshesSW(EachItemTask):
             mesh = image_data.toMesh(1)  # Seems to get the mesh in the right orientation without manual realignment
 
             if params.decimate:
-                pv_mesh = sw.sw2vtkMesh(mesh)
-                pv_mesh = pv_mesh.decimate(target_reduction=params.target_reduction,
-                                           volume_preservation=params.volume_preservation)
-                mesh = sw.Mesh(pv_mesh.points, pyvista_faces_to_2d(pv_mesh.faces))
+                mesh = sw.sw2vtkMesh(mesh)
+                mesh = mesh.decimate(target_reduction=params.target_reduction,
+                                     volume_preservation=params.volume_preservation)
+                mesh = sw.Mesh(mesh.points, pyvista_faces_to_2d(mesh.faces))
 
-            # Shapeworks remeshing uses ACVD (vtkIsotropicDiscreteRemeshing). Should be the same as pyACVD with pyvista
-            mesh_rm = mesh.remeshPercent(percentage=params.remesh_percentage,
-                                         adaptivity=params.adaptivity) if params.remesh else mesh
-            # Shapeworks smooth uses vtkSmoothPolyData. Should be the same as pyVista
-            mesh_sm = mesh_rm.smooth(iterations=params.smooth_iterations,
-                                     relaxation=params.relaxation) if params.smooth else mesh_rm
-            # Shapeworks fillHoles uses vtkFillHolesFilter. Should be the same as pyVista
-            mesh_fh = mesh_sm.fillHoles(hole_size=params.hole_size) if params.fill_holes else mesh_sm
+            if params.remesh:
+                # Shapeworks remeshing uses ACVD (vtkIsotropicDiscreteRemeshing). Should be the same as pyACVD with pyvista
+                mesh = mesh.remeshPercent(percentage=params.remesh_percentage,
+                                          adaptivity=params.adaptivity)
 
-            output_filename = f"{output_directory / Path(image_file).stem}-{output_directory.parents[0].stem}.vtk"
+            if params.smooth:
+                # Shapeworks smooth uses vtkSmoothPolyData. Should be the same as pyVista
+                mesh = mesh.smooth(iterations=params.smooth_iterations,
+                                   relaxation=params.relaxation)
+
+            if params.fill_holes:
+                # Shapeworks fillHoles uses vtkFillHolesFilter. Should be the same as pyVista
+                mesh = mesh.fillHoles(hole_size=params.hole_size)
+
             if params.remove_shared_faces:
-                pv_mesh = sw.sw2vtkMesh(mesh_fh)
-                mesh_rsh = remove_shared_faces_with_merge([pv_mesh])
-                if mesh_rsh.n_faces == 0:
+                mesh = sw.sw2vtkMesh(mesh) if isinstance(mesh, sw.Mesh) else mesh
+                mesh = remove_shared_faces_with_merge([mesh])
+                if mesh.n_faces == 0:
                     raise ValueError("Generated mesh is empty")
             else:
-                mesh_rsh = sw.sw2vtkMesh(mesh_fh)
+                mesh = sw.sw2vtkMesh(mesh) if isinstance(mesh, sw.Mesh) else mesh
 
             if params.isolate_mesh:
-                groups = find_connected_faces(list(pyvista_faces_to_2d(mesh_rsh.faces)))
-                if len(groups) > 1:
-                    group_points = [list(set(np.array(group).ravel())) for group in groups.values()]
-                    group_points.sort(key=len, reverse=True)
-                    to_remove = flatten(group_points[1:])
-                    mesh_rsh, _ = mesh_rsh.remove_points(to_remove)
+                _, connected_points = find_connected_faces(list(pyvista_faces_to_2d(mesh.faces)))
+                if len(connected_points) > 1:
+                    connected_points = [list(set(item)) for item in list(connected_points.values())]
+                    connected_points.sort(key=len, reverse=True)
+                    to_remove = flatten(connected_points[1:])
+                    mesh, _ = mesh.remove_points(to_remove)
 
-            # # Remove unreferenced points. This is necessary to be able to use geodesic distance
-            # referenced_points = set(pyvista_faces_to_2d(mesh_rsh.faces).ravel())
-            # points = set(range(mesh_rsh.n_points))
-            # unreferenced = points - referenced_points
-            #
-            # if len(unreferenced) > 0:
-            #     print(f"Removing {len(unreferenced)} points")
-            #     mesh_rsh = mesh_rsh.remove_points(list(unreferenced))
-
-            mesh_rsh.save(output_filename)
+            output_filename = f"{output_directory / Path(image_file).stem}-{output_directory.parents[0].stem}.vtk"
+            mesh.save(output_filename)
 
             mesh_files.append(Path(output_filename))
 
@@ -268,7 +271,7 @@ class ReferenceSelectionMeshSW(AllItemsTask):
     def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
              task_config: DictConfig) -> list[Path]:
         """
-        A task to load all meshes at once so the shape closest to the mean can be found and selected as the reference
+        Load all meshes at once so the shape closest to the mean can be found and selected as the reference
 
         The subject that was used as the reference is indicated in the output filename, surrounded by ()
 
@@ -283,13 +286,15 @@ class ReferenceSelectionMeshSW(AllItemsTask):
         dataset_config
             Config relating to the entire dataset
         task_config
-            Task specific config
+            **source_directory**: subdirectory within derivative source folder to find source files
+
+            **results_directory**: subdirectory for results
 
 
         Returns
         -------
-        reference
-            Mesh selected as the reference
+        List of reference mesh filenames. The first element is the combined reference mesh, and the following elements
+        are the domain reference meshes.
 
         """
         if not os.path.exists(output_directory):
@@ -349,7 +354,25 @@ class MeshTransformSW(EachItemTask):
 
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        """
+        Load reference meshes and convert to points and faces so they can be pickled and sent to the work function
 
+        Parameters
+        ----------
+        dataloc
+            Dataset Locator
+        dataset_config
+            Dataset config
+        task_config
+            **source_directory_initialize**
+                directory from which to load reference meshes
+
+        Returns
+        -------
+        Dict of reference meshes
+            {**reference_meshes**:{**points**:[points], **faces**:[faces]}}
+
+        """
         reference_mesh_files = glob(
             str(dataloc.abs_pooled_derivative / task_config.source_directory_initialize / "*.vtk"))
 
@@ -364,7 +387,37 @@ class MeshTransformSW(EachItemTask):
     @staticmethod
     def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
              dataset_config: DictConfig, task_config: DictConfig, initialize_result=None) -> list[Path]:
+        """
+        Calculate alignment transforms for global alignment and per domain alignment. Uses shapeworks rigid alignment
+        for both.
 
+        Parameters
+        ----------
+        source_directory_primary
+            Absolute path of the source directory in the primary folder of the dataset
+        source_directory_derivative
+            Absolute path of the source directory in the derivative folder of the dataset
+        output_directory
+            Directory in which to save results of the work
+        dataset_config
+            Config relating to the entire dataset
+        task_config
+            **results_directory**: subdirectory for results
+
+            **output_filenames**: dict providing a mapping from lobe mapping (in dataset config) to output filenames
+
+            **params**: (Dict)
+                **iterations**
+                    Iterations for shapeworks alignment function
+
+        initialize_result
+            Return dict from the initialize function
+
+        Returns
+        -------
+        List of transform filenames. The first is for the global alignment, and the following are for domain alignments.
+
+        """
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
 
@@ -431,7 +484,32 @@ class OptimizeMeshesSW(AllItemsTask):
     @staticmethod
     def work(dataloc: DatasetLocator, dirs_list, output_directory: Path, dataset_config: DictConfig,
              task_config: DictConfig) -> list[Path]:
+        """
+        Run the shapeworks optimize command
 
+        Parameters
+        ----------
+        dataloc
+            Dataset Locator
+        dirs_list
+            List of relative paths to the source directories
+        output_directory
+            Directory in which to save results of the work
+        dataset_config
+            Dataset config
+        task_config
+            **source_directory_transform**
+                directory for transform files
+            **source_directory_mesh**
+                directory for mesh files
+            **source_directory_original**
+                directory for original (pre-grooming) files
+            **results_directory**:
+                subdirectory for results
+            **params**
+                shapeworks optimization params
+
+        """
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
 

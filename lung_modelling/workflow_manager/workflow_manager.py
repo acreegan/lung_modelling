@@ -87,7 +87,7 @@ class EachItemTask:
     def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
              dataset_config: DictConfig, task_config: DictConfig, initialize_result=None) -> list[Path]:
         """
-        The work function fo the implementation of this class. Defines work to be done on a set of sources specified by
+        The work function of the implementation of this class. Defines work to be done on a set of sources specified by
         the source directory parameters. This function should not attempt to access files outside these directories
         because this function will be run in parallel for all workflow sources.
 
