@@ -101,8 +101,6 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">__metaclass___</span> <span class="o">=</span> <span class="n">ABCMeta</span>
 
-    <span class="c1"># Todo: Initialize method to be called before multiprocessing to load data required by all items</span>
-
     <span class="nd">@property</span>
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -111,14 +109,26 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">pass</span>
 
+<div class="viewcode-block" id="EachItemTask.initialize">
+<a class="viewcode-back" href="../../../module_reference.html#lung_modelling.workflow_manager.EachItemTask.initialize">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A method to be called before multiprocessing to load data required by all items. This should only be used to</span>
+<span class="sd">        load data to avoid multiple simultaneous file access by the work function. It should not create or modify any files.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+
 <div class="viewcode-block" id="EachItemTask.work">
 <a class="viewcode-back" href="../../../module_reference.html#lung_modelling.workflow_manager.EachItemTask.work">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">source_directory_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
-             <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+             <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">initialize_result</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        The work function fo the implementation of this class. Defines work to be done on a set of sources specified by</span>
+<span class="sd">        The work function of the implementation of this class. Defines work to be done on a set of sources specified by</span>
 <span class="sd">        the source directory parameters. This function should not attempt to access files outside these directories</span>
 <span class="sd">        because this function will be run in parallel for all workflow sources.</span>
 
@@ -137,16 +147,167 @@
 <span class="sd">            Config relating to the entire dataset</span>
 <span class="sd">        task_config</span>
 <span class="sd">            Task specific config</span>
+<span class="sd">        initialize_result</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        list of Path objects representing the files created.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="EachItemTask.apply_to_dataset">
+<a class="viewcode-back" href="../../../module_reference.html#lung_modelling.workflow_manager.EachItemTask.apply_to_dataset">[docs]</a>
+    <span class="k">def</span> <span class="nf">apply_to_dataset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">dirs_list</span><span class="p">,</span>
+                         <span class="n">initialize_result</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mpool</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">show_progress</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply work function to each subject in a dataset, with optional multiprocessing.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataloc</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">        task_config</span>
+<span class="sd">        dirs_list</span>
+<span class="sd">        mpool</span>
+<span class="sd">        show_progress</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">exception_warning</span><span class="p">(</span><span class="n">source_dir</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">task</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Task: </span><span class="si">{</span><span class="n">task</span><span class="si">}</span><span class="s2"> resulted in exception for </span><span class="si">{</span><span class="n">source_dir</span><span class="si">}</span><span class="s2">, message: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">mpool</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">source_directory</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">dirs_list</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Running: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                                               <span class="n">disable</span><span class="o">=</span><span class="ow">not</span> <span class="n">show_progress</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">output_directory</span> <span class="o">=</span> <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="n">source_directory</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">results_directory</span>
+                    <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">work</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_primary</span> <span class="o">/</span> <span class="n">source_directory</span><span class="p">,</span>
+                                       <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="n">source_directory</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">,</span>
+                                       <span class="n">task_config</span><span class="p">,</span> <span class="n">initialize_result</span><span class="p">)</span>
+                    <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="nb">str</span><span class="p">(</span><span class="n">source_directory</span><span class="p">),</span> <span class="n">result</span><span class="p">))</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="n">exception_warning</span><span class="p">(</span><span class="n">source_directory</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
+                    <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="nb">str</span><span class="p">(</span><span class="n">source_directory</span><span class="p">),</span> <span class="n">e</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">args</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="p">(</span><span class="n">source_directory</span><span class="p">,</span> <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_primary</span> <span class="o">/</span> <span class="n">source_directory</span><span class="p">,</span> <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="n">source_directory</span><span class="p">,</span>
+                 <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="n">source_directory</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">results_directory</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">,</span>
+                 <span class="n">task_config</span><span class="p">,</span> <span class="n">initialize_result</span><span class="p">)</span> <span class="k">for</span> <span class="n">source_directory</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">dirs_list</span><span class="p">)</span>
+            <span class="n">monitored</span> <span class="o">=</span> <span class="n">exception_monitor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">work</span><span class="p">,</span> <span class="n">exception_warning</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
+            <span class="n">unpacked</span> <span class="o">=</span> <span class="n">args_unpacker</span><span class="p">(</span><span class="n">monitored</span><span class="p">)</span>
+            <span class="n">imap_results</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+                <span class="n">tqdm</span><span class="p">(</span><span class="n">mpool</span><span class="o">.</span><span class="n">imap</span><span class="p">(</span><span class="n">unpacked</span><span class="p">,</span> <span class="n">args</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Running: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="ow">not</span> <span class="n">show_progress</span><span class="p">,</span>
+                     <span class="n">total</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">dirs_list</span><span class="p">)))</span>
+
+            <span class="n">results</span><span class="p">,</span> <span class="n">errors</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">imap_results</span><span class="p">))</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+            <span class="n">errors</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">errors</span> <span class="k">if</span> <span class="n">e</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+
+        <span class="n">relative_files</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">to_relative</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">result</span><span class="p">)))</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">Path</span><span class="p">)</span> <span class="k">else</span> <span class="n">result</span> <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span>
+                          <span class="n">results</span><span class="p">]</span>
+        <span class="n">combined</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;results&quot;</span><span class="p">:</span> <span class="n">relative_files</span><span class="p">,</span> <span class="s2">&quot;errors&quot;</span><span class="p">:</span> <span class="n">errors</span><span class="p">}</span>
+        <span class="k">return</span> <span class="n">combined</span></div>
+
+
+<div class="viewcode-block" id="EachItemTask.apply_initialize">
+<a class="viewcode-back" href="../../../module_reference.html#lung_modelling.workflow_manager.EachItemTask.apply_initialize">[docs]</a>
+    <span class="k">def</span> <span class="nf">apply_initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataloc</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">        task_config</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">exception_warning</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">task</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Task: </span><span class="si">{</span><span class="n">task</span><span class="si">}</span><span class="s2"> resulted in exception, message: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">,</span> <span class="n">task_config</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">exception_warning</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
+            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="n">e</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;result&quot;</span><span class="p">:</span> <span class="n">result</span><span class="p">,</span> <span class="s2">&quot;errors&quot;</span><span class="p">:</span> <span class="n">errors</span><span class="p">}</span></div>
 </div>
 
 
 
+<div class="viewcode-block" id="exception_monitor">
+<a class="viewcode-back" href="../../../module_reference.html#lung_modelling.workflow_manager.exception_monitor">[docs]</a>
+<span class="k">def</span> <span class="nf">exception_monitor</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">callback</span><span class="p">,</span> <span class="n">logger</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Decorator to catch exceptions from multiprocessing tasks</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    func</span>
+<span class="sd">        Function to wrap</span>
+<span class="sd">    callback</span>
+<span class="sd">        Callback to run if exception occurs</span>
+<span class="sd">    logger</span>
+<span class="sd">        Loguru logger reference needed for logging from multiprocessing</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">exception_monitor_wrapper</span><span class="p">(</span><span class="n">source_directory</span><span class="p">,</span> <span class="n">source_directory_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+                                  <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">initialize_result</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">source_directory</span><span class="p">),</span>
+                      <span class="n">func</span><span class="p">(</span><span class="n">source_directory_primary</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">,</span>
+                           <span class="n">task_config</span><span class="p">,</span> <span class="n">initialize_result</span><span class="p">))</span>
+            <span class="n">error</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">error</span> <span class="o">=</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">source_directory</span><span class="p">),</span> <span class="n">e</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">callback</span><span class="p">(</span><span class="n">source_directory</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">result</span><span class="p">,</span> <span class="n">error</span>
+
+    <span class="n">functools</span><span class="o">.</span><span class="n">update_wrapper</span><span class="p">(</span><span class="n">exception_monitor_wrapper</span><span class="p">,</span> <span class="n">func</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">exception_monitor_wrapper</span></div>
+
+
+
+<div class="viewcode-block" id="args_unpacker">
+<a class="viewcode-back" href="../../../module_reference.html#lung_modelling.workflow_manager.args_unpacker">[docs]</a>
+<span class="k">def</span> <span class="nf">args_unpacker</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Decorator to unpack tuple of arguments from multiprocessing methods such as imap</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    func</span>
+<span class="sd">        Function to wrap</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">unpack</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="n">functools</span><span class="o">.</span><span class="n">update_wrapper</span><span class="p">(</span><span class="n">unpack</span><span class="p">,</span> <span class="n">func</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">unpack</span></div>
+
+
+
+<div class="viewcode-block" id="AllItemsTask">
+<a class="viewcode-back" href="../../../module_reference.html#lung_modelling.workflow_manager.AllItemsTask">[docs]</a>
 <span class="k">class</span> <span class="nc">AllItemsTask</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A class providing an interface for tasks that should be applied to all items in a list of sources at once.</span>
@@ -162,9 +323,11 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">pass</span>
 
+<div class="viewcode-block" id="AllItemsTask.work">
+<a class="viewcode-back" href="../../../module_reference.html#lung_modelling.workflow_manager.AllItemsTask.work">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="nd">@abstractmethod</span>
-    <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dirs_list</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span>
+    <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dirs_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span>
              <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        The work function fo the implementation of this class. Defines work to be done on a set of sources specified by</span>
@@ -190,7 +353,46 @@
 <span class="sd">        -------</span>
 <span class="sd">        list of Path objects representing the files created.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">pass</span>
+        <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="AllItemsTask.apply_to_dataset">
+<a class="viewcode-back" href="../../../module_reference.html#lung_modelling.workflow_manager.AllItemsTask.apply_to_dataset">[docs]</a>
+    <span class="k">def</span> <span class="nf">apply_to_dataset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span>
+                         <span class="n">dirs_list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply work function to all items in a dataset at once.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataloc</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">        task_config</span>
+<span class="sd">        dirs_list</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">exception_warning</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">task</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Task: </span><span class="si">{</span><span class="n">task</span><span class="si">}</span><span class="s2"> resulted in exception, message: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">output_directory</span> <span class="o">=</span> <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_pooled_derivative</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">results_directory</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">work</span><span class="p">(</span><span class="n">dataloc</span><span class="p">,</span> <span class="n">dirs_list</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">,</span> <span class="n">task_config</span><span class="p">)</span>
+            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="n">result</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">exception_warning</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
+            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="n">e</span><span class="p">))</span>
+
+        <span class="n">relative_files</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">to_relative</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">result</span><span class="p">)))</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">Path</span><span class="p">)</span> <span class="k">else</span> <span class="n">result</span> <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span>
+                          <span class="n">results</span><span class="p">]</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;results&quot;</span><span class="p">:</span> <span class="n">relative_files</span><span class="p">,</span> <span class="s2">&quot;errors&quot;</span><span class="p">:</span> <span class="n">errors</span><span class="p">}</span></div>
+</div>
+
 
 
 <div class="viewcode-block" id="initialize">
@@ -319,156 +521,6 @@
 
     <span class="k">return</span> <span class="n">dirs_list</span></div>
 
-
-
-<div class="viewcode-block" id="exception_monitor">
-<a class="viewcode-back" href="../../../module_reference.html#lung_modelling.workflow_manager.exception_monitor">[docs]</a>
-<span class="k">def</span> <span class="nf">exception_monitor</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">callback</span><span class="p">,</span> <span class="n">logger</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Decorator to catch exceptions from multiprocessing tasks</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    func</span>
-<span class="sd">        Function to wrap</span>
-<span class="sd">    callback</span>
-<span class="sd">        Callback to run if exception occurs</span>
-<span class="sd">    logger</span>
-<span class="sd">        Loguru logger reference needed for logging from multiprocessing</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="nf">exception_monitor_wrapper</span><span class="p">(</span><span class="n">source_directory</span><span class="p">,</span> <span class="n">source_directory_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
-                                  <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">):</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">source_directory</span><span class="p">),</span>
-                      <span class="n">func</span><span class="p">(</span><span class="n">source_directory_primary</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">,</span>
-                           <span class="n">task_config</span><span class="p">))</span>
-            <span class="n">error</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="n">error</span> <span class="o">=</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">source_directory</span><span class="p">),</span> <span class="n">e</span><span class="p">)</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="kc">None</span>
-            <span class="n">callback</span><span class="p">(</span><span class="n">source_directory</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">result</span><span class="p">,</span> <span class="n">error</span>
-
-    <span class="n">functools</span><span class="o">.</span><span class="n">update_wrapper</span><span class="p">(</span><span class="n">exception_monitor_wrapper</span><span class="p">,</span> <span class="n">func</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">exception_monitor_wrapper</span></div>
-
-
-
-<div class="viewcode-block" id="args_unpacker">
-<a class="viewcode-back" href="../../../module_reference.html#lung_modelling.workflow_manager.args_unpacker">[docs]</a>
-<span class="k">def</span> <span class="nf">args_unpacker</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Decorator to unpack tuple of arguments from multiprocessing methods such as imap</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    func</span>
-<span class="sd">        Function to wrap</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="nf">unpack</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
-
-    <span class="n">functools</span><span class="o">.</span><span class="n">update_wrapper</span><span class="p">(</span><span class="n">unpack</span><span class="p">,</span> <span class="n">func</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">unpack</span></div>
-
-
-
-<div class="viewcode-block" id="apply_to_dataset">
-<a class="viewcode-back" href="../../../module_reference.html#lung_modelling.workflow_manager.apply_to_dataset">[docs]</a>
-<span class="k">def</span> <span class="nf">apply_to_dataset</span><span class="p">(</span><span class="n">func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Decorator to apply a function to each subject in a dataset, with optional multiprocessing.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    func</span>
-<span class="sd">        Function to wrap</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="nd">@functools</span><span class="o">.</span><span class="n">wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
-    <span class="k">def</span> <span class="nf">wrapper_apply_to_dataset</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span>
-                                 <span class="n">task_name</span><span class="p">,</span> <span class="n">dirs_list</span><span class="p">,</span> <span class="n">mpool</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">show_progress</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-
-        <span class="k">def</span> <span class="nf">exception_warning</span><span class="p">(</span><span class="n">source_dir</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">task</span><span class="o">=</span><span class="n">task_name</span><span class="p">):</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Task: </span><span class="si">{</span><span class="n">task</span><span class="si">}</span><span class="s2"> resulted in exception for </span><span class="si">{</span><span class="n">source_dir</span><span class="si">}</span><span class="s2">, message: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">mpool</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="k">for</span> <span class="n">source_directory</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">dirs_list</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Running: </span><span class="si">{</span><span class="n">task_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-                                               <span class="n">disable</span><span class="o">=</span><span class="ow">not</span> <span class="n">show_progress</span><span class="p">):</span>
-                <span class="k">try</span><span class="p">:</span>
-                    <span class="n">output_directory</span> <span class="o">=</span> <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="n">source_directory</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">results_directory</span>
-                    <span class="n">result</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_primary</span> <span class="o">/</span> <span class="n">source_directory</span><span class="p">,</span> <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="n">source_directory</span><span class="p">,</span>
-                                  <span class="n">output_directory</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">,</span> <span class="n">task_config</span><span class="p">)</span>
-                    <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="nb">str</span><span class="p">(</span><span class="n">source_directory</span><span class="p">),</span> <span class="n">result</span><span class="p">))</span>
-                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                    <span class="n">exception_warning</span><span class="p">(</span><span class="n">source_directory</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
-                    <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="nb">str</span><span class="p">(</span><span class="n">source_directory</span><span class="p">),</span> <span class="n">e</span><span class="p">))</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">args</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="p">(</span><span class="n">source_directory</span><span class="p">,</span> <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_primary</span> <span class="o">/</span> <span class="n">source_directory</span><span class="p">,</span> <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="n">source_directory</span><span class="p">,</span>
-                 <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="n">source_directory</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">results_directory</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">,</span>
-                 <span class="n">task_config</span><span class="p">)</span> <span class="k">for</span> <span class="n">source_directory</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">dirs_list</span><span class="p">)</span>
-            <span class="n">monitored</span> <span class="o">=</span> <span class="n">exception_monitor</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">exception_warning</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
-            <span class="n">unpacked</span> <span class="o">=</span> <span class="n">args_unpacker</span><span class="p">(</span><span class="n">monitored</span><span class="p">)</span>
-            <span class="n">imap_results</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
-                <span class="n">tqdm</span><span class="p">(</span><span class="n">mpool</span><span class="o">.</span><span class="n">imap</span><span class="p">(</span><span class="n">unpacked</span><span class="p">,</span> <span class="n">args</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Running: </span><span class="si">{</span><span class="n">task_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="ow">not</span> <span class="n">show_progress</span><span class="p">,</span>
-                     <span class="n">total</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">dirs_list</span><span class="p">)))</span>
-
-            <span class="n">results</span><span class="p">,</span> <span class="n">errors</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">imap_results</span><span class="p">))</span>
-            <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
-            <span class="n">errors</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">errors</span> <span class="k">if</span> <span class="n">e</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
-
-        <span class="n">relative_files</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">to_relative</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">result</span><span class="p">)))</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">Path</span><span class="p">)</span> <span class="k">else</span> <span class="n">result</span> <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span>
-                          <span class="n">results</span><span class="p">]</span>
-        <span class="n">combined</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;results&quot;</span><span class="p">:</span> <span class="n">relative_files</span><span class="p">,</span> <span class="s2">&quot;errors&quot;</span><span class="p">:</span> <span class="n">errors</span><span class="p">}</span>
-        <span class="k">return</span> <span class="n">combined</span>
-
-    <span class="k">return</span> <span class="n">wrapper_apply_to_dataset</span></div>
-
-
-
-<span class="k">def</span> <span class="nf">apply_all_items</span><span class="p">(</span><span class="n">func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Decorator to apply a function to all items in a dataset at once.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    func</span>
-<span class="sd">        Function to wrap</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="nd">@functools</span><span class="o">.</span><span class="n">wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
-    <span class="k">def</span> <span class="nf">wrapper_apply_all_items</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span>
-                                <span class="n">task_name</span><span class="p">,</span> <span class="n">dirs_list</span><span class="p">):</span>
-
-        <span class="k">def</span> <span class="nf">exception_warning</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">task</span><span class="o">=</span><span class="n">task_name</span><span class="p">):</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Task: </span><span class="si">{</span><span class="n">task</span><span class="si">}</span><span class="s2"> resulted in exception, message: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-        <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Running </span><span class="si">{</span><span class="n">task_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">output_directory</span> <span class="o">=</span> <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_pooled_derivative</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">results_directory</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">dataloc</span><span class="p">,</span> <span class="n">dirs_list</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">,</span> <span class="n">task_config</span><span class="p">)</span>
-            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="nb">str</span><span class="p">(</span><span class="n">task_name</span><span class="p">),</span> <span class="n">result</span><span class="p">))</span>
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="n">exception_warning</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
-            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="nb">str</span><span class="p">(</span><span class="n">task_name</span><span class="p">),</span> <span class="n">e</span><span class="p">))</span>
-
-        <span class="n">relative_files</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">to_relative</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">result</span><span class="p">)))</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">Path</span><span class="p">)</span> <span class="k">else</span> <span class="n">result</span> <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span>
-                          <span class="n">results</span><span class="p">]</span>
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;results&quot;</span><span class="p">:</span> <span class="n">relative_files</span><span class="p">,</span> <span class="s2">&quot;errors&quot;</span><span class="p">:</span> <span class="n">errors</span><span class="p">}</span>
-
-    <span class="k">return</span> <span class="n">wrapper_apply_all_items</span>
 
 
 <div class="viewcode-block" id="log_workflow">
@@ -652,22 +704,29 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot run a task that is not registered&quot;</span><span class="p">)</span>
 
         <span class="k">for</span> <span class="n">task_name</span> <span class="ow">in</span> <span class="n">task_list</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Running </span><span class="si">{</span><span class="n">task_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">registered_tasks</span><span class="p">[</span><span class="n">task_name</span><span class="p">](),</span> <span class="n">EachItemTask</span><span class="p">):</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="n">task_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">apply_to_dataset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">registered_tasks</span><span class="p">[</span><span class="n">task_name</span><span class="p">]</span><span class="o">.</span><span class="n">work</span><span class="p">)(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataloc</span><span class="p">,</span>
-                                                                                                  <span class="bp">self</span><span class="o">.</span><span class="n">dataset_config</span><span class="p">,</span>
-                                                                                                  <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">tasks</span><span class="p">[</span>
-                                                                                                      <span class="n">task_name</span><span class="p">],</span>
-                                                                                                  <span class="n">task_name</span><span class="p">,</span>
-                                                                                                  <span class="bp">self</span><span class="o">.</span><span class="n">dirs_list</span><span class="p">,</span>
-                                                                                                  <span class="bp">self</span><span class="o">.</span><span class="n">mpool</span><span class="p">,</span>
-                                                                                                  <span class="bp">self</span><span class="o">.</span><span class="n">show_progress</span><span class="p">)</span>
+
+                <span class="n">initialize_result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">registered_tasks</span><span class="p">[</span><span class="n">task_name</span><span class="p">]()</span><span class="o">.</span><span class="n">apply_initialize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataloc</span><span class="p">,</span>
+                                                                                        <span class="bp">self</span><span class="o">.</span><span class="n">dataset_config</span><span class="p">,</span>
+                                                                                        <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">tasks</span><span class="p">[</span><span class="n">task_name</span><span class="p">])</span>
+
+                <span class="n">work_result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">registered_tasks</span><span class="p">[</span><span class="n">task_name</span><span class="p">]()</span><span class="o">.</span><span class="n">apply_to_dataset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataloc</span><span class="p">,</span>
+                                                                                  <span class="bp">self</span><span class="o">.</span><span class="n">dataset_config</span><span class="p">,</span>
+                                                                                  <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">tasks</span><span class="p">[</span><span class="n">task_name</span><span class="p">],</span>
+                                                                                  <span class="bp">self</span><span class="o">.</span><span class="n">dirs_list</span><span class="p">,</span>
+                                                                                  <span class="n">initialize_result</span><span class="p">[</span><span class="s2">&quot;result&quot;</span><span class="p">],</span>
+                                                                                  <span class="bp">self</span><span class="o">.</span><span class="n">mpool</span><span class="p">,</span>
+                                                                                  <span class="bp">self</span><span class="o">.</span><span class="n">show_progress</span><span class="p">)</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="n">task_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;results&quot;</span><span class="p">:</span> <span class="n">work_result</span><span class="p">[</span><span class="s2">&quot;results&quot;</span><span class="p">],</span>
+                                           <span class="s2">&quot;errors&quot;</span><span class="p">:</span> <span class="p">[</span><span class="o">*</span><span class="n">initialize_result</span><span class="p">[</span><span class="s2">&quot;errors&quot;</span><span class="p">],</span> <span class="o">*</span><span class="n">work_result</span><span class="p">[</span><span class="s2">&quot;errors&quot;</span><span class="p">]]}</span>
+
             <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">registered_tasks</span><span class="p">[</span><span class="n">task_name</span><span class="p">](),</span> <span class="n">AllItemsTask</span><span class="p">):</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="n">task_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">apply_all_items</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">registered_tasks</span><span class="p">[</span><span class="n">task_name</span><span class="p">]</span><span class="o">.</span><span class="n">work</span><span class="p">)(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataloc</span><span class="p">,</span>
-                                                                                                 <span class="bp">self</span><span class="o">.</span><span class="n">dataset_config</span><span class="p">,</span>
-                                                                                                 <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">tasks</span><span class="p">[</span>
-                                                                                                     <span class="n">task_name</span><span class="p">],</span>
-                                                                                                 <span class="n">task_name</span><span class="p">,</span>
-                                                                                                 <span class="bp">self</span><span class="o">.</span><span class="n">dirs_list</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="n">task_name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">registered_tasks</span><span class="p">[</span><span class="n">task_name</span><span class="p">]()</span><span class="o">.</span><span class="n">apply_to_dataset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataloc</span><span class="p">,</span>
+                                                                                              <span class="bp">self</span><span class="o">.</span><span class="n">dataset_config</span><span class="p">,</span>
+                                                                                              <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">tasks</span><span class="p">[</span><span class="n">task_name</span><span class="p">],</span>
+                                                                                              <span class="bp">self</span><span class="o">.</span><span class="n">dirs_list</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error executing </span><span class="si">{</span><span class="n">task_name</span><span class="si">}</span><span class="s2">. Unrecognized task type&quot;</span><span class="p">)</span>
 

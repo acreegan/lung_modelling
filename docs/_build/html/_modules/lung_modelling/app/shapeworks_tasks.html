@@ -37,11 +37,22 @@
 <span class="kn">from</span> <span class="nn">glob</span> <span class="kn">import</span> <span class="n">glob</span>
 <span class="kn">import</span> <span class="nn">pyvista</span> <span class="k">as</span> <span class="nn">pv</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">from</span> <span class="nn">pyvista_tools</span> <span class="kn">import</span> <span class="n">pyvista_faces_to_2d</span><span class="p">,</span> <span class="n">remove_shared_faces_with_merge</span>
+<span class="kn">import</span> <span class="nn">csv</span>
+<span class="kn">from</span> <span class="nn">lung_modelling</span> <span class="kn">import</span> <span class="n">find_connected_faces</span><span class="p">,</span> <span class="n">flatten</span>
 
 
 <div class="viewcode-block" id="SmoothLungLobesSW">
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.SmoothLungLobesSW">[docs]</a>
 <span class="k">class</span> <span class="nc">SmoothLungLobesSW</span><span class="p">(</span><span class="n">EachItemTask</span><span class="p">):</span>
+
+<div class="viewcode-block" id="SmoothLungLobesSW.initialize">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.SmoothLungLobesSW.initialize">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="k">pass</span></div>
+
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -51,7 +62,7 @@
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.SmoothLungLobesSW.work">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">source_directory_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
-             <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+             <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">initialize_result</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Pre-process lung lobe images by applying antialiasing using Shapeworks libraries</span>
 
@@ -94,7 +105,7 @@
             <span class="n">lobe_image</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">extractLabel</span><span class="p">(</span><span class="n">dataset_config</span><span class="o">.</span><span class="n">lobe_mapping</span><span class="p">[</span><span class="n">lobe</span><span class="p">])</span>
             <span class="n">iso_spacing</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
             <span class="n">lobe_image</span><span class="o">.</span><span class="n">antialias</span><span class="p">(</span><span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">numberOfIterations</span><span class="p">,</span> <span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">maximumRMSError</span><span class="p">)</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span>
-                <span class="n">iso_spacing</span><span class="p">,</span> <span class="n">sw</span><span class="o">.</span><span class="n">InterpolationType</span><span class="o">.</span><span class="n">Linear</span><span class="p">)</span><span class="o">.</span><span class="n">binarize</span><span class="p">()</span>
+                <span class="n">iso_spacing</span><span class="p">,</span> <span class="n">sw</span><span class="o">.</span><span class="n">InterpolationType</span><span class="o">.</span><span class="n">Linear</span><span class="p">)</span><span class="o">.</span><span class="n">binarize</span><span class="p">()</span><span class="o">.</span><span class="n">isolate</span><span class="p">()</span>
 
             <span class="n">filename</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">output_directory</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">name</span><span class="p">)</span><span class="si">}{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="n">lobe_image</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
@@ -109,6 +120,13 @@
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.CreateMeshesSW">[docs]</a>
 <span class="k">class</span> <span class="nc">CreateMeshesSW</span><span class="p">(</span><span class="n">EachItemTask</span><span class="p">):</span>
 
+<div class="viewcode-block" id="CreateMeshesSW.initialize">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.CreateMeshesSW.initialize">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="k">pass</span></div>
+
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="s2">&quot;create_meshes_sw&quot;</span>
@@ -117,9 +135,12 @@
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.CreateMeshesSW.work">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">source_directory_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
-             <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+             <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">initialize_result</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Convert medical image files to meshes and apply smoothing using Shapeworks libraries.</span>
+
+<span class="sd">        To meet the shapeworks requirement that all groomed files have unique names, the top level parent folder (which</span>
+<span class="sd">        should be the subject number) is appended to the file names, delimited by a dash character (-).</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -137,13 +158,20 @@
 <span class="sd">            **results_directory**: subdirectory for results</span>
 
 <span class="sd">            **params**: (Dict)</span>
-
+<span class="sd">                **decimate**, **target_reduction**, **volume_preservation**</span>
+<span class="sd">                    Option to decimate and parameters for pyvvista mesh decimate</span>
 <span class="sd">                **remesh**, **remesh_percentage**, **adaptivity**:</span>
 <span class="sd">                    Option to remesh and parameters for shapeworks remesh</span>
 <span class="sd">                **smooth**, **smooth_iterations**, **relaxation**:</span>
 <span class="sd">                    Option to smooth and parameters for shapeworks smooth</span>
 <span class="sd">                **fill_holes**, **hole_size**:</span>
-<span class="sd">                    Option to fill holes nad parameters for shapeworks fill_holes}</span>
+<span class="sd">                    Option to fill holes andd parameters for shapeworks fill_holes</span>
+<span class="sd">                **remove_shared_faces**:</span>
+<span class="sd">                    Option to remove duplicate faces in the mesh</span>
+<span class="sd">                **isolate_mesh**:</span>
+<span class="sd">                    Option to remove islands leaving only the larges connected region in the mesh.</span>
+<span class="sd">                    If use_geodesic_distance is selected in the optimizer, it is essential that the mesh does not</span>
+<span class="sd">                    have islands.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -162,20 +190,48 @@
 
         <span class="n">mesh_files</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">image_file</span> <span class="ow">in</span> <span class="n">image_files</span><span class="p">:</span>
-            <span class="n">image_data</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">Image</span><span class="p">(</span><span class="n">image_file</span><span class="p">)</span>
+            <span class="n">image_data</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">Image</span><span class="p">(</span><span class="n">image_file</span><span class="p">)</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
             <span class="n">mesh</span> <span class="o">=</span> <span class="n">image_data</span><span class="o">.</span><span class="n">toMesh</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># Seems to get the mesh in the right orientation without manual realignment</span>
 
-            <span class="c1"># Shapeworks remeshing uses ACVD (vtkIsotropicDiscreteRemeshing). Should be the same as pyACVD with pyvista</span>
-            <span class="n">mesh_rm</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">remeshPercent</span><span class="p">(</span><span class="n">percentage</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">remesh_percentage</span><span class="p">,</span>
-                                         <span class="n">adaptivity</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">adaptivity</span><span class="p">)</span> <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">remesh</span> <span class="k">else</span> <span class="n">mesh</span>
-            <span class="c1"># Shapeworks smooth uses vtkSmothPolyData. Should be the same as pyVista</span>
-            <span class="n">mesh_sm</span> <span class="o">=</span> <span class="n">mesh_rm</span><span class="o">.</span><span class="n">smooth</span><span class="p">(</span><span class="n">iterations</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">smooth_iterations</span><span class="p">,</span>
-                                     <span class="n">relaxation</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">relaxation</span><span class="p">)</span> <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">smooth</span> <span class="k">else</span> <span class="n">mesh_rm</span>
-            <span class="c1"># Shapeworks fillHoles uses vtkFillHolesFilter. Should be the same as pyVista</span>
-            <span class="n">mesh_fh</span> <span class="o">=</span> <span class="n">mesh_sm</span><span class="o">.</span><span class="n">fillHoles</span><span class="p">(</span><span class="n">hole_size</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">hole_size</span><span class="p">)</span> <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">fill_holes</span> <span class="k">else</span> <span class="n">mesh_sm</span>
+            <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">decimate</span><span class="p">:</span>
+                <span class="n">mesh</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">sw2vtkMesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span>
+                <span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">decimate</span><span class="p">(</span><span class="n">target_reduction</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">target_reduction</span><span class="p">,</span>
+                                     <span class="n">volume_preservation</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">volume_preservation</span><span class="p">)</span>
+                <span class="n">mesh</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">points</span><span class="p">,</span> <span class="n">pyvista_faces_to_2d</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">faces</span><span class="p">))</span>
 
-            <span class="n">output_filename</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">output_directory</span> <span class="o">/</span> <span class="n">Path</span><span class="p">(</span><span class="n">image_file</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.vtk&#39;</span>
-            <span class="n">mesh_fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">output_filename</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">remesh</span><span class="p">:</span>
+                <span class="c1"># Shapeworks remeshing uses ACVD (vtkIsotropicDiscreteRemeshing). Should be the same as pyACVD with pyvista</span>
+                <span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">remeshPercent</span><span class="p">(</span><span class="n">percentage</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">remesh_percentage</span><span class="p">,</span>
+                                          <span class="n">adaptivity</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">adaptivity</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">smooth</span><span class="p">:</span>
+                <span class="c1"># Shapeworks smooth uses vtkSmoothPolyData. Should be the same as pyVista</span>
+                <span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">smooth</span><span class="p">(</span><span class="n">iterations</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">smooth_iterations</span><span class="p">,</span>
+                                   <span class="n">relaxation</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">relaxation</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">fill_holes</span><span class="p">:</span>
+                <span class="c1"># Shapeworks fillHoles uses vtkFillHolesFilter. Should be the same as pyVista</span>
+                <span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">fillHoles</span><span class="p">(</span><span class="n">hole_size</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">hole_size</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">remove_shared_faces</span><span class="p">:</span>
+                <span class="n">mesh</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">sw2vtkMesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="p">)</span> <span class="k">else</span> <span class="n">mesh</span>
+                <span class="n">mesh</span> <span class="o">=</span> <span class="n">remove_shared_faces_with_merge</span><span class="p">([</span><span class="n">mesh</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">mesh</span><span class="o">.</span><span class="n">n_faces</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Generated mesh is empty&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">mesh</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">sw2vtkMesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="p">)</span> <span class="k">else</span> <span class="n">mesh</span>
+
+            <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">isolate_mesh</span><span class="p">:</span>
+                <span class="n">_</span><span class="p">,</span> <span class="n">connected_points</span> <span class="o">=</span> <span class="n">find_connected_faces</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">pyvista_faces_to_2d</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">faces</span><span class="p">)))</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">connected_points</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">connected_points</span> <span class="o">=</span> <span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">item</span><span class="p">))</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">connected_points</span><span class="o">.</span><span class="n">values</span><span class="p">())]</span>
+                    <span class="n">connected_points</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="nb">len</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                    <span class="n">to_remove</span> <span class="o">=</span> <span class="n">flatten</span><span class="p">(</span><span class="n">connected_points</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+                    <span class="n">mesh</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">remove_points</span><span class="p">(</span><span class="n">to_remove</span><span class="p">)</span>
+
+            <span class="n">output_filename</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">output_directory</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">Path</span><span class="p">(</span><span class="n">image_file</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">output_directory</span><span class="o">.</span><span class="n">parents</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">stem</span><span class="si">}</span><span class="s2">.vtk&quot;</span>
+            <span class="n">mesh</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">output_filename</span><span class="p">)</span>
+
             <span class="n">mesh_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">output_filename</span><span class="p">))</span>
 
         <span class="k">return</span> <span class="n">mesh_files</span></div>
@@ -187,6 +243,13 @@
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.SmoothWholeLungsSW">[docs]</a>
 <span class="k">class</span> <span class="nc">SmoothWholeLungsSW</span><span class="p">(</span><span class="n">EachItemTask</span><span class="p">):</span>
 
+<div class="viewcode-block" id="SmoothWholeLungsSW.initialize">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.SmoothWholeLungsSW.initialize">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="k">pass</span></div>
+
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="s2">&quot;smooth_whole_lungs_sw&quot;</span>
@@ -195,7 +258,7 @@
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.SmoothWholeLungsSW.work">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">source_directory_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
-             <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+             <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">initialize_result</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Pre-process lung segmentation by extracting whole lung and applying antialiasing using Shapeworks libraries.</span>
 
@@ -240,13 +303,13 @@
                 <span class="n">image</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">extractLabel</span><span class="p">(</span><span class="n">dataset_config</span><span class="o">.</span><span class="n">lobe_mapping</span><span class="p">[</span><span class="n">lobe</span><span class="p">])</span>
                 <span class="n">lobe_images</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
 
-            <span class="n">merged</span> <span class="o">=</span> <span class="n">lobe_images</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="k">for</span> <span class="n">image</span> <span class="ow">in</span> <span class="n">lobe_images</span><span class="p">:</span>
+            <span class="n">merged</span> <span class="o">=</span> <span class="n">lobe_images</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">image</span> <span class="ow">in</span> <span class="n">lobe_images</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
                 <span class="n">merged</span> <span class="o">=</span> <span class="n">merged</span> <span class="o">+</span> <span class="n">image</span>
 
             <span class="n">iso_spacing</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
             <span class="n">merged</span><span class="o">.</span><span class="n">antialias</span><span class="p">(</span><span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">numberOfIterations</span><span class="p">,</span> <span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">maximumRMSError</span><span class="p">)</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span>
-                <span class="n">iso_spacing</span><span class="p">,</span> <span class="n">sw</span><span class="o">.</span><span class="n">InterpolationType</span><span class="o">.</span><span class="n">Linear</span><span class="p">)</span><span class="o">.</span><span class="n">binarize</span><span class="p">()</span>
+                <span class="n">iso_spacing</span><span class="p">,</span> <span class="n">sw</span><span class="o">.</span><span class="n">InterpolationType</span><span class="o">.</span><span class="n">Linear</span><span class="p">)</span><span class="o">.</span><span class="n">binarize</span><span class="p">()</span><span class="o">.</span><span class="n">isolate</span><span class="p">()</span>
 
             <span class="n">filename</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">output_directory</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">name</span><span class="p">)</span><span class="si">}{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="n">merged</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
@@ -267,11 +330,12 @@
 <div class="viewcode-block" id="ReferenceSelectionMeshSW.work">
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.ReferenceSelectionMeshSW.work">[docs]</a>
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dirs_list</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span>
+    <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dirs_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span>
              <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        A task to load all meshes at once so the shape closest to the mean can be found and selected as the reference</span>
+<span class="sd">        Load all meshes at once so the shape closest to the mean can be found and selected as the reference</span>
 
+<span class="sd">        The subject that was used as the reference is indicated in the output filename, surrounded by ()</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -284,13 +348,15 @@
 <span class="sd">        dataset_config</span>
 <span class="sd">            Config relating to the entire dataset</span>
 <span class="sd">        task_config</span>
-<span class="sd">            Task specific config</span>
+<span class="sd">            **source_directory**: subdirectory within derivative source folder to find source files</span>
+
+<span class="sd">            **results_directory**: subdirectory for results</span>
 
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        reference</span>
-<span class="sd">            Mesh selected as the reference</span>
+<span class="sd">        List of reference mesh filenames. The first element is the combined reference mesh, and the following elements</span>
+<span class="sd">        are the domain reference meshes.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_directory</span><span class="p">):</span>
@@ -306,26 +372,270 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Not all source directories have the same number of meshes&quot;</span><span class="p">)</span>
 
         <span class="n">domains_per_shape</span> <span class="o">=</span> <span class="n">lengths</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">task_config</span><span class="o">.</span><span class="n">reference_domain</span> <span class="o">&gt;</span> <span class="n">domains_per_shape</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Domain </span><span class="si">{</span><span class="n">task_config</span><span class="o">.</span><span class="n">reference_domain</span><span class="si">}</span><span class="s2"> selected as reference but does not exist&quot;</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">task_config</span><span class="o">.</span><span class="n">reference_domain</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">domains_per_shape</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">all_meshes</span> <span class="o">=</span> <span class="p">[</span><span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">file</span><span class="p">)</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">all_mesh_files</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()]</span>
-            <span class="n">ref_index</span><span class="p">,</span> <span class="n">combined_meshes</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">find_reference_mesh_index</span><span class="p">(</span><span class="n">all_meshes</span><span class="p">,</span> <span class="n">domains_per_shape</span><span class="p">)</span>
-            <span class="n">ref_mesh</span> <span class="o">=</span> <span class="n">combined_meshes</span><span class="p">[</span><span class="n">ref_index</span><span class="p">]</span>
+        <span class="n">all_meshes</span> <span class="o">=</span> <span class="p">[</span><span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">file</span><span class="p">)</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">all_mesh_files</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()]</span>
+
+        <span class="n">domain_reference_filenames</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">domains_per_shape</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">ref_index</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">find_reference_mesh_index</span><span class="p">(</span><span class="n">all_meshes</span><span class="p">,</span> <span class="n">domains_per_shape</span><span class="p">)</span>
+            <span class="n">ref_mesh_combined</span> <span class="o">=</span> <span class="n">all_meshes</span><span class="p">[</span><span class="n">ref_index</span><span class="p">]</span>
+            <span class="n">ref_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">dirs_list</span><span class="p">[</span><span class="n">ref_index</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">stem</span>
 
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Reference selection based on single domain not implemented&quot;</span><span class="p">)</span>
+            <span class="n">ref_index</span><span class="p">,</span> <span class="n">combined_meshes</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">find_reference_mesh_index</span><span class="p">(</span><span class="n">all_meshes</span><span class="p">,</span> <span class="n">domains_per_shape</span><span class="p">)</span>
+            <span class="n">ref_mesh_combined</span> <span class="o">=</span> <span class="n">combined_meshes</span><span class="p">[</span><span class="n">ref_index</span><span class="p">]</span>
+            <span class="n">ref_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">dirs_list</span><span class="p">[</span><span class="n">ref_index</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">stem</span>
 
-        <span class="n">output_filename</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="s2">&quot;reference_mesh.vtk&quot;</span>
-        <span class="n">ref_mesh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">output_filename</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">domains_per_shape</span><span class="p">):</span>
+                <span class="c1"># find_reference_mesh_index destroys all_meshes during the combining process. So we have to create them again</span>
+                <span class="n">all_meshes</span> <span class="o">=</span> <span class="p">[</span><span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">file</span><span class="p">)</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">all_mesh_files</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()]</span>
+                <span class="n">domain_reference_mesh</span> <span class="o">=</span> <span class="n">all_meshes</span><span class="p">[</span><span class="n">ref_index</span> <span class="o">*</span> <span class="n">domains_per_shape</span> <span class="o">+</span> <span class="n">i</span><span class="p">]</span>
+                <span class="n">domain_reference_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span>
+                    <span class="n">Path</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">all_mesh_files</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()[</span><span class="n">ref_index</span> <span class="o">*</span> <span class="n">domains_per_shape</span> <span class="o">+</span> <span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">stem</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
 
-        <span class="k">return</span> <span class="p">[</span><span class="n">output_filename</span><span class="p">]</span></div>
+                <span class="n">domain_reference_filename</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">domain_reference_name</span><span class="si">}</span><span class="s2">_reference_mesh.vtk&quot;</span>
+                <span class="n">domain_reference_mesh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">domain_reference_filename</span><span class="p">))</span>
+                <span class="n">domain_reference_filenames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">domain_reference_filename</span><span class="p">)</span>
+
+        <span class="n">ref_mesh_combined_filename</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;combined_reference_mesh.vtk&quot;</span>
+        <span class="n">ref_mesh_combined</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">ref_mesh_combined_filename</span><span class="p">))</span>
+
+        <span class="n">ref_dir_filename</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="s2">&quot;ref_dir.txt&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">ref_dir_filename</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">ref_dir_file</span><span class="p">:</span>
+            <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">ref_dir_file</span><span class="p">)</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">ref_dir</span><span class="p">)])</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="n">ref_mesh_combined_filename</span><span class="p">,</span> <span class="o">*</span><span class="n">domain_reference_filenames</span><span class="p">]</span></div>
 </div>
 
 
 
-<span class="n">all_tasks</span> <span class="o">=</span> <span class="p">[</span><span class="n">SmoothLungLobesSW</span><span class="p">,</span> <span class="n">CreateMeshesSW</span><span class="p">,</span> <span class="n">SmoothWholeLungsSW</span><span class="p">,</span> <span class="n">ReferenceSelectionMeshSW</span><span class="p">]</span>
+<div class="viewcode-block" id="MeshTransformSW">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.MeshTransformSW">[docs]</a>
+<span class="k">class</span> <span class="nc">MeshTransformSW</span><span class="p">(</span><span class="n">EachItemTask</span><span class="p">):</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;mesh_transform_sw&quot;</span>
+
+<div class="viewcode-block" id="MeshTransformSW.initialize">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.MeshTransformSW.initialize">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load reference meshes and convert to points and faces so they can be pickled and sent to the work function</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataloc</span>
+<span class="sd">            Dataset Locator</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">            Dataset config</span>
+<span class="sd">        task_config</span>
+<span class="sd">            **source_directory_initialize**</span>
+<span class="sd">                directory from which to load reference meshes</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Dict of reference meshes</span>
+<span class="sd">            {**reference_meshes**:{**points**:[points], **faces**:[faces]}}</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">reference_mesh_files</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_pooled_derivative</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory_initialize</span> <span class="o">/</span> <span class="s2">&quot;*.vtk&quot;</span><span class="p">))</span>
+
+        <span class="n">reference_meshes</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">reference_mesh_files</span><span class="p">:</span>
+            <span class="n">reference_mesh</span> <span class="o">=</span> <span class="n">pv</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+            <span class="n">reference_meshes</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">file</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="p">)]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;points&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">reference_mesh</span><span class="o">.</span><span class="n">points</span><span class="p">),</span>
+                                                      <span class="s2">&quot;faces&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pyvista_faces_to_2d</span><span class="p">(</span><span class="n">reference_mesh</span><span class="o">.</span><span class="n">faces</span><span class="p">))}</span>
+
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;reference_meshes&quot;</span><span class="p">:</span> <span class="n">reference_meshes</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="MeshTransformSW.work">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.MeshTransformSW.work">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">source_directory_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+             <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">initialize_result</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate alignment transforms for global alignment and per domain alignment. Uses shapeworks rigid alignment</span>
+<span class="sd">        for both.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        source_directory_primary</span>
+<span class="sd">            Absolute path of the source directory in the primary folder of the dataset</span>
+<span class="sd">        source_directory_derivative</span>
+<span class="sd">            Absolute path of the source directory in the derivative folder of the dataset</span>
+<span class="sd">        output_directory</span>
+<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">            Config relating to the entire dataset</span>
+<span class="sd">        task_config</span>
+<span class="sd">            **results_directory**: subdirectory for results</span>
+
+<span class="sd">            **output_filenames**: dict providing a mapping from lobe mapping (in dataset config) to output filenames</span>
+
+<span class="sd">            **params**: (Dict)</span>
+<span class="sd">                **iterations**</span>
+<span class="sd">                    Iterations for shapeworks alignment function</span>
+
+<span class="sd">        initialize_result</span>
+<span class="sd">            Return dict from the initialize function</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        List of transform filenames. The first is for the global alignment, and the following are for domain alignments.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_directory</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_directory</span><span class="p">)</span>
+
+        <span class="n">mesh_files</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">source_directory_derivative</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory</span> <span class="o">/</span> <span class="s2">&quot;*&quot;</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">mesh_files</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;No files found&quot;</span><span class="p">)</span>
+
+        <span class="n">meshes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">mesh_file</span> <span class="ow">in</span> <span class="n">mesh_files</span><span class="p">:</span>
+            <span class="n">meshes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">mesh_file</span><span class="p">))</span>
+
+        <span class="c1"># Copy so we don&#39;t destroy meshes[0] for later!</span>
+        <span class="n">combined_mesh</span> <span class="o">=</span> <span class="n">meshes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">mesh</span> <span class="ow">in</span> <span class="n">meshes</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="n">combined_mesh</span> <span class="o">+=</span> <span class="n">mesh</span>
+
+        <span class="n">combined_reference_mesh</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">initialize_result</span><span class="p">[</span><span class="s2">&quot;reference_meshes&quot;</span><span class="p">][</span><span class="s2">&quot;combined_reference_mesh&quot;</span><span class="p">][</span><span class="s2">&quot;points&quot;</span><span class="p">],</span>
+                                          <span class="n">initialize_result</span><span class="p">[</span><span class="s2">&quot;reference_meshes&quot;</span><span class="p">][</span><span class="s2">&quot;combined_reference_mesh&quot;</span><span class="p">][</span><span class="s2">&quot;faces&quot;</span><span class="p">])</span>
+        <span class="n">combined_transform</span> <span class="o">=</span> <span class="n">combined_mesh</span><span class="o">.</span><span class="n">createTransform</span><span class="p">(</span><span class="n">combined_reference_mesh</span><span class="p">,</span> <span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="o">.</span><span class="n">AlignmentType</span><span class="o">.</span><span class="n">Rigid</span><span class="p">,</span>
+                                                           <span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">iterations</span><span class="p">)</span>
+
+        <span class="c1"># # Center method:</span>
+        <span class="c1"># com1 = combined_reference_mesh.centerOfMass()</span>
+        <span class="c1"># com2 = combined_mesh.centerOfMass()</span>
+        <span class="c1"># centered_mesh = combined_mesh.copy().translate(</span>
+        <span class="c1">#     [-(com2[0] - com1[0]), -(com2[1] - com1[1]), -(com2[2] - com1[2])])</span>
+        <span class="c1">#</span>
+        <span class="c1"># combined_transform = combined_mesh.createTransform(centered_mesh, sw.Mesh.AlignmentType.Rigid,</span>
+        <span class="c1">#                                                    1).flatten()</span>
+
+        <span class="n">combined_transform_filename</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="s2">&quot;combined_mesh_transform.txt&quot;</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">combined_transform_filename</span><span class="p">),</span> <span class="n">combined_transform</span><span class="p">)</span>
+
+        <span class="n">domain_transform_filenames</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">meshes</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">file</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">meshes</span><span class="p">,</span> <span class="n">mesh_files</span><span class="p">):</span>
+                <span class="n">domain_reference_mesh</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span>
+                    <span class="n">initialize_result</span><span class="p">[</span><span class="s2">&quot;reference_meshes&quot;</span><span class="p">][</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">file</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">_reference_mesh&quot;</span><span class="p">][</span>
+                        <span class="s2">&quot;points&quot;</span><span class="p">],</span>
+                    <span class="n">initialize_result</span><span class="p">[</span><span class="s2">&quot;reference_meshes&quot;</span><span class="p">][</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">file</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">_reference_mesh&quot;</span><span class="p">][</span>
+                        <span class="s2">&quot;faces&quot;</span><span class="p">])</span>
+                <span class="n">domain_transform</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">createTransform</span><span class="p">(</span><span class="n">domain_reference_mesh</span><span class="p">,</span> <span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="o">.</span><span class="n">AlignmentType</span><span class="o">.</span><span class="n">Rigid</span><span class="p">,</span>
+                                                        <span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">iterations</span><span class="p">)</span>
+
+                <span class="c1"># # Center method:</span>
+                <span class="c1"># com = mesh.centerOfMass()</span>
+                <span class="c1"># centered_mesh = mesh.copy().translate([-com[0], -com[1], -com[2]])</span>
+                <span class="c1"># domain_transform = mesh.createTransform(centered_mesh, sw.Mesh.AlignmentType.Rigid, 1)</span>
+
+                <span class="n">domain_transform_filename</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">file</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="p">)</span><span class="si">}</span><span class="s2">_transform.txt&quot;</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">domain_transform_filename</span><span class="p">),</span> <span class="n">domain_transform</span><span class="p">)</span>
+                <span class="n">domain_transform_filenames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">domain_transform_filename</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="n">combined_transform_filename</span><span class="p">,</span> <span class="o">*</span><span class="n">domain_transform_filenames</span><span class="p">]</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="OptimizeMeshesSW">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.OptimizeMeshesSW">[docs]</a>
+<span class="k">class</span> <span class="nc">OptimizeMeshesSW</span><span class="p">(</span><span class="n">AllItemsTask</span><span class="p">):</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;optimize_meshes_sw&quot;</span>
+
+<div class="viewcode-block" id="OptimizeMeshesSW.work">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.OptimizeMeshesSW.work">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dirs_list</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span>
+             <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Run the shapeworks optimize command</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataloc</span>
+<span class="sd">            Dataset Locator</span>
+<span class="sd">        dirs_list</span>
+<span class="sd">            List of relative paths to the source directories</span>
+<span class="sd">        output_directory</span>
+<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">            Dataset config</span>
+<span class="sd">        task_config</span>
+<span class="sd">            **source_directory_transform**</span>
+<span class="sd">                directory for transform files</span>
+<span class="sd">            **source_directory_mesh**</span>
+<span class="sd">                directory for mesh files</span>
+<span class="sd">            **source_directory_original**</span>
+<span class="sd">                directory for original (pre-grooming) files</span>
+<span class="sd">            **results_directory**:</span>
+<span class="sd">                subdirectory for results</span>
+<span class="sd">            **params**</span>
+<span class="sd">                shapeworks optimization params</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_directory</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_directory</span><span class="p">)</span>
+
+        <span class="n">subjects</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="nb">dir</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">dirs_list</span><span class="p">:</span>
+            <span class="n">subject</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">Subject</span><span class="p">()</span>
+            <span class="n">mesh_files</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="nb">dir</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory_mesh</span> <span class="o">/</span> <span class="s2">&quot;*&quot;</span><span class="p">))</span>
+            <span class="n">original_files</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="nb">dir</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory_original</span> <span class="o">/</span> <span class="s2">&quot;*&quot;</span><span class="p">))</span>
+            <span class="n">subject</span><span class="o">.</span><span class="n">set_number_of_domains</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">mesh_files</span><span class="p">))</span>
+            <span class="n">transforms</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">mesh_files</span><span class="p">:</span>
+                <span class="n">glob_string</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span>
+                    <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="nb">dir</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory_transform</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;*</span><span class="si">{</span><span class="n">Path</span><span class="p">(</span><span class="n">file</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="si">}</span><span class="s2">*&quot;</span><span class="p">)</span>
+                <span class="n">transform_file</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">glob_string</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">transform</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">transform_file</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                <span class="n">transforms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">transform</span><span class="p">)</span>
+
+            <span class="n">combined_transform_file</span> <span class="o">=</span> \
+                <span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="nb">dir</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory_transform</span> <span class="o">/</span> <span class="s2">&quot;*combined*&quot;</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">combined_transform</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">combined_transform_file</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+            <span class="n">transforms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">combined_transform</span><span class="p">)</span>
+            <span class="n">subject</span><span class="o">.</span><span class="n">set_groomed_transforms</span><span class="p">(</span><span class="n">transforms</span><span class="p">)</span>
+            <span class="n">subject</span><span class="o">.</span><span class="n">set_groomed_filenames</span><span class="p">(</span><span class="n">mesh_files</span><span class="p">)</span>
+            <span class="n">subject</span><span class="o">.</span><span class="n">set_original_filenames</span><span class="p">(</span><span class="n">original_files</span><span class="p">)</span>
+            <span class="n">subject</span><span class="o">.</span><span class="n">set_display_name</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="nb">dir</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="p">))</span>
+            <span class="n">subjects</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">subject</span><span class="p">)</span>
+
+        <span class="n">project</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">Project</span><span class="p">()</span>
+        <span class="n">project</span><span class="o">.</span><span class="n">set_subjects</span><span class="p">(</span><span class="n">subjects</span><span class="p">)</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">Parameters</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">sw</span><span class="o">.</span><span class="n">Variant</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+
+        <span class="n">project</span><span class="o">.</span><span class="n">set_parameters</span><span class="p">(</span><span class="s2">&quot;optimize&quot;</span><span class="p">,</span> <span class="n">parameters</span><span class="p">)</span>
+
+        <span class="n">spreadsheet_file</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="s2">&quot;shapeworks_project.swproj&quot;</span>
+        <span class="n">project</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">spreadsheet_file</span><span class="p">))</span>
+
+        <span class="n">wd</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">output_directory</span><span class="p">)</span>
+        <span class="n">optimize_cmd</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;shapeworks optimize --progress --name &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">spreadsheet_file</span><span class="p">))</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">check_call</span><span class="p">(</span><span class="n">optimize_cmd</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">wd</span><span class="p">)</span></div>
+</div>
+
+
+
+<span class="n">all_tasks</span> <span class="o">=</span> <span class="p">[</span><span class="n">SmoothLungLobesSW</span><span class="p">,</span> <span class="n">CreateMeshesSW</span><span class="p">,</span> <span class="n">SmoothWholeLungsSW</span><span class="p">,</span> <span class="n">ReferenceSelectionMeshSW</span><span class="p">,</span> <span class="n">MeshTransformSW</span><span class="p">,</span>
+             <span class="n">OptimizeMeshesSW</span><span class="p">]</span>
 </pre></div>
 
           </div>

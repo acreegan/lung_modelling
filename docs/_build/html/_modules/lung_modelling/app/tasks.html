@@ -46,6 +46,13 @@
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.SmoothLungLobes">[docs]</a>
 <span class="k">class</span> <span class="nc">SmoothLungLobes</span><span class="p">(</span><span class="n">EachItemTask</span><span class="p">):</span>
 
+<div class="viewcode-block" id="SmoothLungLobes.initialize">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.SmoothLungLobes.initialize">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="k">pass</span></div>
+
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="s2">&quot;smooth_lung_lobes&quot;</span>
@@ -54,7 +61,7 @@
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.SmoothLungLobes.work">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">source_directory_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
-             <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+             <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">initialize_result</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Pre-process lung lobe segmentation by extracting lobe labels and applying antialiasing.</span>
 
@@ -114,6 +121,13 @@
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.SmoothWholeLungs">[docs]</a>
 <span class="k">class</span> <span class="nc">SmoothWholeLungs</span><span class="p">(</span><span class="n">EachItemTask</span><span class="p">):</span>
 
+<div class="viewcode-block" id="SmoothWholeLungs.initialize">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.SmoothWholeLungs.initialize">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="k">pass</span></div>
+
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="s2">&quot;smooth_whole_lungs&quot;</span>
@@ -122,7 +136,7 @@
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.SmoothWholeLungs.work">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">source_directory_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
-             <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+             <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">initialize_result</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Pre-process lung segmentation by extracting whole lung and applying antialiasing.</span>
 
@@ -185,6 +199,13 @@
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.CreateMeshes">[docs]</a>
 <span class="k">class</span> <span class="nc">CreateMeshes</span><span class="p">(</span><span class="n">EachItemTask</span><span class="p">):</span>
 
+<div class="viewcode-block" id="CreateMeshes.initialize">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.CreateMeshes.initialize">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="k">pass</span></div>
+
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="s2">&quot;create_meshes&quot;</span>
@@ -193,7 +214,7 @@
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.CreateMeshes.work">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">source_directory_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
-             <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+             <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">initialize_result</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Convert medical image files to meshes and apply smoothing.</span>
 

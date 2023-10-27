@@ -52,9 +52,18 @@ derivative directories</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.workflow_manager.EachItemTask.initialize">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/workflow_manager/workflow_manager.html#EachItemTask.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.workflow_manager.EachItemTask.initialize" title="Link to this definition">¶</a></dt>
+<dd><p>A method to be called before multiprocessing to load data required by all items. This should only be used to
+load data to avoid multiple simultaneous file access by the work function. It should not create or modify any files.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="lung_modelling.workflow_manager.EachItemTask.work">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_directory_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_directory_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/workflow_manager/workflow_manager.html#EachItemTask.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.workflow_manager.EachItemTask.work" title="Link to this definition">¶</a></dt>
-<dd><p>The work function fo the implementation of this class. Defines work to be done on a set of sources specified by
+<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_directory_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_directory_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initialize_result</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/workflow_manager/workflow_manager.html#EachItemTask.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.workflow_manager.EachItemTask.work" title="Link to this definition">¶</a></dt>
+<dd><p>The work function of the implementation of this class. Defines work to be done on a set of sources specified by
 the source directory parameters. This function should not attempt to access files outside these directories
 because this function will be run in parallel for all workflow sources.</p>
 <p>Results of the work should be saved in the output directory. The return type should be a list of Path objects
@@ -67,6 +76,7 @@ representing the files created.</p>
 <li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
 <li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
 <li><p><strong>task_config</strong> (<em>DictConfig</em>) – Task specific config</p></li>
+<li><p><strong>initialize_result</strong> – </p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -74,6 +84,92 @@ representing the files created.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>list[<em>Path</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.workflow_manager.EachItemTask.apply_to_dataset">
+<span class="sig-name descname"><span class="pre">apply_to_dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dirs_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initialize_result</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mpool</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/workflow_manager/workflow_manager.html#EachItemTask.apply_to_dataset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.workflow_manager.EachItemTask.apply_to_dataset" title="Link to this definition">¶</a></dt>
+<dd><p>Apply work function to each subject in a dataset, with optional multiprocessing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataloc</strong> (<a class="reference internal" href="#lung_modelling.workflow_manager.DatasetLocator" title="lung_modelling.workflow_manager.workflow_manager.DatasetLocator"><em>DatasetLocator</em></a>) – </p></li>
+<li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – </p></li>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – </p></li>
+<li><p><strong>dirs_list</strong> – </p></li>
+<li><p><strong>mpool</strong> – </p></li>
+<li><p><strong>show_progress</strong> – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.workflow_manager.EachItemTask.apply_initialize">
+<span class="sig-name descname"><span class="pre">apply_initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/workflow_manager/workflow_manager.html#EachItemTask.apply_initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.workflow_manager.EachItemTask.apply_initialize" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataloc</strong> (<a class="reference internal" href="#lung_modelling.workflow_manager.DatasetLocator" title="lung_modelling.workflow_manager.workflow_manager.DatasetLocator"><em>DatasetLocator</em></a>) – </p></li>
+<li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – </p></li>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lung_modelling.workflow_manager.AllItemsTask">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.workflow_manager.</span></span><span class="sig-name descname"><span class="pre">AllItemsTask</span></span><a class="reference internal" href="_modules/lung_modelling/workflow_manager/workflow_manager.html#AllItemsTask"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.workflow_manager.AllItemsTask" title="Link to this definition">¶</a></dt>
+<dd><p>A class providing an interface for tasks that should be applied to all items in a list of sources at once.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="lung_modelling.workflow_manager.AllItemsTask.name">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#lung_modelling.workflow_manager.AllItemsTask.name" title="Link to this definition">¶</a></dt>
+<dd><p>The name for the derived implementation of this class. This is used to match the task to its task_config</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.workflow_manager.AllItemsTask.work">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dirs_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/workflow_manager/workflow_manager.html#AllItemsTask.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.workflow_manager.AllItemsTask.work" title="Link to this definition">¶</a></dt>
+<dd><p>The work function fo the implementation of this class. Defines work to be done on a set of sources specified by
+the source directory parameters.</p>
+<p>Results of the work should be saved in the output directory. The return type should be a list of Path objects
+representing the files created.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataloc</strong> (<a class="reference internal" href="#lung_modelling.workflow_manager.DatasetLocator" title="lung_modelling.workflow_manager.workflow_manager.DatasetLocator"><em>DatasetLocator</em></a>) – Dataset locator for the dataset</p></li>
+<li><p><strong>dirs_list</strong> (<em>list</em>) – List of relative paths to the source directories</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – Task specific config</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>list of Path objects representing the files created.</em></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[<em>Path</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.workflow_manager.AllItemsTask.apply_to_dataset">
+<span class="sig-name descname"><span class="pre">apply_to_dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dirs_list</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/workflow_manager/workflow_manager.html#AllItemsTask.apply_to_dataset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.workflow_manager.AllItemsTask.apply_to_dataset" title="Link to this definition">¶</a></dt>
+<dd><p>Apply work function to all items in a dataset at once.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataloc</strong> (<a class="reference internal" href="#lung_modelling.workflow_manager.DatasetLocator" title="lung_modelling.workflow_manager.workflow_manager.DatasetLocator"><em>DatasetLocator</em></a>) – </p></li>
+<li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – </p></li>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – </p></li>
+<li><p><strong>dirs_list</strong> – </p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -177,17 +273,6 @@ If this is none, all directories are selected.</p></li>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="lung_modelling.workflow_manager.apply_to_dataset">
-<span class="sig-prename descclassname"><span class="pre">lung_modelling.workflow_manager.</span></span><span class="sig-name descname"><span class="pre">apply_to_dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/workflow_manager/workflow_manager.html#apply_to_dataset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.workflow_manager.apply_to_dataset" title="Link to this definition">¶</a></dt>
-<dd><p>Decorator to apply a function to each subject in a dataset, with optional multiprocessing.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>func</strong> (<em>Callable</em>) – Function to wrap</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
 <dt class="sig sig-object py" id="lung_modelling.workflow_manager.log_workflow">
 <span class="sig-prename descclassname"><span class="pre">lung_modelling.workflow_manager.</span></span><span class="sig-name descname"><span class="pre">log_workflow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cfg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">results</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/workflow_manager/workflow_manager.html#log_workflow"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.workflow_manager.log_workflow" title="Link to this definition">¶</a></dt>
 <dd><p>Workflow task for logging the result of a workflow. Runs after all tasks are complete in
@@ -252,7 +337,7 @@ of the code that ran in the workflow)</p>
 or “logging”. The task name defines which config dict will be passed to it when it is run.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>task</strong> (<em>Type</em><em>[</em><a class="reference internal" href="#lung_modelling.workflow_manager.EachItemTask" title="lung_modelling.workflow_manager.EachItemTask"><em>EachItemTask</em></a><em>] </em><em>| </em><em>Type</em><em>[</em><em>AllItemsTask</em><em>]</em>) – EachItemTask</p>
+<dd class="field-odd"><p><strong>task</strong> (<em>Type</em><em>[</em><a class="reference internal" href="#lung_modelling.workflow_manager.EachItemTask" title="lung_modelling.workflow_manager.EachItemTask"><em>EachItemTask</em></a><em>] </em><em>| </em><em>Type</em><em>[</em><a class="reference internal" href="#lung_modelling.workflow_manager.AllItemsTask" title="lung_modelling.workflow_manager.AllItemsTask"><em>AllItemsTask</em></a><em>]</em>) – EachItemTask</p>
 </dd>
 </dl>
 </dd></dl>
@@ -298,11 +383,11 @@ Otherwise, all tasks will be run in the order they were registered in.</p>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Module Reference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#lung_modelling.workflow_manager.DatasetLocator"><code class="docutils literal notranslate"><span class="pre">DatasetLocator</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#lung_modelling.workflow_manager.EachItemTask"><code class="docutils literal notranslate"><span class="pre">EachItemTask</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#lung_modelling.workflow_manager.AllItemsTask"><code class="docutils literal notranslate"><span class="pre">AllItemsTask</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#lung_modelling.workflow_manager.initialize"><code class="docutils literal notranslate"><span class="pre">initialize()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#lung_modelling.workflow_manager.gather_directories"><code class="docutils literal notranslate"><span class="pre">gather_directories()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#lung_modelling.workflow_manager.exception_monitor"><code class="docutils literal notranslate"><span class="pre">exception_monitor()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#lung_modelling.workflow_manager.args_unpacker"><code class="docutils literal notranslate"><span class="pre">args_unpacker()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#lung_modelling.workflow_manager.apply_to_dataset"><code class="docutils literal notranslate"><span class="pre">apply_to_dataset()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#lung_modelling.workflow_manager.log_workflow"><code class="docutils literal notranslate"><span class="pre">log_workflow()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#lung_modelling.workflow_manager.get_unique_file_name"><code class="docutils literal notranslate"><span class="pre">get_unique_file_name()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#lung_modelling.workflow_manager.print_results"><code class="docutils literal notranslate"><span class="pre">print_results()</span></code></a></li>

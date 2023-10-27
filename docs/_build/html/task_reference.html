@@ -103,7 +103,16 @@ No parameters are currently in use for this task_config</p></li>
 <dl class="py class">
 <dt class="sig sig-object py" id="lung_modelling.app.tasks.SmoothLungLobes">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.tasks.</span></span><span class="sig-name descname"><span class="pre">SmoothLungLobes</span></span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#SmoothLungLobes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.SmoothLungLobes" title="Link to this definition">¶</a></dt>
-<dd><dl class="py property">
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.app.tasks.SmoothLungLobes.initialize">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#SmoothLungLobes.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.SmoothLungLobes.initialize" title="Link to this definition">¶</a></dt>
+<dd><p>A method to be called before multiprocessing to load data required by all items. This should only be used to
+load data to avoid multiple simultaneous file access by the work function. It should not create or modify any files.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="lung_modelling.app.tasks.SmoothLungLobes.name">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#lung_modelling.app.tasks.SmoothLungLobes.name" title="Link to this definition">¶</a></dt>
 <dd><p>The name for the derived implementation of this class. This is used to match the task to its task_config</p>
@@ -111,7 +120,7 @@ No parameters are currently in use for this task_config</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="lung_modelling.app.tasks.SmoothLungLobes.work">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_directory_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_directory_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#SmoothLungLobes.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.SmoothLungLobes.work" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_directory_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_directory_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initialize_result</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#SmoothLungLobes.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.SmoothLungLobes.work" title="Link to this definition">¶</a></dt>
 <dd><p>Pre-process lung lobe segmentation by extracting lobe labels and applying antialiasing.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -146,7 +155,16 @@ No parameters are currently in use for this task_config</p></li>
 <dl class="py class">
 <dt class="sig sig-object py" id="lung_modelling.app.tasks.SmoothWholeLungs">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.tasks.</span></span><span class="sig-name descname"><span class="pre">SmoothWholeLungs</span></span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#SmoothWholeLungs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.SmoothWholeLungs" title="Link to this definition">¶</a></dt>
-<dd><dl class="py property">
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.app.tasks.SmoothWholeLungs.initialize">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#SmoothWholeLungs.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.SmoothWholeLungs.initialize" title="Link to this definition">¶</a></dt>
+<dd><p>A method to be called before multiprocessing to load data required by all items. This should only be used to
+load data to avoid multiple simultaneous file access by the work function. It should not create or modify any files.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="lung_modelling.app.tasks.SmoothWholeLungs.name">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#lung_modelling.app.tasks.SmoothWholeLungs.name" title="Link to this definition">¶</a></dt>
 <dd><p>The name for the derived implementation of this class. This is used to match the task to its task_config</p>
@@ -154,7 +172,7 @@ No parameters are currently in use for this task_config</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="lung_modelling.app.tasks.SmoothWholeLungs.work">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_directory_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_directory_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#SmoothWholeLungs.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.SmoothWholeLungs.work" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_directory_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_directory_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initialize_result</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#SmoothWholeLungs.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.SmoothWholeLungs.work" title="Link to this definition">¶</a></dt>
 <dd><p>Pre-process lung segmentation by extracting whole lung and applying antialiasing.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -189,7 +207,16 @@ No parameters are currently in use for this task_config</p></li>
 <dl class="py class">
 <dt class="sig sig-object py" id="lung_modelling.app.tasks.CreateMeshes">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.tasks.</span></span><span class="sig-name descname"><span class="pre">CreateMeshes</span></span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#CreateMeshes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.CreateMeshes" title="Link to this definition">¶</a></dt>
-<dd><dl class="py property">
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.app.tasks.CreateMeshes.initialize">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#CreateMeshes.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.CreateMeshes.initialize" title="Link to this definition">¶</a></dt>
+<dd><p>A method to be called before multiprocessing to load data required by all items. This should only be used to
+load data to avoid multiple simultaneous file access by the work function. It should not create or modify any files.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="lung_modelling.app.tasks.CreateMeshes.name">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#lung_modelling.app.tasks.CreateMeshes.name" title="Link to this definition">¶</a></dt>
 <dd><p>The name for the derived implementation of this class. This is used to match the task to its task_config</p>
@@ -197,7 +224,7 @@ No parameters are currently in use for this task_config</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="lung_modelling.app.tasks.CreateMeshes.work">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_directory_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_directory_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#CreateMeshes.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.CreateMeshes.work" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_directory_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_directory_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initialize_result</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#CreateMeshes.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.CreateMeshes.work" title="Link to this definition">¶</a></dt>
 <dd><p>Convert medical image files to meshes and apply smoothing.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -275,7 +302,16 @@ No parameters are currently in use for this task_config</p></li>
 <dl class="py class">
 <dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.SmoothLungLobesSW">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.shapeworks_tasks.</span></span><span class="sig-name descname"><span class="pre">SmoothLungLobesSW</span></span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#SmoothLungLobesSW"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.SmoothLungLobesSW" title="Link to this definition">¶</a></dt>
-<dd><dl class="py property">
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.SmoothLungLobesSW.initialize">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#SmoothLungLobesSW.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.SmoothLungLobesSW.initialize" title="Link to this definition">¶</a></dt>
+<dd><p>A method to be called before multiprocessing to load data required by all items. This should only be used to
+load data to avoid multiple simultaneous file access by the work function. It should not create or modify any files.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.SmoothLungLobesSW.name">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.SmoothLungLobesSW.name" title="Link to this definition">¶</a></dt>
 <dd><p>The name for the derived implementation of this class. This is used to match the task to its task_config</p>
@@ -283,7 +319,7 @@ No parameters are currently in use for this task_config</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.SmoothLungLobesSW.work">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_directory_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_directory_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#SmoothLungLobesSW.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.SmoothLungLobesSW.work" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_directory_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_directory_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initialize_result</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#SmoothLungLobesSW.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.SmoothLungLobesSW.work" title="Link to this definition">¶</a></dt>
 <dd><p>Pre-process lung lobe images by applying antialiasing using Shapeworks libraries</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -318,7 +354,16 @@ No parameters are currently in use for this task_config</p></li>
 <dl class="py class">
 <dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.CreateMeshesSW">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.shapeworks_tasks.</span></span><span class="sig-name descname"><span class="pre">CreateMeshesSW</span></span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#CreateMeshesSW"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.CreateMeshesSW" title="Link to this definition">¶</a></dt>
-<dd><dl class="py property">
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.CreateMeshesSW.initialize">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#CreateMeshesSW.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.CreateMeshesSW.initialize" title="Link to this definition">¶</a></dt>
+<dd><p>A method to be called before multiprocessing to load data required by all items. This should only be used to
+load data to avoid multiple simultaneous file access by the work function. It should not create or modify any files.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.CreateMeshesSW.name">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.CreateMeshesSW.name" title="Link to this definition">¶</a></dt>
 <dd><p>The name for the derived implementation of this class. This is used to match the task to its task_config</p>
@@ -326,8 +371,10 @@ No parameters are currently in use for this task_config</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.CreateMeshesSW.work">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_directory_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_directory_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#CreateMeshesSW.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.CreateMeshesSW.work" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_directory_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_directory_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initialize_result</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#CreateMeshesSW.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.CreateMeshesSW.work" title="Link to this definition">¶</a></dt>
 <dd><p>Convert medical image files to meshes and apply smoothing using Shapeworks libraries.</p>
+<p>To meet the shapeworks requirement that all groomed files have unique names, the top level parent folder (which
+should be the subject number) is appended to the file names, delimited by a dash character (-).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -337,17 +384,25 @@ No parameters are currently in use for this task_config</p></li>
 <li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
 <li><p><strong>task_config</strong> (<em>DictConfig</em>) – <p><strong>source_directory</strong>: subdirectory within derivative source folder to find source files</p>
 <p><strong>results_directory</strong>: subdirectory for results</p>
-<p><strong>params</strong>: (Dict)</p>
-<blockquote>
-<div><dl class="simple">
+<dl class="simple">
+<dt><strong>params</strong>: (Dict)</dt><dd><dl class="simple">
+<dt><strong>decimate</strong>, <strong>target_reduction</strong>, <strong>volume_preservation</strong></dt><dd><p>Option to decimate and parameters for pyvvista mesh decimate</p>
+</dd>
 <dt><strong>remesh</strong>, <strong>remesh_percentage</strong>, <strong>adaptivity</strong>:</dt><dd><p>Option to remesh and parameters for shapeworks remesh</p>
 </dd>
 <dt><strong>smooth</strong>, <strong>smooth_iterations</strong>, <strong>relaxation</strong>:</dt><dd><p>Option to smooth and parameters for shapeworks smooth</p>
 </dd>
-<dt><strong>fill_holes</strong>, <strong>hole_size</strong>:</dt><dd><p>Option to fill holes nad parameters for shapeworks fill_holes}</p>
+<dt><strong>fill_holes</strong>, <strong>hole_size</strong>:</dt><dd><p>Option to fill holes andd parameters for shapeworks fill_holes</p>
+</dd>
+<dt><strong>remove_shared_faces</strong>:</dt><dd><p>Option to remove duplicate faces in the mesh</p>
+</dd>
+<dt><strong>isolate_mesh</strong>:</dt><dd><p>Option to remove islands leaving only the larges connected region in the mesh.
+If use_geodesic_distance is selected in the optimizer, it is essential that the mesh does not
+have islands.</p>
 </dd>
 </dl>
-</div></blockquote>
+</dd>
+</dl>
 </p></li>
 </ul>
 </dd>
@@ -365,7 +420,16 @@ No parameters are currently in use for this task_config</p></li>
 <dl class="py class">
 <dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.SmoothWholeLungsSW">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.shapeworks_tasks.</span></span><span class="sig-name descname"><span class="pre">SmoothWholeLungsSW</span></span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#SmoothWholeLungsSW"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.SmoothWholeLungsSW" title="Link to this definition">¶</a></dt>
-<dd><dl class="py property">
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.SmoothWholeLungsSW.initialize">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#SmoothWholeLungsSW.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.SmoothWholeLungsSW.initialize" title="Link to this definition">¶</a></dt>
+<dd><p>A method to be called before multiprocessing to load data required by all items. This should only be used to
+load data to avoid multiple simultaneous file access by the work function. It should not create or modify any files.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.SmoothWholeLungsSW.name">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.SmoothWholeLungsSW.name" title="Link to this definition">¶</a></dt>
 <dd><p>The name for the derived implementation of this class. This is used to match the task to its task_config</p>
@@ -373,7 +437,7 @@ No parameters are currently in use for this task_config</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.SmoothWholeLungsSW.work">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_directory_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_directory_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#SmoothWholeLungsSW.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.SmoothWholeLungsSW.work" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_directory_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_directory_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initialize_result</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#SmoothWholeLungsSW.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.SmoothWholeLungsSW.work" title="Link to this definition">¶</a></dt>
 <dd><p>Pre-process lung segmentation by extracting whole lung and applying antialiasing using Shapeworks libraries.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -417,22 +481,139 @@ No parameters are currently in use for this task_config</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.ReferenceSelectionMeshSW.work">
 <em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dirs_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#ReferenceSelectionMeshSW.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.ReferenceSelectionMeshSW.work" title="Link to this definition">¶</a></dt>
-<dd><p>A task to load all meshes at once so the shape closest to the mean can be found and selected as the reference</p>
+<dd><p>Load all meshes at once so the shape closest to the mean can be found and selected as the reference</p>
+<p>The subject that was used as the reference is indicated in the output filename, surrounded by ()</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>dataloc</strong> (<a class="reference internal" href="module_reference.html#lung_modelling.workflow_manager.DatasetLocator" title="lung_modelling.workflow_manager.workflow_manager.DatasetLocator"><em>DatasetLocator</em></a>) – Dataset locator for the dataset</p></li>
-<li><p><strong>dirs_list</strong> (<em>Path</em>) – List of relative paths to the source directories</p></li>
+<li><p><strong>dirs_list</strong> (<em>list</em>) – List of relative paths to the source directories</p></li>
 <li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
 <li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
-<li><p><strong>task_config</strong> (<em>DictConfig</em>) – Task specific config</p></li>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – <p><strong>source_directory</strong>: subdirectory within derivative source folder to find source files</p>
+<p><strong>results_directory</strong>: subdirectory for results</p>
+</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><em>reference</em> – Mesh selected as the reference</p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><em>List of reference mesh filenames. The first element is the combined reference mesh, and the following elements</em></p></li>
+<li><p><em>are the domain reference meshes.</em></p></li>
+</ul>
+</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>list[<em>Path</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.MeshTransformSW">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.shapeworks_tasks.</span></span><span class="sig-name descname"><span class="pre">MeshTransformSW</span></span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#MeshTransformSW"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.MeshTransformSW" title="Link to this definition">¶</a></dt>
+<dd><dl class="py property">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.MeshTransformSW.name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.MeshTransformSW.name" title="Link to this definition">¶</a></dt>
+<dd><p>The name for the derived implementation of this class. This is used to match the task to its task_config</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.MeshTransformSW.initialize">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#MeshTransformSW.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.MeshTransformSW.initialize" title="Link to this definition">¶</a></dt>
+<dd><p>Load reference meshes and convert to points and faces so they can be pickled and sent to the work function</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataloc</strong> (<a class="reference internal" href="module_reference.html#lung_modelling.workflow_manager.DatasetLocator" title="lung_modelling.workflow_manager.workflow_manager.DatasetLocator"><em>DatasetLocator</em></a>) – Dataset Locator</p></li>
+<li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Dataset config</p></li>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – <dl class="simple">
+<dt><strong>source_directory_initialize</strong></dt><dd><p>directory from which to load reference meshes</p>
+</dd>
+</dl>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Dict of reference meshes</em> – {<strong>reference_meshes</strong>:{<strong>points</strong>:[points], <strong>faces</strong>:[faces]}}</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.MeshTransformSW.work">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_directory_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_directory_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initialize_result</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#MeshTransformSW.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.MeshTransformSW.work" title="Link to this definition">¶</a></dt>
+<dd><p>Calculate alignment transforms for global alignment and per domain alignment. Uses shapeworks rigid alignment
+for both.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>source_directory_primary</strong> (<em>Path</em>) – Absolute path of the source directory in the primary folder of the dataset</p></li>
+<li><p><strong>source_directory_derivative</strong> (<em>Path</em>) – Absolute path of the source directory in the derivative folder of the dataset</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – <p><strong>results_directory</strong>: subdirectory for results</p>
+<p><strong>output_filenames</strong>: dict providing a mapping from lobe mapping (in dataset config) to output filenames</p>
+<dl class="simple">
+<dt><strong>params</strong>: (Dict)</dt><dd><dl class="simple">
+<dt><strong>iterations</strong></dt><dd><p>Iterations for shapeworks alignment function</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</p></li>
+<li><p><strong>initialize_result</strong> – Return dict from the initialize function</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>List of transform filenames. The first is for the global alignment, and the following are for domain alignments.</em></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[<em>Path</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.OptimizeMeshesSW">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.shapeworks_tasks.</span></span><span class="sig-name descname"><span class="pre">OptimizeMeshesSW</span></span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#OptimizeMeshesSW"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.OptimizeMeshesSW" title="Link to this definition">¶</a></dt>
+<dd><dl class="py property">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.OptimizeMeshesSW.name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.OptimizeMeshesSW.name" title="Link to this definition">¶</a></dt>
+<dd><p>The name for the derived implementation of this class. This is used to match the task to its task_config</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.OptimizeMeshesSW.work">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dirs_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#OptimizeMeshesSW.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.OptimizeMeshesSW.work" title="Link to this definition">¶</a></dt>
+<dd><p>Run the shapeworks optimize command</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataloc</strong> (<a class="reference internal" href="module_reference.html#lung_modelling.workflow_manager.DatasetLocator" title="lung_modelling.workflow_manager.workflow_manager.DatasetLocator"><em>DatasetLocator</em></a>) – Dataset Locator</p></li>
+<li><p><strong>dirs_list</strong> – List of relative paths to the source directories</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Dataset config</p></li>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – <dl class="simple">
+<dt><strong>source_directory_transform</strong></dt><dd><p>directory for transform files</p>
+</dd>
+<dt><strong>source_directory_mesh</strong></dt><dd><p>directory for mesh files</p>
+</dd>
+<dt><strong>source_directory_original</strong></dt><dd><p>directory for original (pre-grooming) files</p>
+</dd>
+<dt><strong>results_directory</strong>:</dt><dd><p>subdirectory for results</p>
+</dd>
+<dt><strong>params</strong></dt><dd><p>shapeworks optimization params</p>
+</dd>
+</dl>
+</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
