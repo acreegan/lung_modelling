@@ -167,23 +167,23 @@ class CreateMeshesSW(EachItemTask):
                 mesh = mesh.fillHoles(hole_size=params.hole_size)
 
             if params.remove_shared_faces:
-                mesh = sw.sw2vtkMesh(mesh) if isinstance(mesh, sw.Mesh) else mesh
-                mesh = remove_shared_faces_with_merge([mesh])
-                if mesh.n_faces == 0:
+                pv_mesh = sw.sw2vtkMesh(mesh) if isinstance(mesh, sw.Mesh) else mesh
+                pv_mesh = remove_shared_faces_with_merge([pv_mesh])
+                if pv_mesh.n_faces == 0:
                     raise ValueError("Generated mesh is empty")
             else:
-                mesh = sw.sw2vtkMesh(mesh) if isinstance(mesh, sw.Mesh) else mesh
+                pv_mesh = sw.sw2vtkMesh(mesh) if isinstance(mesh, sw.Mesh) else mesh
 
             if params.isolate_mesh:
-                _, connected_points = find_connected_faces(list(pyvista_faces_to_2d(mesh.faces)))
+                _, connected_points = find_connected_faces(list(pyvista_faces_to_2d(pv_mesh.faces)), return_points=True)
                 if len(connected_points) > 1:
                     connected_points = [list(set(item)) for item in list(connected_points.values())]
                     connected_points.sort(key=len, reverse=True)
                     to_remove = flatten(connected_points[1:])
-                    mesh, _ = mesh.remove_points(to_remove)
+                    pv_mesh, _ = pv_mesh.remove_points(to_remove)
 
             output_filename = f"{output_directory / Path(image_file).stem}-{output_directory.parents[0].stem}.vtk"
-            mesh.save(output_filename)
+            pv_mesh.save(output_filename)
 
             mesh_files.append(Path(output_filename))
 
