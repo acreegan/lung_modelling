@@ -9,6 +9,7 @@ import SimpleITK as sitk
 import numpy as np
 import pyacvd
 import cc3d
+from scipy import ndimage
 
 
 class SmoothLungLobes(EachItemTask):
@@ -255,4 +256,61 @@ class ReferenceSelectionMesh(AllItemsTask):
         raise NotImplementedError("Reference selection mesh not yet implemented for non shapeworks libs")
 
 
-all_tasks = [SmoothLungLobes, CreateMeshes, SmoothWholeLungs, ReferenceSelectionMesh]
+class ExtractTorso(EachItemTask):
+
+    @property
+    def name(self):
+        return "extract_torso"
+
+    @staticmethod
+    def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        pass
+
+    @staticmethod
+    def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
+             dataset_config: DictConfig, task_config: DictConfig, initialize_result=None) -> list[Path]:
+        """
+        Extract a torso image from a set of dicom files. Segmented torso is saved in a .nii file
+
+        Parameters
+        ----------
+        source_directory_primary
+            Absolute path of the source directory in the primary folder of the dataset
+        source_directory_derivative
+            Absolute path of the source directory in the derivative folder of the dataset
+        output_directory
+            Directory in which to save results of the work
+        dataset_config
+            Config relating to the entire dataset
+        task_config
+            **source_directory**: subdirectory for dicom files
+
+            **results_directory**: subdirectory for results
+
+            **output_filename**: filename for torso image (not including extension)
+
+            **params**: (Dict)
+                **threshold**
+                    threshold for segmenting torso from dicom image
+
+        Returns
+        -------
+        [output_filename]
+            single item list containing the output filename of the torso image
+        """
+        image, header = medpy.io.load(str(source_directory_primary / task_config.source_directory))
+
+        binary_image = np.array(image > task_config.params.threshold, dtype=np.int8)
+
+        max_connectivity = cc3d.largest_k(binary_image, k=1)
+        image_filled_holes = max_connectivity.copy()
+        for i in range(max_connectivity.shape[-1]):
+            image_filled_holes[:, :, i] = ndimage.binary_fill_holes(max_connectivity[:, :, i])
+
+        output_filename = f"{str(output_directory / task_config.output_filename)}.nii"
+        medpy.io.save(image_filled_holes, output_filename, hdr=header, use_compression=True)
+
+        return [Path(output_filename)]
+
+
+all_tasks = [SmoothLungLobes, CreateMeshes, SmoothWholeLungs, ReferenceSelectionMesh, ExtractTorso]
