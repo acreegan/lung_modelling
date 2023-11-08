@@ -9,7 +9,8 @@ import numpy as np
 import subprocess
 from pyvista_tools import pyvista_faces_to_2d, remove_shared_faces_with_merge
 import csv
-from lung_modelling import find_connected_faces, flatten
+from lung_modelling import find_connected_faces, flatten, voxel_to_mesh, fix_mesh
+import medpy.io
 
 
 class SmoothLungLobesSW(EachItemTask):
@@ -17,10 +18,6 @@ class SmoothLungLobesSW(EachItemTask):
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
         pass
-
-    @property
-    def name(self):
-        return "smooth_lung_lobes_sw"
 
     @staticmethod
     def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
@@ -82,10 +79,6 @@ class CreateMeshesSW(EachItemTask):
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
         pass
 
-    @property
-    def name(self):
-        return "create_meshes_sw"
-
     @staticmethod
     def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
              dataset_config: DictConfig, task_config: DictConfig, initialize_result=None) -> list[Path]:
@@ -111,9 +104,14 @@ class CreateMeshesSW(EachItemTask):
             **results_directory**: subdirectory for results
 
             **params**: (Dict)
-                **decimate**, **target_reduction**, **volume_preservation**
-                    Option to decimate and parameters for pyvvista mesh decimate
-                **remesh**, **remesh_percentage**, **adaptivity**:
+                **step_size**
+                    Step size to use for marching cubes. Higher values result in coarser geometry but can prevent meshes
+                    from taking up too much RAM
+                **decimate**, **decimate_target_faces**, **volume_preservation**, **subdivide_passes**
+                    Option to decimate and parameters for pyvvista mesh decimate. If subdivide_passes is greater than 0,
+                    the mesh is decimated first then subdivided. The initial decimation is calcuated such that the
+                    result after subdivision is the target number of faces
+                **remesh**, **remesh_target_points**, **adaptivity**:
                     Option to remesh and parameters for shapeworks remesh
                 **smooth**, **smooth_iterations**, **relaxation**:
                     Option to smooth and parameters for shapeworks smooth
@@ -136,25 +134,37 @@ class CreateMeshesSW(EachItemTask):
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
 
-        image_files = glob(str(source_directory_derivative / task_config.source_directory / "*"))
+        image_files = glob(str(source_directory_derivative / task_config.source_directory / task_config.image_glob))
 
         if len(image_files) == 0:
             raise RuntimeError("No files found")
 
         mesh_files = []
         for image_file in image_files:
-            image_data = sw.Image(image_file).pad(10)
-            mesh = image_data.toMesh(1)  # Seems to get the mesh in the right orientation without manual realignment
+            image_data, header = medpy.io.load(image_file)
+            image_data = np.pad(image_data, 5)
+            mesh = voxel_to_mesh(image_data, spacing=header.spacing, direction=header.direction, offset=header.offset,
+                                 step_size=params.step_size)
+            mesh = sw.Mesh(mesh.points, pyvista_faces_to_2d(mesh.faces))
 
             if params.decimate:
                 mesh = sw.sw2vtkMesh(mesh)
-                mesh = mesh.decimate(target_reduction=params.target_reduction,
+                mesh = mesh.clean()
+
+                t_faces = params.decimate_target_faces / (4**params.subdivide_passes)
+                target_reduction = 1 - (t_faces / mesh.n_faces)
+                mesh = mesh.decimate(target_reduction=target_reduction,
                                      volume_preservation=params.volume_preservation)
+
+                if params.subdivide_passes > 0:
+                    mesh = fix_mesh(mesh)
+                    mesh = mesh.subdivide(params.subdivide_passes)
+
                 mesh = sw.Mesh(mesh.points, pyvista_faces_to_2d(mesh.faces))
 
             if params.remesh:
                 # Shapeworks remeshing uses ACVD (vtkIsotropicDiscreteRemeshing). Should be the same as pyACVD with pyvista
-                mesh = mesh.remeshPercent(percentage=params.remesh_percentage,
+                mesh = mesh.remesh(numVertices=params.remesh_target_points,
                                           adaptivity=params.adaptivity)
 
             if params.smooth:
@@ -195,10 +205,6 @@ class SmoothWholeLungsSW(EachItemTask):
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
         pass
-
-    @property
-    def name(self):
-        return "smooth_whole_lungs_sw"
 
     @staticmethod
     def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
@@ -263,9 +269,6 @@ class SmoothWholeLungsSW(EachItemTask):
 
 
 class ReferenceSelectionMeshSW(AllItemsTask):
-    @property
-    def name(self):
-        return "reference_selection_mesh_sw"
 
     @staticmethod
     def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
@@ -286,7 +289,7 @@ class ReferenceSelectionMeshSW(AllItemsTask):
         dataset_config
             Config relating to the entire dataset
         task_config
-            **source_directory**: subdirectory within derivative source folder to find source files
+            **source_directories**: subdirectories within derivative source folder to find source files
 
             **results_directory**: subdirectory for results
 
@@ -302,7 +305,10 @@ class ReferenceSelectionMeshSW(AllItemsTask):
 
         all_mesh_files = []
         for dir, _, _ in dirs_list:
-            mesh_files = glob(str(dataloc.abs_derivative / dir / task_config.source_directory / "*"))
+            mesh_files = []
+            # Combine files from all sub source directories
+            for source_directory in task_config.source_directories:
+                mesh_files.extend(glob(str(dataloc.abs_derivative / dir / source_directory / "*")))
             all_mesh_files.append(mesh_files)
 
         lengths = [len(files) for files in all_mesh_files]
@@ -347,10 +353,6 @@ class ReferenceSelectionMeshSW(AllItemsTask):
 
 
 class MeshTransformSW(EachItemTask):
-
-    @property
-    def name(self):
-        return "mesh_transform_sw"
 
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
@@ -402,9 +404,9 @@ class MeshTransformSW(EachItemTask):
         dataset_config
             Config relating to the entire dataset
         task_config
-            **results_directory**: subdirectory for results
+            **source_directories**: subdirectories within derivative source folder to find source files
 
-            **output_filenames**: dict providing a mapping from lobe mapping (in dataset config) to output filenames
+            **results_directory**: subdirectory for results
 
             **params**: (Dict)
                 **iterations**
@@ -421,7 +423,9 @@ class MeshTransformSW(EachItemTask):
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
 
-        mesh_files = glob(str(source_directory_derivative / task_config.source_directory / "*"))
+        mesh_files = []
+        for source_directory in task_config.source_directories:
+            mesh_files.extend(glob(str(source_directory_derivative / source_directory / "*")))
 
         if len(mesh_files) == 0:
             raise RuntimeError("No files found")
@@ -477,10 +481,6 @@ class MeshTransformSW(EachItemTask):
 
 class OptimizeMeshesSW(AllItemsTask):
 
-    @property
-    def name(self):
-        return "optimize_meshes_sw"
-
     @staticmethod
     def work(dataloc: DatasetLocator, dirs_list, output_directory: Path, dataset_config: DictConfig,
              task_config: DictConfig) -> list[Path]:
@@ -500,10 +500,10 @@ class OptimizeMeshesSW(AllItemsTask):
         task_config
             **source_directory_transform**
                 directory for transform files
-            **source_directory_mesh**
-                directory for mesh files
-            **source_directory_original**
-                directory for original (pre-grooming) files
+            **source_directories_mesh**
+                directories for mesh files
+            **source_directories_original**
+                directories for original (pre-grooming) files
             **results_directory**:
                 subdirectory for results
             **params**
@@ -516,9 +516,18 @@ class OptimizeMeshesSW(AllItemsTask):
         subjects = []
         for dir, _, _ in dirs_list:
             subject = sw.Subject()
-            mesh_files = glob(str(dataloc.abs_derivative / dir / task_config.source_directory_mesh / "*"))
-            original_files = glob(str(dataloc.abs_derivative / dir / task_config.source_directory_original / "*"))
+            mesh_files = []
+            for source_directory_mesh in task_config.source_directories_mesh:
+                mesh_files.extend(glob(str(dataloc.abs_derivative / dir / source_directory_mesh / "*")))
+
+            original_files = []
+            for source_directory_original in task_config.source_directories_original:
+                for image_glob in task_config.image_globs:
+                    original_files.extend(
+                        glob(str(dataloc.abs_derivative / dir / source_directory_original / image_glob)))
+
             subject.set_number_of_domains(len(mesh_files))
+
             transforms = []
             for file in mesh_files:
                 glob_string = str(
@@ -531,6 +540,12 @@ class OptimizeMeshesSW(AllItemsTask):
                 glob(str(dataloc.abs_derivative / dir / task_config.source_directory_transform / "*combined*"))[0]
             combined_transform = np.loadtxt(combined_transform_file).flatten()
             transforms.append(combined_transform)
+
+            landmark_files = []
+            for source_directory_landmarks in task_config.source_directories_landmarks:
+                landmark_files.extend(glob(str(dataloc.abs_derivative / dir / source_directory_landmarks / "*")))
+
+            subject.set_landmarks_filenames(landmark_files)
             subject.set_groomed_transforms(transforms)
             subject.set_groomed_filenames(mesh_files)
             subject.set_original_filenames(original_files)

@@ -10,6 +10,7 @@ import numpy as np
 import pyacvd
 import cc3d
 from scipy import ndimage
+import pyvista as pv
 
 
 class SmoothLungLobes(EachItemTask):
@@ -17,10 +18,6 @@ class SmoothLungLobes(EachItemTask):
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
         pass
-
-    @property
-    def name(self):
-        return "smooth_lung_lobes"
 
     @staticmethod
     def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
@@ -83,10 +80,6 @@ class SmoothWholeLungs(EachItemTask):
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
         pass
-
-    @property
-    def name(self):
-        return "smooth_whole_lungs"
 
     @staticmethod
     def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
@@ -153,10 +146,6 @@ class CreateMeshes(EachItemTask):
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
         pass
 
-    @property
-    def name(self):
-        return "create_meshes"
-
     @staticmethod
     def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
              dataset_config: DictConfig, task_config: DictConfig, initialize_result=None) -> list[Path]:
@@ -222,9 +211,6 @@ class CreateMeshes(EachItemTask):
 
 
 class ReferenceSelectionMesh(AllItemsTask):
-    @property
-    def name(self):
-        return "reference_selection_mesh"
 
     @staticmethod
     def work(dataloc: DatasetLocator, dirs_list: Path, output_directory: Path, dataset_config: DictConfig,
@@ -257,10 +243,6 @@ class ReferenceSelectionMesh(AllItemsTask):
 
 
 class ExtractTorso(EachItemTask):
-
-    @property
-    def name(self):
-        return "extract_torso"
 
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
@@ -298,6 +280,9 @@ class ExtractTorso(EachItemTask):
         [output_filename]
             single item list containing the output filename of the torso image
         """
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
+
         image, header = medpy.io.load(str(source_directory_primary / task_config.source_directory))
 
         binary_image = np.array(image > task_config.params.threshold, dtype=np.int8)
@@ -313,4 +298,50 @@ class ExtractTorso(EachItemTask):
         return [Path(output_filename)]
 
 
-all_tasks = [SmoothLungLobes, CreateMeshes, SmoothWholeLungs, ReferenceSelectionMesh, ExtractTorso]
+class MeshLandmarksCoarse(EachItemTask):
+
+    @staticmethod
+    def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        pass
+
+    @staticmethod
+    def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
+             dataset_config: DictConfig, task_config: DictConfig, initialize_result=None) -> list[Path]:
+
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
+
+        mesh_files = glob(str(source_directory_derivative / task_config.source_directory / "*"))
+
+        if len(mesh_files) == 0:
+            raise RuntimeError("No files found")
+
+        meshes = []
+        for mesh_file in mesh_files:
+            meshes.append(pv.read(mesh_file))
+
+        mesh_landmark_filenames = []
+        for mesh, file in zip(meshes, mesh_files):
+            axis = task_config.params.axis
+            com = mesh.center_of_mass()
+            bounds = np.array(mesh.bounds).reshape(3, -1)
+            distance = bounds[axis][1] - bounds[axis][0]
+
+            stop_plus = com.copy()
+            stop_plus[axis] += distance
+            points_plus, _ = mesh.ray_trace(com, stop_plus)
+
+            stop_minus = com.copy()
+            stop_minus[axis] -= distance
+            points_minus, _ = mesh.ray_trace(com, stop_minus)
+
+            mesh_landmarks = np.array((points_plus[-1], points_minus[-1]))
+
+            mesh_landmark_filename = output_directory / f"{str(Path(file).stem)}_landmarks.particles"
+            np.savetxt(str(mesh_landmark_filename), mesh_landmarks, delimiter=" ")
+            mesh_landmark_filenames.append(mesh_landmark_filename)
+
+        return mesh_landmark_filenames
+
+
+all_tasks = [SmoothLungLobes, CreateMeshes, SmoothWholeLungs, ReferenceSelectionMesh, ExtractTorso, MeshLandmarksCoarse]

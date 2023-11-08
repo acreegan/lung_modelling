@@ -28,7 +28,7 @@ def extract_section(image_data, section_value):
     return section_array
 
 
-def voxel_to_mesh(dataarray, spacing=None, direction=None, offset=None) -> pv.PolyData:
+def voxel_to_mesh(dataarray, spacing=None, direction=None, offset=None, step_size=1) -> pv.PolyData:
     """
     Creat mesh from discrete scalar array
 
@@ -41,6 +41,10 @@ def voxel_to_mesh(dataarray, spacing=None, direction=None, offset=None) -> pv.Po
         Spacing parameter for array in X, Y, and Z
     direction
         Affine transformation matrix
+    offset
+        Offset position of mesh
+    step_size
+        step_size for marching cubes
 
     Returns
     -------
@@ -56,7 +60,7 @@ def voxel_to_mesh(dataarray, spacing=None, direction=None, offset=None) -> pv.Po
     if offset is None:
         offset = np.array([0, 0, 0])
 
-    verts, faces, norms, vals = skimage.measure.marching_cubes(dataarray, step_size=1, spacing=spacing,
+    verts, faces, norms, vals = skimage.measure.marching_cubes(dataarray, step_size=step_size, spacing=spacing,
                                                                allow_degenerate=False)
 
     verts = np.matmul(verts, direction)
@@ -97,9 +101,7 @@ def fix_mesh(mesh: pv.DataSet, repair_kwargs: dict = None, return_holes=False) -
     meshfix = pymeshfix.MeshFix(mesh.points, pyvista_faces_to_2d(mesh.faces))
     holes = meshfix.extract_holes()
     meshfix.repair(**repair_kwargs)
-    fixed_mesh = mesh.copy()
-    fixed_mesh.points = meshfix.v
-    fixed_mesh.faces = pyvista_faces_to_1d(meshfix.f)
+    fixed_mesh = meshfix.mesh
 
     if return_holes:
         return fixed_mesh, holes

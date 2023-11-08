@@ -58,20 +58,24 @@ class DatasetLocator:
         raise ValueError("Neither primary nor derivative found in input path")
 
 
-class EachItemTask:
+class Task:
+    """
+    A class providing an interface for types of workflow task
+    """
+
+    __metaclass__ = ABCMeta
+
+    def __init__(self, name: str, config: DictConfig):
+        self.name = name
+        self.config = config
+
+
+class EachItemTask(Task):
     """
     A class providing an interface for tasks that should be applied to each item in a list of sources.
 
     """
-    __metaclass___ = ABCMeta
-
-    @property
-    @abstractmethod
-    def name(self):
-        """
-        The name for the derived implementation of this class. This is used to match the task to its task_config
-        """
-        pass
+    __metaclass__ = ABCMeta
 
     @staticmethod
     @abstractmethod
@@ -114,7 +118,7 @@ class EachItemTask:
         """
         pass
 
-    def apply_to_dataset(self, dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig, dirs_list,
+    def apply_to_dataset(self, dataloc: DatasetLocator, dataset_config: DictConfig, dirs_list,
                          initialize_result=None, mpool=None, show_progress=False) -> dict:
         """
         Apply work function to each subject in a dataset, with optional multiprocessing.
@@ -123,7 +127,6 @@ class EachItemTask:
         ----------
         dataloc
         dataset_config
-        task_config
         dirs_list
         mpool
         show_progress
@@ -142,10 +145,10 @@ class EachItemTask:
             for source_directory, _, _ in tqdm(dirs_list, desc=f"Running: {self.name}",
                                                disable=not show_progress):
                 try:
-                    output_directory = dataloc.abs_derivative / source_directory / task_config.results_directory
+                    output_directory = dataloc.abs_derivative / source_directory / self.config.results_directory
                     result = self.work(dataloc.abs_primary / source_directory,
                                        dataloc.abs_derivative / source_directory, output_directory, dataset_config,
-                                       task_config, initialize_result)
+                                       self.config, initialize_result)
                     results.append((str(source_directory), result))
                 except Exception as e:
                     exception_warning(source_directory, e, logger)
@@ -153,8 +156,8 @@ class EachItemTask:
         else:
             args = (
                 (source_directory, dataloc.abs_primary / source_directory, dataloc.abs_derivative / source_directory,
-                 dataloc.abs_derivative / source_directory / task_config.results_directory, dataset_config,
-                 task_config, initialize_result) for source_directory, _, _ in dirs_list)
+                 dataloc.abs_derivative / source_directory / self.config.results_directory, dataset_config,
+                 self.config, initialize_result) for source_directory, _, _ in dirs_list)
             monitored = exception_monitor(self.work, exception_warning, logger)
             unpacked = args_unpacker(monitored)
             imap_results = list(
@@ -170,14 +173,13 @@ class EachItemTask:
         combined = {"results": relative_files, "errors": errors}
         return combined
 
-    def apply_initialize(self, dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+    def apply_initialize(self, dataloc: DatasetLocator, dataset_config: DictConfig) -> dict:
         """
 
         Parameters
         ----------
         dataloc
         dataset_config
-        task_config
 
         Returns
         -------
@@ -190,7 +192,7 @@ class EachItemTask:
         result = {}
         errors = []
         try:
-            result = self.initialize(dataloc, dataset_config, task_config)
+            result = self.initialize(dataloc, dataset_config, self.config)
         except Exception as e:
             exception_warning(e, logger)
             errors.append((str(self.name), e))
@@ -217,7 +219,8 @@ def exception_monitor(func, callback, logger):
     """
 
     def exception_monitor_wrapper(source_directory, source_directory_primary: Path, source_directory_derivative: Path,
-                                  output_directory: Path, dataset_config: DictConfig, task_config: DictConfig, initialize_result):
+                                  output_directory: Path, dataset_config: DictConfig, task_config: DictConfig,
+                                  initialize_result):
         try:
             result = (str(source_directory),
                       func(source_directory_primary, source_directory_derivative, output_directory, dataset_config,
@@ -251,20 +254,12 @@ def args_unpacker(func):
     return unpack
 
 
-class AllItemsTask:
+class AllItemsTask(Task):
     """
     A class providing an interface for tasks that should be applied to all items in a list of sources at once.
 
     """
     __metaclass___ = ABCMeta
-
-    @property
-    @abstractmethod
-    def name(self):
-        """
-        The name for the derived implementation of this class. This is used to match the task to its task_config
-        """
-        pass
 
     @staticmethod
     @abstractmethod
@@ -296,8 +291,7 @@ class AllItemsTask:
         """
         pass
 
-    def apply_to_dataset(self, dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig,
-                         dirs_list) -> dict:
+    def apply_to_dataset(self, dataloc: DatasetLocator, dataset_config: DictConfig, dirs_list) -> dict:
         """
         Apply work function to all items in a dataset at once.
 
@@ -305,7 +299,6 @@ class AllItemsTask:
         ----------
         dataloc
         dataset_config
-        task_config
         dirs_list
 
         Returns
@@ -319,8 +312,8 @@ class AllItemsTask:
         results = []
         errors = []
         try:
-            output_directory = dataloc.abs_pooled_derivative / task_config.results_directory
-            result = self.work(dataloc, dirs_list, output_directory, dataset_config, task_config)
+            output_directory = dataloc.abs_pooled_derivative / self.config.results_directory
+            result = self.work(dataloc, dirs_list, output_directory, dataset_config, self.config)
             results.append((str(self.name), result))
         except Exception as e:
             exception_warning(e, logger)
@@ -467,6 +460,8 @@ def log_workflow(dataloc: DatasetLocator, cfg: DictConfig, task_config: DictConf
     task_config
         Configuration dict for this task
         No parameters are currently in use for this task_config
+    task_name
+        name of this task
     results
         Results of workflow tasks to log
 
@@ -551,18 +546,6 @@ class WorkflowManager:
     A class to manage worflows consisting of a list of tasks to run on a collection of data. This class is designed to
     run on data organized in the SPARC Data Structure (https://doi.org/10.1101/2021.02.10.430563). Units of data to
     operate on are organized in a directory tree.
-
-    initialize() loads the dataset specific configuration from the dataset root directory and gathers a list of directories
-    representing units of data to operate on.
-
-    register_task() adds tasks implementing the interface EachItemTask (or other supporeted interfaces) to the list of
-    tasks that can be run
-
-    run_workflow() executes the work function of each task on each of the data directories
-
-    log_workflow() writes the results to file along with provenance information (most importantly, the traceable version
-    of the code that ran in the workflow)
-
     """
 
     def __init__(self, dataset_root: Path, cfg: DictConfig, mpool: Pool = None, show_progress=False):
@@ -574,7 +557,7 @@ class WorkflowManager:
         self.registered_tasks = {}
         self.results = {}
 
-    def register_task(self, task: Type[EachItemTask] | Type[AllItemsTask]):
+    def register_task(self, task: EachItemTask | AllItemsTask):
         """
         Register a task that can be run by the workflow manager. Registered tasks cannot be duplicates or "initialize"
         or "logging". The task name defines which config dict will be passed to it when it is run.
@@ -585,64 +568,44 @@ class WorkflowManager:
             EachItemTask
         """
 
-        if task().name in [*self.registered_tasks.keys(), "initialize", "logging"]:
+        if task.name in [*self.registered_tasks.keys(), "initialize", "logging"]:
             # Because there would be confusion about what is the correct configuration
             raise ValueError(
-                f"Error registering {task().name}. Cannot register a task with the same name as a task already registered")
+                f"Error registering {task.name}. Cannot register a task with the same name as a task already registered")
 
-        if task().name not in self.cfg.tasks.keys():
+        if task.name not in self.cfg.tasks.keys():
             # Because we don't know if a task can handle it
             raise ValueError(
-                f"Error registering {task().name}. Cannot register a task with no matching task configuration")
+                f"Error registering {task.name}. Cannot register a task with no matching task configuration")
 
-        self.registered_tasks[task().name] = task
+        # Todo
+        # Also check if the output directory is the same as an existing one
 
-    def run_workflow(self, task_list: list[str] = None):
+        self.registered_tasks[task.name] = task
+
+    def run_workflow(self):
         """
-        Run all desired tasks, then log the results. If task list is provided, tasks will be run in that order.
-        Otherwise, all tasks will be run in the order they were registered in.
+        Run all tasks, then log the results. tasks will be run in the order they were registered in.
 
-        Parameters
-        ----------
-        task_list
-            Optional list of tasks to run
         """
-        # If task list contains duplicates or missing tasks, raise an exception
         self.results = {}
 
-        if len(set(task_list)) != len(task_list):
-            # Because the results dict would be overwritten
-            raise ValueError("Cannot use a task more than once in a workflow run")
+        for task in self.registered_tasks.values():
+            logger.info(f"Running {task.name}")
+            if isinstance(task, EachItemTask):
 
-        if any([task not in self.registered_tasks.keys() for task in task_list]):
-            raise ValueError("Cannot run a task that is not registered")
+                initialize_result = task.apply_initialize(self.dataloc, self.dataset_config)
 
-        for task_name in task_list:
-            logger.info(f"Running {task_name}")
-            if isinstance(self.registered_tasks[task_name](), EachItemTask):
+                work_result = task.apply_to_dataset(self.dataloc, self.dataset_config, self.dirs_list,
+                                                    initialize_result["result"], self.mpool, self.show_progress)
 
-                initialize_result = self.registered_tasks[task_name]().apply_initialize(self.dataloc,
-                                                                                        self.dataset_config,
-                                                                                        self.cfg.tasks[task_name])
+                self.results[task.name] = {"results": work_result["results"], "errors": [*initialize_result["errors"],
+                                                                                         *work_result["errors"]]}
 
-                work_result = self.registered_tasks[task_name]().apply_to_dataset(self.dataloc,
-                                                                                  self.dataset_config,
-                                                                                  self.cfg.tasks[task_name],
-                                                                                  self.dirs_list,
-                                                                                  initialize_result["result"],
-                                                                                  self.mpool,
-                                                                                  self.show_progress)
-
-                self.results[task_name] = {"results": work_result["results"],
-                                           "errors": [*initialize_result["errors"], *work_result["errors"]]}
-
-            elif isinstance(self.registered_tasks[task_name](), AllItemsTask):
-                self.results[task_name] = self.registered_tasks[task_name]().apply_to_dataset(self.dataloc,
-                                                                                              self.dataset_config,
-                                                                                              self.cfg.tasks[task_name],
-                                                                                              self.dirs_list)
+            elif isinstance(task, AllItemsTask):
+                self.results[task.name] = task.apply_to_dataset(self.dataloc, self.dataset_config, self.dirs_list)
             else:
-                raise ValueError(f"Error executing {task_name}. Unrecognized task type")
+                raise ValueError(f"Error executing {task.name}. Unrecognized task type")
 
         log_workflow(self.dataloc, self.cfg, self.cfg.tasks.logging, "logging", results=self.results)
 

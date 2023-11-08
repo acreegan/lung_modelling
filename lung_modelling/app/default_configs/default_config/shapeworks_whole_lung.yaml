@@ -17,12 +17,15 @@ tasks:
   create_meshes_sw:
     source_directory: "smooth_whole_lungs_sw"
     results_directory: "create_meshes_whole_lungs_sw"
+    image_glob: "*.nii"
     params: {
+      step_size: 1,
       decimate: True,
-      target_reduction: 0.5,
+      decimate_target_faces: 100000,
+      subdivide_passes: 0,
       volume_preservation: True,
       remesh: True,
-      remesh_percentage: 0.75,
+      remesh_target_points: 40000,
       adaptivity: 0,
       smooth: True,
       smooth_iterations: 10,

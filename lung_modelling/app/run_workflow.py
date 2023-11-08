@@ -56,18 +56,22 @@ def run_cli(primary_config: DictConfig):
     workflow_manager = WorkflowManager(cfg.dataset_root, cfg, mpool, show_progress=True)
 
     # Register tasks
+    collected_tasks = {}
     from lung_modelling.app.tasks import all_tasks
     for task in all_tasks:
-        if task().name in cfg.run_tasks:
-            workflow_manager.register_task(task)
+        collected_tasks[task.__name__] = task
 
     if len(fnmatch.filter([config_choice], "*shapeworks*")) > 0:
         from lung_modelling.app.shapeworks_tasks import all_tasks as all_sw_tasks
         for task in all_sw_tasks:
-            if task().name in cfg.run_tasks:
-                workflow_manager.register_task(task)
+            collected_tasks[task.__name__] = task
 
-    workflow_manager.run_workflow(cfg.run_tasks)
+    for task_name in cfg.run_tasks:
+        task_class_name = cfg.tasks[task_name].task
+        if task := collected_tasks.get(task_class_name):
+            workflow_manager.register_task(task(task_name, cfg.tasks[task_name]))
+
+    workflow_manager.run_workflow()
 
 
 def initialize_user_config():
