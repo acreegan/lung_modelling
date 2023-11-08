@@ -95,6 +95,8 @@ tasks:
     source_directory_transform: "mesh_transform_sw"
     source_directories_mesh: [ "create_meshes_whole_lungs_sw", "create_meshes_torso_sw" ]
     source_directories_original: [ "smooth_whole_lungs_sw", "extract_torso" ]
+    source_directories_landmarks: [ "mesh_landmarks_coarse_lungs", "mesh_landmarks_coarse_torso" ]
+    image_globs: [ "*.nii","*.mhd" ]
     results_directory: "optimize_meshes_sw"
     params: {
       checkpointing_interval: 200,

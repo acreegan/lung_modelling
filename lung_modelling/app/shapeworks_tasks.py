@@ -560,7 +560,7 @@ class OptimizeMeshesSW(AllItemsTask):
 
         project.set_parameters("optimize", parameters)
 
-        spreadsheet_file = output_directory / "shapeworks_project.swproj"
+        spreadsheet_file = output_directory / f"{output_directory.stem}_shapeworks_project.swproj"
         project.save(str(spreadsheet_file))
 
         wd = os.getcwd()
