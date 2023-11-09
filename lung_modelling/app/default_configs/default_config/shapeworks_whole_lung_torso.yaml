@@ -35,7 +35,7 @@ tasks:
       volume_preservation: True,
       remesh: True,
       remesh_target_points: 40000,
-      adaptivity: 1,
+      adaptivity: 0,
       smooth: True,
       smooth_iterations: 10,
       relaxation: 1,
