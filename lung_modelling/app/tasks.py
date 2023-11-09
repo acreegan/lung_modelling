@@ -307,6 +307,38 @@ class MeshLandmarksCoarse(EachItemTask):
     @staticmethod
     def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
              dataset_config: DictConfig, task_config: DictConfig, initialize_result=None) -> list[Path]:
+        """
+        Calculate points spaced roughly equidistantly around the surface of a mesh. This should help get
+        good coverage in optimization without needing to lower initial relative weighting as much.
+
+        Points are placed by tracing a ray from the mesh center of mass to the vertices of a cube. This results in
+        8 landmarks. The cube is oriented such that two of its vertices point straight up and down.
+
+        Parameters
+        ----------
+        source_directory_primary
+            Absolute path of the source directory in the primary folder of the dataset
+        source_directory_derivative
+            Absolute path of the source directory in the derivative folder of the dataset
+        output_directory
+            Directory in which to save results of the work
+        dataset_config
+            Config relating to the entire dataset
+        task_config
+            **source_directory**: subdirectory within derivative source folder to find source files
+
+            **results_directory**: subdirectory for results
+
+            **params**: (Dict): No params currently used for this task
+
+        initialize_result
+            Return dict from the initialize function
+
+        Returns
+        -------
+        List of mesh landmark filenames. These take the same form as shapeworks particles files
+
+        """
 
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)

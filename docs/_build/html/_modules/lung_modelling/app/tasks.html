@@ -40,6 +40,8 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pyacvd</span>
 <span class="kn">import</span> <span class="nn">cc3d</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">ndimage</span>
+<span class="kn">import</span> <span class="nn">pyvista</span> <span class="k">as</span> <span class="nn">pv</span>
 
 
 <div class="viewcode-block" id="SmoothLungLobes">
@@ -52,10 +54,6 @@
     <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
         <span class="k">pass</span></div>
 
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="s2">&quot;smooth_lung_lobes&quot;</span>
 
 <div class="viewcode-block" id="SmoothLungLobes.work">
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.SmoothLungLobes.work">[docs]</a>
@@ -127,10 +125,6 @@
     <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
         <span class="k">pass</span></div>
 
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="s2">&quot;smooth_whole_lungs&quot;</span>
 
 <div class="viewcode-block" id="SmoothWholeLungs.work">
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.SmoothWholeLungs.work">[docs]</a>
@@ -206,10 +200,6 @@
         <span class="k">pass</span></div>
 
 
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="s2">&quot;create_meshes&quot;</span>
-
 <div class="viewcode-block" id="CreateMeshes.work">
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.CreateMeshes.work">[docs]</a>
     <span class="nd">@staticmethod</span>
@@ -281,9 +271,6 @@
 <div class="viewcode-block" id="ReferenceSelectionMesh">
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.ReferenceSelectionMesh">[docs]</a>
 <span class="k">class</span> <span class="nc">ReferenceSelectionMesh</span><span class="p">(</span><span class="n">AllItemsTask</span><span class="p">):</span>
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="s2">&quot;reference_selection_mesh&quot;</span>
 
 <div class="viewcode-block" id="ReferenceSelectionMesh.work">
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.ReferenceSelectionMesh.work">[docs]</a>
@@ -319,7 +306,158 @@
 
 
 
-<span class="n">all_tasks</span> <span class="o">=</span> <span class="p">[</span><span class="n">SmoothLungLobes</span><span class="p">,</span> <span class="n">CreateMeshes</span><span class="p">,</span> <span class="n">SmoothWholeLungs</span><span class="p">,</span> <span class="n">ReferenceSelectionMesh</span><span class="p">]</span>
+<div class="viewcode-block" id="ExtractTorso">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.ExtractTorso">[docs]</a>
+<span class="k">class</span> <span class="nc">ExtractTorso</span><span class="p">(</span><span class="n">EachItemTask</span><span class="p">):</span>
+
+<div class="viewcode-block" id="ExtractTorso.initialize">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.ExtractTorso.initialize">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="ExtractTorso.work">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.ExtractTorso.work">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">source_directory_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+             <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">initialize_result</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Extract a torso image from a set of dicom files. Segmented torso is saved in a .nii file</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        source_directory_primary</span>
+<span class="sd">            Absolute path of the source directory in the primary folder of the dataset</span>
+<span class="sd">        source_directory_derivative</span>
+<span class="sd">            Absolute path of the source directory in the derivative folder of the dataset</span>
+<span class="sd">        output_directory</span>
+<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">            Config relating to the entire dataset</span>
+<span class="sd">        task_config</span>
+<span class="sd">            **source_directory**: subdirectory for dicom files</span>
+
+<span class="sd">            **results_directory**: subdirectory for results</span>
+
+<span class="sd">            **output_filename**: filename for torso image (not including extension)</span>
+
+<span class="sd">            **params**: (Dict)</span>
+<span class="sd">                **threshold**</span>
+<span class="sd">                    threshold for segmenting torso from dicom image</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        [output_filename]</span>
+<span class="sd">            single item list containing the output filename of the torso image</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_directory</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_directory</span><span class="p">)</span>
+
+        <span class="n">image</span><span class="p">,</span> <span class="n">header</span> <span class="o">=</span> <span class="n">medpy</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">source_directory_primary</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory</span><span class="p">))</span>
+
+        <span class="n">binary_image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">image</span> <span class="o">&gt;</span> <span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">threshold</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int8</span><span class="p">)</span>
+
+        <span class="n">max_connectivity</span> <span class="o">=</span> <span class="n">cc3d</span><span class="o">.</span><span class="n">largest_k</span><span class="p">(</span><span class="n">binary_image</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">image_filled_holes</span> <span class="o">=</span> <span class="n">max_connectivity</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_connectivity</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="n">image_filled_holes</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">binary_fill_holes</span><span class="p">(</span><span class="n">max_connectivity</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">i</span><span class="p">])</span>
+
+        <span class="n">output_filename</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">output_directory</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">task_config</span><span class="o">.</span><span class="n">output_filename</span><span class="p">)</span><span class="si">}</span><span class="s2">.nii&quot;</span>
+        <span class="n">medpy</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">image_filled_holes</span><span class="p">,</span> <span class="n">output_filename</span><span class="p">,</span> <span class="n">hdr</span><span class="o">=</span><span class="n">header</span><span class="p">,</span> <span class="n">use_compression</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="n">Path</span><span class="p">(</span><span class="n">output_filename</span><span class="p">)]</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="MeshLandmarksCoarse">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.MeshLandmarksCoarse">[docs]</a>
+<span class="k">class</span> <span class="nc">MeshLandmarksCoarse</span><span class="p">(</span><span class="n">EachItemTask</span><span class="p">):</span>
+
+<div class="viewcode-block" id="MeshLandmarksCoarse.initialize">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.MeshLandmarksCoarse.initialize">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="MeshLandmarksCoarse.work">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.MeshLandmarksCoarse.work">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">source_directory_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+             <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">initialize_result</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate points spaced roughly equidistantly around the surface of a mesh. This should help get</span>
+<span class="sd">        good coverage in optimization without needing to lower initial relative weighting as much.</span>
+
+<span class="sd">        Points are placed by tracing a ray from the mesh center of mass to the vertices of a cube. This results in</span>
+<span class="sd">        8 landmarks. The cube is oriented such that two of its vertices point straight up and down.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        source_directory_primary</span>
+<span class="sd">            Absolute path of the source directory in the primary folder of the dataset</span>
+<span class="sd">        source_directory_derivative</span>
+<span class="sd">            Absolute path of the source directory in the derivative folder of the dataset</span>
+<span class="sd">        output_directory</span>
+<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">            Config relating to the entire dataset</span>
+<span class="sd">        task_config</span>
+<span class="sd">            **source_directory**: subdirectory within derivative source folder to find source files</span>
+
+<span class="sd">            **results_directory**: subdirectory for results</span>
+
+<span class="sd">            **params**: (Dict): No params currently used for this task</span>
+
+<span class="sd">        initialize_result</span>
+<span class="sd">            Return dict from the initialize function</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        List of mesh landmark filenames. These take the same form as shapeworks particles files</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_directory</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_directory</span><span class="p">)</span>
+
+        <span class="n">mesh_files</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">source_directory_derivative</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory</span> <span class="o">/</span> <span class="s2">&quot;*&quot;</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">mesh_files</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;No files found&quot;</span><span class="p">)</span>
+
+        <span class="n">meshes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">mesh_file</span> <span class="ow">in</span> <span class="n">mesh_files</span><span class="p">:</span>
+            <span class="n">meshes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pv</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">mesh_file</span><span class="p">))</span>
+
+        <span class="n">mesh_landmark_filenames</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">file</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">meshes</span><span class="p">,</span> <span class="n">mesh_files</span><span class="p">):</span>
+            <span class="n">com</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">center_of_mass</span><span class="p">()</span>
+            <span class="n">bounds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">bounds</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="n">longest_side</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">bounds</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">bounds</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
+
+            <span class="n">cube</span> <span class="o">=</span> <span class="n">pv</span><span class="o">.</span><span class="n">Box</span><span class="p">(</span><span class="n">quads</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">scale</span><span class="p">([</span><span class="n">longest_side</span><span class="p">,</span> <span class="n">longest_side</span><span class="p">,</span> <span class="n">longest_side</span><span class="p">])</span>
+            <span class="n">cube</span> <span class="o">=</span> <span class="n">cube</span><span class="o">.</span><span class="n">rotate_x</span><span class="p">(</span><span class="mi">45</span><span class="p">)</span><span class="o">.</span><span class="n">rotate_y</span><span class="p">(</span><span class="mf">35.264</span><span class="p">)</span>
+            <span class="n">cube</span> <span class="o">=</span> <span class="n">cube</span><span class="o">.</span><span class="n">translate</span><span class="p">(</span><span class="n">com</span> <span class="o">-</span> <span class="n">cube</span><span class="o">.</span><span class="n">center_of_mass</span><span class="p">())</span>
+
+            <span class="n">mesh_landmarks</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">cube</span><span class="o">.</span><span class="n">points</span><span class="p">:</span>
+                <span class="n">landmark</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">ray_trace</span><span class="p">(</span><span class="n">com</span><span class="p">,</span> <span class="n">point</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">mesh_landmarks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">landmark</span><span class="p">)</span>
+
+            <span class="n">mesh_landmark_filename</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">file</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="p">)</span><span class="si">}</span><span class="s2">_landmarks.particles&quot;</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">mesh_landmark_filename</span><span class="p">),</span> <span class="n">mesh_landmarks</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
+            <span class="n">mesh_landmark_filenames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mesh_landmark_filename</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">mesh_landmark_filenames</span></div>
+</div>
+
+
+
+<span class="n">all_tasks</span> <span class="o">=</span> <span class="p">[</span><span class="n">SmoothLungLobes</span><span class="p">,</span> <span class="n">CreateMeshes</span><span class="p">,</span> <span class="n">SmoothWholeLungs</span><span class="p">,</span> <span class="n">ReferenceSelectionMesh</span><span class="p">,</span> <span class="n">ExtractTorso</span><span class="p">,</span> <span class="n">MeshLandmarksCoarse</span><span class="p">]</span>
 </pre></div>
 
           </div>
