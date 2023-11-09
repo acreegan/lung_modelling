@@ -82,13 +82,13 @@ tasks:
     task: "MeshLandmarksCoarse"
     source_directory: "create_meshes_whole_lungs_sw"
     results_directory: "mesh_landmarks_coarse_lungs"
-    params: { axis: 2 }
+    params: { }
 
   mesh_landmarks_torso:
     task: "MeshLandmarksCoarse"
     source_directory: "create_meshes_torso_sw"
     results_directory: "mesh_landmarks_coarse_torso"
-    params: { axis: 1 }
+    params: { }
 
   optimize_meshes_sw:
     task: "OptimizeMeshesSW"

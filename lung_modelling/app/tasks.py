@@ -322,20 +322,19 @@ class MeshLandmarksCoarse(EachItemTask):
 
         mesh_landmark_filenames = []
         for mesh, file in zip(meshes, mesh_files):
-            axis = task_config.params.axis
             com = mesh.center_of_mass()
             bounds = np.array(mesh.bounds).reshape(3, -1)
-            distance = bounds[axis][1] - bounds[axis][0]
 
-            stop_plus = com.copy()
-            stop_plus[axis] += distance
-            points_plus, _ = mesh.ray_trace(com, stop_plus)
+            longest_side = np.max(bounds[:, 1] - bounds[:, 0])
 
-            stop_minus = com.copy()
-            stop_minus[axis] -= distance
-            points_minus, _ = mesh.ray_trace(com, stop_minus)
+            cube = pv.Box(quads=True).scale([longest_side, longest_side, longest_side])
+            cube = cube.rotate_x(45).rotate_y(35.264)
+            cube = cube.translate(com - cube.center_of_mass())
 
-            mesh_landmarks = np.array((points_plus[-1], points_minus[-1]))
+            mesh_landmarks = []
+            for point in cube.points:
+                landmark = mesh.ray_trace(com, point)[0][-1]
+                mesh_landmarks.append(landmark)
 
             mesh_landmark_filename = output_directory / f"{str(Path(file).stem)}_landmarks.particles"
             np.savetxt(str(mesh_landmark_filename), mesh_landmarks, delimiter=" ")
