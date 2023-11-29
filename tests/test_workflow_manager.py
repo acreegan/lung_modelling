@@ -44,7 +44,7 @@ def test_gather_directories():
 
 
 def test_dataloc():
-    dataloc = DatasetLocator(Path("MyDatasetRoot"), Path("MyPrimary"), Path("MyDerivative"), Path("PooledDerivative"))
+    dataloc = DatasetLocator(Path("MyDatasetRoot"), Path("MyPrimary"), Path("MyDerivative"), Path("PooledPrimary"), Path("PooledDerivative"))
 
     assert dataloc.abs_primary == Path("MyDatasetRoot") / "MyPrimary"
     assert dataloc.abs_derivative == Path("MyDatasetRoot") / "MyDerivative"
