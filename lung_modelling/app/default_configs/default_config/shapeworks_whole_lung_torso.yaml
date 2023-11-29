@@ -90,12 +90,21 @@ tasks:
     results_directory: "mesh_landmarks_coarse_torso"
     params: { }
 
+  parse_copdgene_subject_groups:
+    task: "ParseCOPDGeneSubjectGroups"
+    source_directory: "subject_data"
+    results_directory: "parsed_subject_data"
+    subject_data_filename: "COPDGene_Phase1_SM_NS_25OCT21.txt"
+    subject_data_dict_filename: "P1P2_Pheno_w_QCT_DataDict_annotated_25oct21_rev.xlsx"
+    groups: ["race", "gender"]
+
   optimize_meshes_sw:
     task: "OptimizeMeshesSW"
     source_directory_transform: "mesh_transform_sw"
     source_directories_mesh: [ "create_meshes_whole_lungs_sw", "create_meshes_torso_sw" ]
     source_directories_original: [ "smooth_whole_lungs_sw", "extract_torso" ]
     source_directories_landmarks: [ "mesh_landmarks_coarse_lungs", "mesh_landmarks_coarse_torso" ]
+    source_directory_subject_data: "parsed_subject_data"
     image_globs: [ "*.nii","*.mhd" ]
     results_directory: "optimize_meshes_sw"
     params: {
@@ -123,4 +132,4 @@ tasks:
 
 run_tasks: [ "smooth_whole_lungs_sw", "extract_torso", "create_meshes_sw", "create_meshes_torso_sw",
              "reference_selection_mesh_sw", "mesh_transform_sw", "mesh_landmarks_lungs", "mesh_landmarks_torso",
-             "optimize_meshes_sw" ]
+             "parse_copdgene_subject_groups", "optimize_meshes_sw" ]

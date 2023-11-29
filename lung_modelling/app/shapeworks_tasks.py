@@ -11,6 +11,7 @@ from pyvista_tools import pyvista_faces_to_2d, remove_shared_faces_with_merge
 import csv
 from lung_modelling import find_connected_faces, flatten, voxel_to_mesh, fix_mesh
 import medpy.io
+import pandas as pd
 
 
 class SmoothLungLobesSW(EachItemTask):
@@ -151,7 +152,7 @@ class CreateMeshesSW(EachItemTask):
                 mesh = sw.sw2vtkMesh(mesh)
                 mesh = mesh.clean()
 
-                t_faces = params.decimate_target_faces / (4**params.subdivide_passes)
+                t_faces = params.decimate_target_faces / (4 ** params.subdivide_passes)
                 target_reduction = 1 - (t_faces / mesh.n_faces)
                 mesh = mesh.decimate(target_reduction=target_reduction,
                                      volume_preservation=params.volume_preservation)
@@ -165,7 +166,7 @@ class CreateMeshesSW(EachItemTask):
             if params.remesh:
                 # Shapeworks remeshing uses ACVD (vtkIsotropicDiscreteRemeshing). Should be the same as pyACVD with pyvista
                 mesh = mesh.remesh(numVertices=params.remesh_target_points,
-                                          adaptivity=params.adaptivity)
+                                   adaptivity=params.adaptivity)
 
             if params.smooth:
                 # Shapeworks smooth uses vtkSmoothPolyData. Should be the same as pyVista
@@ -184,6 +185,7 @@ class CreateMeshesSW(EachItemTask):
             else:
                 pv_mesh = sw.sw2vtkMesh(mesh) if isinstance(mesh, sw.Mesh) else mesh
 
+            # Todo: Pyvista already has a function for this called connectivity
             if params.isolate_mesh:
                 _, connected_points = find_connected_faces(list(pyvista_faces_to_2d(pv_mesh.faces)), return_points=True)
                 if len(connected_points) > 1:
@@ -513,6 +515,9 @@ class OptimizeMeshesSW(AllItemsTask):
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
 
+        group_data_file = glob(str(dataloc.abs_pooled_derivative / task_config.source_directory_subject_data / "*"))[0]
+        group_data = pd.read_csv(group_data_file)
+
         subjects = []
         for dir, _, _ in dirs_list:
             subject = sw.Subject()
@@ -545,6 +550,11 @@ class OptimizeMeshesSW(AllItemsTask):
             for source_directory_landmarks in task_config.source_directories_landmarks:
                 landmark_files.extend(glob(str(dataloc.abs_derivative / dir / source_directory_landmarks / "*")))
 
+            sid = dir.stem.split("_")[0]
+            subject_group_data = group_data.loc[group_data.sid == sid]
+
+            subject.set_group_values(
+                {column: subject_group_data[column].values[0] for column in subject_group_data.columns[1:]})
             subject.set_landmarks_filenames(landmark_files)
             subject.set_groomed_transforms(transforms)
             subject.set_groomed_filenames(mesh_files)
@@ -559,6 +569,15 @@ class OptimizeMeshesSW(AllItemsTask):
             parameters.set(key, sw.Variant(value))
 
         project.set_parameters("optimize", parameters)
+
+        # Set studio parameters
+        studio_dictionary = {
+            "tool_state": "analysis"
+        }
+        studio_parameters = sw.Parameters()
+        for key in studio_dictionary:
+            studio_parameters.set(key, sw.Variant(studio_dictionary[key]))
+        project.set_parameters("studio", studio_parameters)
 
         spreadsheet_file = output_directory / f"{output_directory.stem}_shapeworks_project.swproj"
         project.save(str(spreadsheet_file))

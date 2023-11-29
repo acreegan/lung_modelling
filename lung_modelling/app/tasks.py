@@ -3,7 +3,7 @@ from pathlib import Path
 from omegaconf import DictConfig
 import os
 from glob import glob
-from lung_modelling import extract_section, voxel_to_mesh, refine_mesh
+from lung_modelling import extract_section, voxel_to_mesh, refine_mesh, parse_discrete
 import medpy.io
 import SimpleITK as sitk
 import numpy as np
@@ -11,6 +11,8 @@ import pyacvd
 import cc3d
 from scipy import ndimage
 import pyvista as pv
+import pandas as pd
+import csv
 
 
 class SmoothLungLobes(EachItemTask):
@@ -375,4 +377,73 @@ class MeshLandmarksCoarse(EachItemTask):
         return mesh_landmark_filenames
 
 
-all_tasks = [SmoothLungLobes, CreateMeshes, SmoothWholeLungs, ReferenceSelectionMesh, ExtractTorso, MeshLandmarksCoarse]
+class ParseCOPDGeneSubjectGroups(AllItemsTask):
+    @staticmethod
+    def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
+             task_config: DictConfig) -> list[Path]:
+        """
+        A task to parse subject data from the COPDGene dataset so that it can be added to a shapeworks style config file.
+
+        This is an AllItemsTask even though it involves parsing each individual subject separately because we don't
+        want pass the large subject data array to lots of duplicate threads. Also the parsing should not take long.
+
+
+        Parameters
+        ----------
+        dataloc
+            Dataset locator for the dataset
+        dirs_list
+            List of relative paths to the source directories
+        output_directory
+            Directory in which to save results of the work
+        dataset_config
+            Config relating to the entire dataset
+        task_config
+            Task specific config
+
+
+        Returns
+        -------
+        parsed_data
+            File containing parsed groups
+
+        """
+
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
+
+        data_file = dataloc.abs_pooled_primary / task_config.source_directory / task_config.subject_data_filename
+        data = pd.read_csv(data_file, sep="\t")
+
+        data_dict_file = dataloc.abs_pooled_primary / task_config.source_directory / task_config.subject_data_dict_filename
+        data_dict = pd.read_excel(data_dict_file)
+        data_dict = data_dict.set_index("VariableName")
+
+        group_mappings = {group: parse_discrete(data_dict["CodedValues"][group]) for group in task_config.groups}
+
+        group_data_header = ["sid", *task_config.groups]
+        group_values = []
+        for dir, _, _ in dirs_list:
+            sid = dir.stem.split("_")[0]
+            subject_group_values = []
+            subject_group_values.append(sid)
+            for group in task_config.groups:
+                raw_value = data.loc[data.sid == sid][group].values[0]
+                mapped_value = group_mappings[group][raw_value]
+                subject_group_values.append(mapped_value)
+
+            group_values.append(subject_group_values)
+
+        group_data_filename = output_directory / "group_data.csv"
+        with open(str(group_data_filename), "w") as ref_dir_file:
+            writer = csv.writer(ref_dir_file)
+            writer.writerow(group_data_header)
+
+            for row in group_values:
+                writer.writerow(row)
+
+        return [Path(group_data_filename)]
+
+
+all_tasks = [SmoothLungLobes, CreateMeshes, SmoothWholeLungs, ReferenceSelectionMesh, ExtractTorso, MeshLandmarksCoarse,
+             ParseCOPDGeneSubjectGroups]

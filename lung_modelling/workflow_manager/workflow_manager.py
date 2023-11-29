@@ -28,10 +28,11 @@ class DatasetLocator:
 
     """
 
-    def __init__(self, root: Path, rel_primary: Path, rel_derivative: Path, rel_pooled_derivative: Path):
+    def __init__(self, root: Path, rel_primary: Path, rel_derivative: Path, rel_pooled_primary:Path, rel_pooled_derivative: Path):
         self.root = Path(root)
         self.rel_primary = Path(rel_primary)
         self.rel_derivative = Path(rel_derivative)
+        self.rel_pooled_primary = Path(rel_pooled_primary)
         self.rel_pooled_derivative = Path(rel_pooled_derivative)
 
     @property
@@ -46,6 +47,10 @@ class DatasetLocator:
     def abs_pooled_derivative(self):
         return self.root / self.rel_pooled_derivative
 
+    @property
+    def abs_pooled_primary(self):
+        return self.root / self.rel_pooled_primary
+
     def to_relative(self, path: Path) -> Path:
         for parent in path.parents:
             if parent.name == self.rel_primary.name:
@@ -54,6 +59,8 @@ class DatasetLocator:
                 return self.rel_derivative / path.relative_to(self.abs_derivative)
             elif parent.name == self.rel_pooled_derivative.name:
                 return self.rel_pooled_derivative / path.relative_to(self.abs_pooled_derivative)
+            elif parent.name == self.rel_pooled_primary.name:
+                return self.rel_pooled_primary / path.relative_to(self.abs_pooled_primary)
 
         raise ValueError("Neither primary nor derivative found in input path")
 
@@ -368,7 +375,7 @@ def initialize(dataset_root: Path, task_config: DictConfig, show_progress=True) 
         dataset_config = DictConfig(json.load(f))
 
     dataloc = DatasetLocator(dataset_root, dataset_config.primary_directory, dataset_config.derivative_directory,
-                             dataset_config.pooled_derivative_directory)
+                             dataset_config.pooled_primary_directory, dataset_config.pooled_derivative_directory)
 
     index_list = None
     if task_config.use_directory_index:
