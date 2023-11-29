@@ -1,5 +1,5 @@
 from lung_modelling.workflow_manager import EachItemTask, DatasetLocator, AllItemsTask
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from omegaconf import DictConfig
 import os
 import shapeworks as sw
@@ -506,6 +506,10 @@ class OptimizeMeshesSW(AllItemsTask):
                 directories for mesh files
             **source_directories_original**
                 directories for original (pre-grooming) files
+            **source_directory_subject_data**
+                optional source directory to add subject groups to shapeworks project
+            **image_globs**
+                glob to find original files
             **results_directory**:
                 subdirectory for results
             **params**
@@ -515,8 +519,9 @@ class OptimizeMeshesSW(AllItemsTask):
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
 
-        group_data_file = glob(str(dataloc.abs_pooled_derivative / task_config.source_directory_subject_data / "*"))[0]
-        group_data = pd.read_csv(group_data_file)
+        if "source_directory_subject_data" in task_config:
+            group_data_file = glob(str(dataloc.abs_pooled_derivative / task_config.source_directory_subject_data / "*"))[0]
+            group_data = pd.read_csv(group_data_file)
 
         subjects = []
         for dir, _, _ in dirs_list:
@@ -550,11 +555,11 @@ class OptimizeMeshesSW(AllItemsTask):
             for source_directory_landmarks in task_config.source_directories_landmarks:
                 landmark_files.extend(glob(str(dataloc.abs_derivative / dir / source_directory_landmarks / "*")))
 
-            sid = dir.stem.split("_")[0]
-            subject_group_data = group_data.loc[group_data.sid == sid]
-
-            subject.set_group_values(
-                {column: subject_group_data[column].values[0] for column in subject_group_data.columns[1:]})
+            if "source_directory_subject_data" in task_config:
+                subject_dir = str(PurePosixPath(dir))
+                subject_group_data = group_data.loc[group_data.dir == subject_dir]
+                subject.set_group_values(
+                    {column: subject_group_data[column].values[0] for column in subject_group_data.columns[1:]})
             subject.set_landmarks_filenames(landmark_files)
             subject.set_groomed_transforms(transforms)
             subject.set_groomed_filenames(mesh_files)

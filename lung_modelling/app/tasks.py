@@ -1,5 +1,5 @@
 from lung_modelling.workflow_manager import EachItemTask, DatasetLocator, AllItemsTask
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from omegaconf import DictConfig
 import os
 from glob import glob
@@ -399,7 +399,17 @@ class ParseCOPDGeneSubjectGroups(AllItemsTask):
         dataset_config
             Config relating to the entire dataset
         task_config
-            Task specific config
+            **source_directory**
+                subdirectory within derivative source folder to find source files
+            **results_directory**
+                subdirectory for results
+            **subject_data_filename**
+                filename for COPDGene subject data file
+            **subject_data_dict_filename**
+                filename for COPDGene subject data dict file
+            **groups**
+                list of group labels to parse
+            **params**: (Dict): No params currently used for this task
 
 
         Returns
@@ -421,12 +431,12 @@ class ParseCOPDGeneSubjectGroups(AllItemsTask):
 
         group_mappings = {group: parse_discrete(data_dict["CodedValues"][group]) for group in task_config.groups}
 
-        group_data_header = ["sid", *task_config.groups]
+        group_data_header = ["dir", *task_config.groups]
         group_values = []
         for dir, _, _ in dirs_list:
             sid = dir.stem.split("_")[0]
             subject_group_values = []
-            subject_group_values.append(sid)
+            subject_group_values.append(str(PurePosixPath(dir)))
             for group in task_config.groups:
                 raw_value = data.loc[data.sid == sid][group].values[0]
                 mapped_value = group_mappings[group][raw_value]
