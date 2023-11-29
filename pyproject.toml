@@ -4,6 +4,6 @@ requires = ["setuptools",
 build-backend = "setuptools.build_meta"
 
 [project]
-dynamic = ["version"]
+dynamic = ["version", "dependencies", "optional-dependencies"]
 name = "lung_modelling"
 [tool.setuptools_scm]
