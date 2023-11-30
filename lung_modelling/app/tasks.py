@@ -1,3 +1,5 @@
+import math
+
 from lung_modelling.workflow_manager import EachItemTask, DatasetLocator, AllItemsTask
 from pathlib import Path, PurePosixPath
 from omegaconf import DictConfig
@@ -13,6 +15,7 @@ from scipy import ndimage
 import pyvista as pv
 import pandas as pd
 import csv
+from medpy.io import load
 
 
 class SmoothLungLobes(EachItemTask):
@@ -455,5 +458,84 @@ class ParseCOPDGeneSubjectGroups(AllItemsTask):
         return [Path(group_data_filename)]
 
 
+class InspectSegmentations(AllItemsTask):
+
+    @staticmethod
+    def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
+             task_config: DictConfig) -> list[Path]:
+        """
+        Display groups of segmentations. Performs a simple marching cubes on them to make them esaier to view
+
+        Parameters
+        ----------
+        dataloc
+            Dataset locator for the dataset
+        dirs_list
+            List of relative paths to the source directories
+        output_directory
+            Directory in which to save results of the work
+        dataset_config
+            Config relating to the entire dataset
+        task_config
+            **source_directory**
+                subdirectory within derivative source folder to find source files
+            **params**: (Dict): No params currently used for this task
+
+
+        Returns
+        -------
+        """
+
+        n_per_window = 9
+        n_windows = math.ceil(len(dirs_list)/n_per_window)
+        selected_dirs = dict()
+        for window_index, i in enumerate(range(0, len(dirs_list), n_per_window)):
+            shape = (3, 3)
+            p = pv.Plotter(shape=shape)
+
+            for j in range(n_per_window):
+                if i + j >= len(dirs_list):
+                    break
+
+                dir = dirs_list[i + j][0]
+                p.subplot(*np.unravel_index(j, shape))
+                file = glob(str(dataloc.abs_derivative / dir / task_config.source_directory / "*"))[0]
+                image_data, header = load(file)
+
+                mesh = voxel_to_mesh(image_data, spacing=header.spacing, direction=header.direction,
+                                     offset=header.offset, step_size=3)
+
+                if i == 0:
+                    ref_mesh = mesh
+                else:
+                    mesh = mesh.align(ref_mesh)
+
+                class update_selected:
+                    def __init__(self, dir):
+                        self.dir = dir
+
+                    def __call__(self, state):
+                        selected_dirs[self.dir] = state
+                        if state:
+                            print(f"Selected: {self.dir}")
+                        else:
+                            print(f"Deselected: {self.dir}")
+
+                p.add_mesh(mesh)
+                p.add_title(Path(dir).stem, font_size=8)
+                p.add_checkbox_button_widget(update_selected(dir))
+
+            p.link_views()
+            p.show(title=f"Window {window_index+1}/{n_windows}")
+
+        print(f"Selected dirs:")
+        for dir, value in selected_dirs.items():
+            if value:
+                print(str(dir))
+
+
+
+
+
 all_tasks = [SmoothLungLobes, CreateMeshes, SmoothWholeLungs, ReferenceSelectionMesh, ExtractTorso, MeshLandmarksCoarse,
-             ParseCOPDGeneSubjectGroups]
+             ParseCOPDGeneSubjectGroups, InspectSegmentations]
