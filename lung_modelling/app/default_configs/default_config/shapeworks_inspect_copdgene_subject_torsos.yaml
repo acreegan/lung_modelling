@@ -40,4 +40,4 @@ tasks:
   logging:
 
 
-run_tasks: ["extract_torso", "create_meshes_sw", "inspect_segmentations" ]
+run_tasks: ["extract_torso", "create_meshes_sw", "inspect_meshes" ]
