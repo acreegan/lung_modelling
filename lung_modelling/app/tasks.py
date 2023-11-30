@@ -458,13 +458,14 @@ class ParseCOPDGeneSubjectGroups(AllItemsTask):
         return [Path(group_data_filename)]
 
 
-class InspectSegmentations(AllItemsTask):
-
+class SelectCOPDGeneSubjectsByValue(AllItemsTask):
     @staticmethod
     def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
              task_config: DictConfig) -> list[Path]:
         """
-        Display groups of segmentations. Performs a simple marching cubes on them to make them esaier to view
+        Select subjects by value using a dict of key value pairs.
+
+        Selections are combined using AND
 
         Parameters
         ----------
@@ -479,6 +480,14 @@ class InspectSegmentations(AllItemsTask):
         task_config
             **source_directory**
                 subdirectory within derivative source folder to find source files
+            **results_directory**
+                subdirectory for results
+            **subject_data_filename**
+                filename for COPDGene subject data file
+            **subject_data_dict_filename**
+                filename for COPDGene subject data dict file
+            **search_values**
+                Dict of key value pairs
             **params**: (Dict): No params currently used for this task
 
 
@@ -486,8 +495,64 @@ class InspectSegmentations(AllItemsTask):
         -------
         """
 
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
+
+        data_file = dataloc.abs_pooled_primary / task_config.source_directory / task_config.subject_data_filename
+        data = pd.read_csv(data_file, sep="\t")
+
+        match = data.copy()
+        for key, value in dict(task_config.search_values).items():
+            match = match.loc[match[key] == value]
+
+        subjects = match["sid"].values
+
+        selected_subjects_filename = output_directory / "selected_subjects.csv"
+        with open(str(selected_subjects_filename), "w") as ref_dir_file:
+            writer = csv.writer(ref_dir_file)
+            writer.writerow(["sid"])
+
+            for row in subjects:
+                writer.writerow([row])
+
+        return [Path(selected_subjects_filename)]
+
+
+class InspectMeshes(AllItemsTask):
+
+    @staticmethod
+    def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
+             task_config: DictConfig) -> list[Path]:
+        """
+        Display groups of meshes
+
+        Parameters
+        ----------
+        dataloc
+            Dataset locator for the dataset
+        dirs_list
+            List of relative paths to the source directories
+        output_directory
+            Directory in which to save results of the work
+        dataset_config
+            Config relating to the entire dataset
+        task_config
+            **source_directory**
+                subdirectory within derivative source folder to find source files
+            **results_directory**
+                subdirectory for results
+            **params**: (Dict): No params currently used for this task
+
+
+        Returns
+        -------
+        """
+
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
+
         n_per_window = 9
-        n_windows = math.ceil(len(dirs_list)/n_per_window)
+        n_windows = math.ceil(len(dirs_list) / n_per_window)
         selected_dirs = dict()
         for window_index, i in enumerate(range(0, len(dirs_list), n_per_window)):
             shape = (3, 3)
@@ -500,10 +565,8 @@ class InspectSegmentations(AllItemsTask):
                 dir = dirs_list[i + j][0]
                 p.subplot(*np.unravel_index(j, shape))
                 file = glob(str(dataloc.abs_derivative / dir / task_config.source_directory / "*"))[0]
-                image_data, header = load(file)
 
-                mesh = voxel_to_mesh(image_data, spacing=header.spacing, direction=header.direction,
-                                     offset=header.offset, step_size=3)
+                mesh = pv.read(file)
 
                 if i == 0:
                     ref_mesh = mesh
@@ -526,16 +589,24 @@ class InspectSegmentations(AllItemsTask):
                 p.add_checkbox_button_widget(update_selected(dir))
 
             p.link_views()
-            p.show(title=f"Window {window_index+1}/{n_windows}")
+            p.show(title=f"Window {window_index + 1}/{n_windows}")
 
         print(f"Selected dirs:")
         for dir, value in selected_dirs.items():
             if value:
                 print(str(dir))
 
+        selected_dirs_filename = output_directory / "selected_dirs.csv"
+        with open(str(selected_dirs_filename), "w") as selected_dirs_file:
+            writer = csv.writer(selected_dirs_file)
+            writer.writerow(["dir"])
 
+            for dir, value in selected_dirs.items():
+                if value:
+                    writer.writerow([dir])
 
+        return [Path(selected_dirs_filename)]
 
 
 all_tasks = [SmoothLungLobes, CreateMeshes, SmoothWholeLungs, ReferenceSelectionMesh, ExtractTorso, MeshLandmarksCoarse,
-             ParseCOPDGeneSubjectGroups, InspectSegmentations]
+             ParseCOPDGeneSubjectGroups, SelectCOPDGeneSubjectsByValue, InspectMeshes]

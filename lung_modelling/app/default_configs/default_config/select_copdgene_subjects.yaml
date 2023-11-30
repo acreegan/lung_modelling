@@ -1,0 +1,23 @@
+dataset_root: null
+
+use_multiprocessing: True
+
+tasks:
+  initialize:
+    dataset_config_filename: "dataset_config.json"
+    use_directory_index: False
+    skip_dirs: []
+    select_dirs: []
+
+  select_copdgene_subjects_by_value:
+    task: "SelectCOPDGeneSubjectsByValue"
+    source_directory: "subject_data"
+    results_directory: "selected_subjects"
+    subject_data_filename: "COPDGene_Phase1_SM_NS_25OCT21.txt"
+    search_values: {"cohort":"Never smoked" }
+    params: {}
+
+  logging:
+
+
+run_tasks: ["select_copdgene_subjects_by_value"]

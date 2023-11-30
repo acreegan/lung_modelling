@@ -143,7 +143,8 @@ class CreateMeshesSW(EachItemTask):
         mesh_files = []
         for image_file in image_files:
             image_data, header = medpy.io.load(image_file)
-            image_data = np.pad(image_data, 5)
+            if params.pad:
+                image_data = np.pad(image_data, 5)
             mesh = voxel_to_mesh(image_data, spacing=header.spacing, direction=header.direction, offset=header.offset,
                                  step_size=params.step_size)
             mesh = sw.Mesh(mesh.points, pyvista_faces_to_2d(mesh.faces))
