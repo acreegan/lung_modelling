@@ -28,6 +28,7 @@ tasks:
     results_directory: "create_meshes_whole_lungs_sw"
     image_glob: "*.mhd"
     params: {
+      pad: True,
       step_size: 1,
       decimate: True,
       decimate_target_faces: 100000,
@@ -50,6 +51,7 @@ tasks:
     results_directory: "create_meshes_torso_sw"
     image_glob: "*.nii"
     params: {
+      pad: True,
       step_size: 3,
       decimate: True,
       decimate_target_faces: 100000,
