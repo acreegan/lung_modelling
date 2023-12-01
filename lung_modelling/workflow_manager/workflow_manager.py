@@ -152,6 +152,7 @@ class EachItemTask(Task):
             for source_directory, _, _ in tqdm(dirs_list, desc=f"Running: {self.name}",
                                                disable=not show_progress):
                 try:
+                    logger.debug(f"Working on {source_directory}")
                     output_directory = dataloc.abs_derivative / source_directory / self.config.results_directory
                     result = self.work(dataloc.abs_primary / source_directory,
                                        dataloc.abs_derivative / source_directory, output_directory, dataset_config,
@@ -385,6 +386,7 @@ def initialize(dataset_root: Path, task_config: DictConfig, show_progress=True) 
     dirs_list = gather_directories(dataloc.abs_primary, dataset_config.data_folder_depth, task_config.skip_dirs,
                                    task_config.select_dirs, index_list, show_progress)
 
+    logger.debug("dirs_list:\n" + "".join([f"{dir}\n" for dir in dirs_list]))
     if len(dirs_list) == 0:
         raise ValueError("No valid source directories found")
 

@@ -11,6 +11,8 @@ import hydra.utils
 from omegaconf import DictConfig
 import os
 import shutil
+import sys
+import importlib.util
 
 """
 A script to run a workflow
@@ -53,6 +55,8 @@ def run_cli(primary_config: DictConfig):
     else:
         mpool = None
 
+    logger.remove()
+    logger.add(sys.stderr, level=cfg.log_level)
     workflow_manager = WorkflowManager(cfg.dataset_root, cfg, mpool, show_progress=True)
 
     # Register tasks
@@ -61,7 +65,7 @@ def run_cli(primary_config: DictConfig):
     for task in all_tasks:
         collected_tasks[task.__name__] = task
 
-    if len(fnmatch.filter([config_choice], "*shapeworks*")) > 0:
+    if importlib.util.find_spec("shapeworks"):
         from lung_modelling.app.shapeworks_tasks import all_tasks as all_sw_tasks
         for task in all_sw_tasks:
             collected_tasks[task.__name__] = task
@@ -70,6 +74,8 @@ def run_cli(primary_config: DictConfig):
         task_class_name = cfg.tasks[task_name].task
         if task := collected_tasks.get(task_class_name):
             workflow_manager.register_task(task(task_name, cfg.tasks[task_name]))
+        else:
+            raise ValueError("Unrecognized task in config run_tasks list")
 
     workflow_manager.run_workflow()
 

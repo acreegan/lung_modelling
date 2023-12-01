@@ -1,6 +1,6 @@
 dataset_root: null
-
-use_multiprocessing: True
+log_level: "INFO"
+use_multiprocessing: False
 
 tasks:
   initialize:
