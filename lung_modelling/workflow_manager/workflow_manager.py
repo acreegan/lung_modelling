@@ -385,8 +385,8 @@ def initialize(dataset_root: Path, task_config: DictConfig, show_progress=True) 
 
     dirs_list = gather_directories(dataloc.abs_primary, dataset_config.data_folder_depth, task_config.skip_dirs,
                                    task_config.select_dirs, index_list, show_progress)
-
-    logger.debug("dirs_list:\n" + "".join([f"{dir}\n" for dir in dirs_list]))
+    dirs_list = sorted(dirs_list, key=lambda d: str(d[0]))
+    logger.debug("dirs_list:\n" + "".join([f"{dir};\n" for dir in dirs_list]))
     if len(dirs_list) == 0:
         raise ValueError("No valid source directories found")
 
