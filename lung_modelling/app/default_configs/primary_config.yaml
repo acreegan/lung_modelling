@@ -1,7 +1,7 @@
 defaults:
   - _self_
-  - default_config: shapeworks_whole_lung
-  - optional user_config: shapeworks_whole_lung
+  - default_config: whole_lung
+  - optional user_config: whole_lung
   - override hydra/hydra_logging: disabled
   - override hydra/job_logging: disabled
 
