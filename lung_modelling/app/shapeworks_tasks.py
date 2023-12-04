@@ -521,7 +521,8 @@ class OptimizeMeshesSW(AllItemsTask):
             os.makedirs(output_directory)
 
         if "source_directory_subject_data" in task_config:
-            group_data_file = glob(str(dataloc.abs_pooled_derivative / task_config.source_directory_subject_data / "*"))[0]
+            group_data_file = \
+            glob(str(dataloc.abs_pooled_derivative / task_config.source_directory_subject_data / "*"))[0]
             group_data = pd.read_csv(group_data_file)
 
         subjects = []
@@ -529,13 +530,15 @@ class OptimizeMeshesSW(AllItemsTask):
             subject = sw.Subject()
             mesh_files = []
             for source_directory_mesh in task_config.source_directories_mesh:
-                mesh_files.extend(glob(str(dataloc.abs_derivative / dir / source_directory_mesh / "*")))
+                abs_mesh_files = glob(str(dataloc.abs_derivative / dir / source_directory_mesh / "*"))
+                mesh_files.extend([os.path.relpath(file, output_directory) for file in abs_mesh_files])
 
             original_files = []
             for source_directory_original in task_config.source_directories_original:
                 for image_glob in task_config.image_globs:
-                    original_files.extend(
-                        glob(str(dataloc.abs_derivative / dir / source_directory_original / image_glob)))
+                    abs_original_files = glob(
+                        str(dataloc.abs_derivative / dir / source_directory_original / image_glob))
+                    original_files.extend([os.path.relpath(file, output_directory) for file in abs_original_files])
 
             subject.set_number_of_domains(len(mesh_files))
 
@@ -554,7 +557,8 @@ class OptimizeMeshesSW(AllItemsTask):
 
             landmark_files = []
             for source_directory_landmarks in task_config.source_directories_landmarks:
-                landmark_files.extend(glob(str(dataloc.abs_derivative / dir / source_directory_landmarks / "*")))
+                abs_landmark_files = glob(str(dataloc.abs_derivative / dir / source_directory_landmarks / "*"))
+                landmark_files.extend([os.path.relpath(file, output_directory) for file in abs_landmark_files])
 
             if "source_directory_subject_data" in task_config:
                 subject_dir = str(PurePosixPath(dir))
