@@ -12,7 +12,7 @@ import csv
 from lung_modelling import find_connected_faces, flatten, voxel_to_mesh, fix_mesh
 import medpy.io
 import pandas as pd
-
+from DataAugmentationUtils import Utils, Embedder
 
 class SmoothLungLobesSW(EachItemTask):
 
@@ -350,7 +350,7 @@ class ReferenceSelectionMeshSW(AllItemsTask):
         ref_dir_filename = output_directory / "ref_dir.txt"
         with open(str(ref_dir_filename), "w") as ref_dir_file:
             writer = csv.writer(ref_dir_file)
-            writer.writerow([str(ref_dir)])
+            writer.writerow([str(dirs_list[ref_index][0])])
 
         return [ref_mesh_combined_filename, *domain_reference_filenames]
 
@@ -522,7 +522,7 @@ class OptimizeMeshesSW(AllItemsTask):
 
         if "source_directory_subject_data" in task_config:
             group_data_file = \
-            glob(str(dataloc.abs_pooled_derivative / task_config.source_directory_subject_data / "*"))[0]
+                glob(str(dataloc.abs_pooled_derivative / task_config.source_directory_subject_data / "*"))[0]
             group_data = pd.read_csv(group_data_file)
 
         subjects = []
@@ -599,5 +599,68 @@ class OptimizeMeshesSW(AllItemsTask):
         os.chdir(wd)
 
 
+class ComputePCASW(AllItemsTask):
+
+    @staticmethod
+    def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
+             task_config: DictConfig) -> list[Path]:
+        """
+        Generate PCA model from the optimized shapeworks particle system
+
+        Parameters
+        ----------
+        dataloc
+            Dataset Locator
+        dirs_list
+            List of relative paths to the source directories
+        output_directory
+            Directory in which to save results of the work
+        dataset_config
+            Dataset config
+        task_config
+            **source_directory**
+                source directory of the shapeworks particle system
+            **source_directory_reference**
+                source directory for the reference shape
+            **results_directory**:
+                subdirectory for results
+            **params**
+                None implemented
+
+        """
+        shapeworks_project_file = glob(str(dataloc.abs_pooled_derivative / task_config.source_directory / "*.swproj"))[0]
+        particle_folder = f"{shapeworks_project_file.split('.swproj')[0]}_particles"
+
+        world_point_files = glob(str(dataloc.abs_pooled_derivative / task_config.source_directory / particle_folder / "*world.particles"))
+
+        # Can do PCA with an Embedder...
+        point_matrix = Utils.create_data_matrix(world_point_files)
+        point_embedder = Embedder.PCA_Embbeder(point_matrix, num_dim=0,
+                                               percent_variability=0.995)  # Setting the percent variability chooses how many modes we keep
+
+
+        # OR, with a ParticleShapeStatistics... do we use local or world??
+        # Provide the list of file names
+        particle_data = sw.ParticleSystem(world_point_files)
+
+        # Calculate the PCA for the read particle system
+        shape_statistics = sw.ParticleShapeStatistics()
+        shape_statistics.PCA(particleSystem=particle_data, domainsPerShape=3)
+        shape_statistics.principalComponentProjections()
+        pca_loadings = shape_statistics.pcaLoadings()
+
+        gen_points = project(pca_loadings[5], shape_statistics, particle_data, domains_per_shape=3)
+
+
+        pass
+
+
+def project(pca_instance, shape_statistics, particle_system, domains_per_shape):
+    W = shape_statistics.eigenVectors().T
+    mean = np.mean(particle_system.Particles(), axis=0)
+    data_instance = np.matmul(pca_instance, W) + mean.reshape(-1)
+    data_instance = data_instance.reshape((particle_system.Particles().shape[1:]))
+    return data_instance
+
 all_tasks = [SmoothLungLobesSW, CreateMeshesSW, SmoothWholeLungsSW, ReferenceSelectionMeshSW, MeshTransformSW,
-             OptimizeMeshesSW]
+             OptimizeMeshesSW, ComputePCASW]
