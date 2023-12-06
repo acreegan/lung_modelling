@@ -13,6 +13,8 @@ from lung_modelling import find_connected_faces, flatten, voxel_to_mesh, fix_mes
 import medpy.io
 import pandas as pd
 from DataAugmentationUtils import Utils, Embedder
+from fnmatch import fnmatch
+
 
 class SmoothLungLobesSW(EachItemTask):
 
@@ -628,39 +630,112 @@ class ComputePCASW(AllItemsTask):
                 None implemented
 
         """
-        shapeworks_project_file = glob(str(dataloc.abs_pooled_derivative / task_config.source_directory / "*.swproj"))[0]
-        particle_folder = f"{shapeworks_project_file.split('.swproj')[0]}_particles"
+        shapeworks_project_file = glob(str(dataloc.abs_pooled_derivative / task_config.source_directory / "*.swproj"))[
+            0]
+        ref_dir_file = glob(str(dataloc.abs_pooled_derivative / task_config.source_directory_reference / "*.txt"))[0]
+        ref_dir = Path(str(np.loadtxt(ref_dir_file, dtype=str)))
 
-        world_point_files = glob(str(dataloc.abs_pooled_derivative / task_config.source_directory / particle_folder / "*world.particles"))
+        ref_mesh_combined = sw.Mesh(
+            glob(str(dataloc.abs_pooled_derivative / task_config.source_directory_reference / "*combined*.vtk"))[0])
 
-        # Can do PCA with an Embedder...
-        point_matrix = Utils.create_data_matrix(world_point_files)
-        point_embedder = Embedder.PCA_Embbeder(point_matrix, num_dim=0,
+        project = sw.Project()
+        project.load(shapeworks_project_file)
+        subjects = project.get_subjects()
+
+        all_subject_points = []
+        for subject in subjects:
+            world_point_files = subject.get_world_particle_filenames()
+            local_point_files = subject.get_local_particle_filenames()
+            subject_world_points = []
+            for file in world_point_files:
+                subject_world_points.extend(
+                    np.loadtxt(dataloc.abs_pooled_derivative / task_config.source_directory / file))
+            subject_world_points = np.array(subject_world_points)
+
+            subject_local_points = []
+            for file in local_point_files:
+                subject_local_points.extend(
+                    np.loadtxt(dataloc.abs_pooled_derivative / task_config.source_directory / file))
+            subject_local_points = np.array(subject_local_points)
+
+            subject_global_transform = np.array(subject.get_groomed_transforms()[-1]).reshape(4,4)
+            subject_points_global_transform = []
+            for file in local_point_files:
+                subject_points_global_transform.extend(
+                    np.loadtxt(dataloc.abs_pooled_derivative / task_config.source_directory / file))
+            subject_points_global_transform = np.array(subject_points_global_transform)
+            subject_points_global_transform = pv.PointSet(subject_points_global_transform)
+            subject_points_global_transform = subject_points_global_transform.transform(subject_global_transform)
+
+            if fnmatch(ref_dir, f"*{subject.get_display_name()}"):
+                ref_points_combined_local = subject_local_points
+                ref_points_combined_world = subject_world_points
+                ref_points_combined_global_transform = subject_points_global_transform
+
+
+                ref_meshes = []
+                for relative_filename in subject.get_groomed_filenames():
+                    ref_mesh_filename = os.path.normpath(
+                        os.path.join(dataloc.abs_pooled_derivative / task_config.source_directory, relative_filename))
+                    ref_meshes.append(sw.Mesh(ref_mesh_filename))
+
+                ref_transform_global = np.array(subject.get_groomed_transforms()[-1]).reshape(4, 4)
+                ref_domain_transforms = []
+                for transform in subject.get_groomed_transforms():
+                    ref_domain_transforms.append(np.array(transform).reshape(4, 4))
+
+            all_subject_points.append(subject_points_global_transform)
+        all_subject_points = np.array(all_subject_points)
+
+        ref_meshes_transformed = []
+        for ref_mesh in ref_meshes:
+            ref_meshes_transformed.append(ref_mesh.copy().applyTransform(ref_transform_global))
+
+
+        # # Todo: Applying the domain transform to each mesh gets you to the position of the world points
+        # # But this isn't really what I want. I think I just want to do global transform on each
+        # ref_meshes_transformed = []
+        # for ref_mesh, transform in zip(ref_meshes, ref_domain_transforms):
+        #     ref_meshes_transformed.append(ref_mesh.copy().applyTransform(transform))
+
+        p = pv.Plotter()
+        for mesh in ref_meshes_transformed:
+            p.add_mesh(sw.sw2vtkMesh(mesh).extract_all_edges())
+
+        p.add_points(ref_points_combined_global_transform, color="red")
+        p.show()
+
+
+
+        # Do PCA
+        # --------------------------------------------------------------------------------------------------------------
+        point_embedder = Embedder.PCA_Embbeder(all_subject_points, num_dim=0,
                                                percent_variability=0.995)  # Setting the percent variability chooses how many modes we keep
 
+        gen_points = point_embedder.project(point_embedder.PCA_scores[5])  # Shape 5 is the reference shape
 
-        # OR, with a ParticleShapeStatistics... do we use local or world??
-        # Provide the list of file names
-        particle_data = sw.ParticleSystem(world_point_files)
 
-        # Calculate the PCA for the read particle system
-        shape_statistics = sw.ParticleShapeStatistics()
-        shape_statistics.PCA(particleSystem=particle_data, domainsPerShape=3)
-        shape_statistics.principalComponentProjections()
-        pca_loadings = shape_statistics.pcaLoadings()
+        # Do Warping
+        # --------------------------------------------------------------------------------------------------------------
 
-        gen_points = project(pca_loadings[5], shape_statistics, particle_data, domains_per_shape=3)
+        # TODO, why isn't this working? Does warper only work on one mesh at a time? Do we need to apply the transformation first?
+        warper = sw.MeshWarper()
+        warper.generateWarp(ref_mesh_combined, ref_points_combined_local)
+        warped_mesh = warper.buildMesh(gen_points)
 
+        p = pv.Plotter()
+        p.add_mesh(sw.sw2vtkMesh(ref_mesh_combined).extract_all_edges(), color="red")
+        p.add_mesh(sw.sw2vtkMesh(warped_mesh).extract_all_edges(), color="blue")
+        p.show()
+
+        p = pv.Plotter()
+        p.add_mesh(sw.sw2vtkMesh(ref_mesh_combined).extract_all_edges(), color="green")
+        p.add_points(ref_points_combined_local, color="red")
+        p.add_points(gen_points, color="blue")
+        p.show()
 
         pass
 
-
-def project(pca_instance, shape_statistics, particle_system, domains_per_shape):
-    W = shape_statistics.eigenVectors().T
-    mean = np.mean(particle_system.Particles(), axis=0)
-    data_instance = np.matmul(pca_instance, W) + mean.reshape(-1)
-    data_instance = data_instance.reshape((particle_system.Particles().shape[1:]))
-    return data_instance
 
 all_tasks = [SmoothLungLobesSW, CreateMeshesSW, SmoothWholeLungsSW, ReferenceSelectionMeshSW, MeshTransformSW,
              OptimizeMeshesSW, ComputePCASW]
