@@ -1,3 +1,5 @@
+import itertools
+
 from lung_modelling.workflow_manager import EachItemTask, DatasetLocator, AllItemsTask
 from pathlib import Path, PurePosixPath
 from omegaconf import DictConfig
@@ -630,8 +632,8 @@ class ComputePCASW(AllItemsTask):
                 None implemented
 
         """
-        shapeworks_project_file = glob(str(dataloc.abs_pooled_derivative / task_config.source_directory / "*.swproj"))[
-            0]
+        project_directory = dataloc.abs_pooled_derivative / task_config.source_directory
+        shapeworks_project_file = glob(str(project_directory / "*.swproj"))[0]
         ref_dir_file = glob(str(dataloc.abs_pooled_derivative / task_config.source_directory_reference / "*.txt"))[0]
         ref_dir = Path(str(np.loadtxt(ref_dir_file, dtype=str)))
 
@@ -639,72 +641,69 @@ class ComputePCASW(AllItemsTask):
         project.load(shapeworks_project_file)
         subjects = project.get_subjects()
 
-        all_subject_points = []
-        domain_n_points = []
-        ref_subject = None
+        # Get the local points and global transforms
+        all_points = []
+        subject_transforms = []
+        ref_subject_index = None
         for i, subject in enumerate(subjects):
-            local_point_files = subject.get_local_particle_filenames()
-
+            # Global transform is the last in the list of subject transforms
             subject_global_transform = np.array(subject.get_groomed_transforms()[-1]).reshape(4, 4)
-            subject_points_global_transform = []
+            subject_transforms.append(subject_global_transform)
+
+            local_point_files = subject.get_local_particle_filenames()
+            subject_points = []
             for file in local_point_files:
-                domain_points = np.loadtxt(dataloc.abs_pooled_derivative / task_config.source_directory / file)
-                subject_points_global_transform.extend(domain_points)
-                if i==0:
-                    domain_n_points.append(len(domain_points))
-            subject_points_global_transform = np.array(subject_points_global_transform)
-            subject_points_global_transform = pv.PointSet(subject_points_global_transform)
-            subject_points_global_transform = subject_points_global_transform.transform(subject_global_transform).points
+                domain_points = np.loadtxt(project_directory / file)  # File paths stored relative to project directory
+                subject_points.append(domain_points)
 
-            if fnmatch(ref_dir, f"*{subject.get_display_name()}"):
-                ref_subject = i
+            all_points.append(subject_points)
 
-                ref_meshes = []
-                for relative_filename in subject.get_groomed_filenames():
-                    ref_mesh_filename = os.path.normpath(
-                        os.path.join(dataloc.abs_pooled_derivative / task_config.source_directory, relative_filename))
-                    ref_meshes.append(sw.Mesh(ref_mesh_filename))
+            # Find reference subject by comparing against directory we stored earlier
+            if fnmatch(Path(subject.get_groomed_filenames()[0]).parents[1], f"*{ref_dir}"):
+                ref_subject_index = i
 
-                ref_transform_global = np.array(subject.get_groomed_transforms()[-1]).reshape(4, 4)
+        # Check the number of points in each domain
+        domain_n_points = [len(p) for p in all_points[0]]
 
-            all_subject_points.append(subject_points_global_transform)
-        all_subject_points = np.array(all_subject_points)
+        # Merge points for each subject and apply transform
+        all_points_transformed = []
+        for subject_points, transform in zip(all_points, subject_transforms):
+            subject_points = pv.PointSet(list(itertools.chain.from_iterable(subject_points)))
+            subject_points_transformed = subject_points.transform(transform).points
+            all_points_transformed.append(subject_points_transformed)
 
+        all_points_transformed = np.array(all_points_transformed)
+
+        # Load reference meshes and apply transform
         ref_meshes_transformed = []
-        for ref_mesh in ref_meshes:
-            ref_meshes_transformed.append(ref_mesh.copy().applyTransform(ref_transform_global))
-
-        # p = pv.Plotter()
-        # for mesh in ref_meshes_transformed:
-        #     p.add_mesh(sw.sw2vtkMesh(mesh).extract_all_edges())
-        #
-        # p.add_points(all_subject_points[ref_subject], color="red")
-        # p.show()
+        for relative_filename in subjects[ref_subject_index].get_groomed_filenames():
+            # File paths stored relative to project directory
+            ref_mesh_filename = os.path.normpath(os.path.join(project_directory, relative_filename))
+            ref_mesh = sw.Mesh(ref_mesh_filename)
+            ref_mesh_transformed = ref_mesh.applyTransform(subject_transforms[ref_subject_index])
+            ref_meshes_transformed.append(ref_mesh_transformed)
 
         # Do PCA
+        point_embedder = Embedder.PCA_Embbeder(all_points_transformed, num_dim=0, percent_variability=0.99)
+
+        # Test Results: Check that PCA reconstructed reference meshes match original reference mesh
         # --------------------------------------------------------------------------------------------------------------
-        point_embedder = Embedder.PCA_Embbeder(all_subject_points, num_dim=0,
-                                               percent_variability=0.995)  # Setting the percent variability chooses how many modes we keep
+        # Project PCA for reference shape
+        generated_points = point_embedder.project(point_embedder.PCA_scores[ref_subject_index])
 
-        gen_points = point_embedder.project(point_embedder.PCA_scores[5])  # Shape 5 is the reference shape
+        # Break points back into domains
+        generated_points_split = np.split(generated_points, np.cumsum(domain_n_points))
+        ref_points_split = np.split(all_points_transformed[ref_subject_index], np.cumsum(domain_n_points))
 
-        # Break points back down into domains
-        domain_gen_points = []
-        domain_n_points_cumulative = [0, *list(np.cumsum(domain_n_points))]
-        for i in range(len(domain_n_points_cumulative[1:])):
-            start = domain_n_points_cumulative[i]
-            stop = domain_n_points_cumulative[i+1]
-            domain_gen_points.append(gen_points[start:stop])
-
-        # Do Warping
-        # --------------------------------------------------------------------------------------------------------------
+        # Do warping
         warped_meshes = []
-        for i, ref_mesh in enumerate(ref_meshes_transformed):
+        for ref_mesh, ref_points, gen_points in zip(ref_meshes_transformed, ref_points_split, generated_points_split):
             warper = sw.MeshWarper()
-            warper.generateWarp(ref_mesh, all_subject_points[ref_subject][domain_n_points_cumulative[i]:domain_n_points_cumulative[i+1]])
-            warped_mesh = warper.buildMesh(domain_gen_points[i])
+            warper.generateWarp(ref_mesh, ref_points)
+            warped_mesh = warper.buildMesh(gen_points)
             warped_meshes.append(warped_mesh)
 
+        # Plot comparison
         p = pv.Plotter()
         for warped_mesh, ref_mesh in zip(warped_meshes, ref_meshes_transformed):
             p.add_mesh(sw.sw2vtkMesh(warped_mesh).extract_all_edges(), color="red")
