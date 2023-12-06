@@ -635,43 +635,29 @@ class ComputePCASW(AllItemsTask):
         ref_dir_file = glob(str(dataloc.abs_pooled_derivative / task_config.source_directory_reference / "*.txt"))[0]
         ref_dir = Path(str(np.loadtxt(ref_dir_file, dtype=str)))
 
-        ref_mesh_combined = sw.Mesh(
-            glob(str(dataloc.abs_pooled_derivative / task_config.source_directory_reference / "*combined*.vtk"))[0])
-
         project = sw.Project()
         project.load(shapeworks_project_file)
         subjects = project.get_subjects()
 
         all_subject_points = []
-        for subject in subjects:
-            world_point_files = subject.get_world_particle_filenames()
+        domain_n_points = []
+        ref_subject = None
+        for i, subject in enumerate(subjects):
             local_point_files = subject.get_local_particle_filenames()
-            subject_world_points = []
-            for file in world_point_files:
-                subject_world_points.extend(
-                    np.loadtxt(dataloc.abs_pooled_derivative / task_config.source_directory / file))
-            subject_world_points = np.array(subject_world_points)
 
-            subject_local_points = []
-            for file in local_point_files:
-                subject_local_points.extend(
-                    np.loadtxt(dataloc.abs_pooled_derivative / task_config.source_directory / file))
-            subject_local_points = np.array(subject_local_points)
-
-            subject_global_transform = np.array(subject.get_groomed_transforms()[-1]).reshape(4,4)
+            subject_global_transform = np.array(subject.get_groomed_transforms()[-1]).reshape(4, 4)
             subject_points_global_transform = []
             for file in local_point_files:
-                subject_points_global_transform.extend(
-                    np.loadtxt(dataloc.abs_pooled_derivative / task_config.source_directory / file))
+                domain_points = np.loadtxt(dataloc.abs_pooled_derivative / task_config.source_directory / file)
+                subject_points_global_transform.extend(domain_points)
+                if i==0:
+                    domain_n_points.append(len(domain_points))
             subject_points_global_transform = np.array(subject_points_global_transform)
             subject_points_global_transform = pv.PointSet(subject_points_global_transform)
-            subject_points_global_transform = subject_points_global_transform.transform(subject_global_transform)
+            subject_points_global_transform = subject_points_global_transform.transform(subject_global_transform).points
 
             if fnmatch(ref_dir, f"*{subject.get_display_name()}"):
-                ref_points_combined_local = subject_local_points
-                ref_points_combined_world = subject_world_points
-                ref_points_combined_global_transform = subject_points_global_transform
-
+                ref_subject = i
 
                 ref_meshes = []
                 for relative_filename in subject.get_groomed_filenames():
@@ -680,9 +666,6 @@ class ComputePCASW(AllItemsTask):
                     ref_meshes.append(sw.Mesh(ref_mesh_filename))
 
                 ref_transform_global = np.array(subject.get_groomed_transforms()[-1]).reshape(4, 4)
-                ref_domain_transforms = []
-                for transform in subject.get_groomed_transforms():
-                    ref_domain_transforms.append(np.array(transform).reshape(4, 4))
 
             all_subject_points.append(subject_points_global_transform)
         all_subject_points = np.array(all_subject_points)
@@ -691,21 +674,12 @@ class ComputePCASW(AllItemsTask):
         for ref_mesh in ref_meshes:
             ref_meshes_transformed.append(ref_mesh.copy().applyTransform(ref_transform_global))
 
-
-        # # Todo: Applying the domain transform to each mesh gets you to the position of the world points
-        # # But this isn't really what I want. I think I just want to do global transform on each
-        # ref_meshes_transformed = []
-        # for ref_mesh, transform in zip(ref_meshes, ref_domain_transforms):
-        #     ref_meshes_transformed.append(ref_mesh.copy().applyTransform(transform))
-
-        p = pv.Plotter()
-        for mesh in ref_meshes_transformed:
-            p.add_mesh(sw.sw2vtkMesh(mesh).extract_all_edges())
-
-        p.add_points(ref_points_combined_global_transform, color="red")
-        p.show()
-
-
+        # p = pv.Plotter()
+        # for mesh in ref_meshes_transformed:
+        #     p.add_mesh(sw.sw2vtkMesh(mesh).extract_all_edges())
+        #
+        # p.add_points(all_subject_points[ref_subject], color="red")
+        # p.show()
 
         # Do PCA
         # --------------------------------------------------------------------------------------------------------------
@@ -714,25 +688,29 @@ class ComputePCASW(AllItemsTask):
 
         gen_points = point_embedder.project(point_embedder.PCA_scores[5])  # Shape 5 is the reference shape
 
+        # Break points back down into domains
+        domain_gen_points = []
+        domain_n_points_cumulative = [0, *list(np.cumsum(domain_n_points))]
+        for i in range(len(domain_n_points_cumulative[1:])):
+            start = domain_n_points_cumulative[i]
+            stop = domain_n_points_cumulative[i+1]
+            domain_gen_points.append(gen_points[start:stop])
 
         # Do Warping
         # --------------------------------------------------------------------------------------------------------------
-
-        # TODO, why isn't this working? Does warper only work on one mesh at a time? Do we need to apply the transformation first?
-        warper = sw.MeshWarper()
-        warper.generateWarp(ref_mesh_combined, ref_points_combined_local)
-        warped_mesh = warper.buildMesh(gen_points)
-
-        p = pv.Plotter()
-        p.add_mesh(sw.sw2vtkMesh(ref_mesh_combined).extract_all_edges(), color="red")
-        p.add_mesh(sw.sw2vtkMesh(warped_mesh).extract_all_edges(), color="blue")
-        p.show()
+        warped_meshes = []
+        for i, ref_mesh in enumerate(ref_meshes_transformed):
+            warper = sw.MeshWarper()
+            warper.generateWarp(ref_mesh, all_subject_points[ref_subject][domain_n_points_cumulative[i]:domain_n_points_cumulative[i+1]])
+            warped_mesh = warper.buildMesh(domain_gen_points[i])
+            warped_meshes.append(warped_mesh)
 
         p = pv.Plotter()
-        p.add_mesh(sw.sw2vtkMesh(ref_mesh_combined).extract_all_edges(), color="green")
-        p.add_points(ref_points_combined_local, color="red")
-        p.add_points(gen_points, color="blue")
+        for warped_mesh, ref_mesh in zip(warped_meshes, ref_meshes_transformed):
+            p.add_mesh(sw.sw2vtkMesh(warped_mesh).extract_all_edges(), color="red")
+            p.add_mesh(sw.sw2vtkMesh(ref_mesh).extract_all_edges(), color="blue")
         p.show()
+
 
         pass
 
