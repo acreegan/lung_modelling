@@ -11,7 +11,7 @@ import numpy as np
 import subprocess
 from pyvista_tools import pyvista_faces_to_2d, remove_shared_faces_with_merge
 import csv
-from lung_modelling import find_connected_faces, flatten, voxel_to_mesh, fix_mesh
+from lung_modelling import find_connected_faces, flatten, voxel_to_mesh, fix_mesh, PCA_Embbeder
 import medpy.io
 import pandas as pd
 from DataAugmentationUtils import Utils, Embedder
@@ -632,6 +632,9 @@ class ComputePCASW(AllItemsTask):
                 None implemented
 
         """
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
+
         project_directory = dataloc.abs_pooled_derivative / task_config.source_directory
         shapeworks_project_file = glob(str(project_directory / "*.swproj"))[0]
         ref_dir_file = glob(str(dataloc.abs_pooled_derivative / task_config.source_directory_reference / "*.txt"))[0]
@@ -684,35 +687,70 @@ class ComputePCASW(AllItemsTask):
             ref_meshes_transformed.append(ref_mesh_transformed)
 
         # Do PCA
-        point_embedder = Embedder.PCA_Embbeder(all_points_transformed, num_dim=0, percent_variability=0.99)
+        # point_embedder = PCA_Embbeder(all_points_transformed, num_dim=len(subjects)-1)
+        point_embedder = PCA_Embbeder(all_points_transformed, percent_variability=1)
 
-        # Test Results: Check that PCA reconstructed reference meshes match original reference mesh
-        # --------------------------------------------------------------------------------------------------------------
-        # Project PCA for reference shape
-        generated_points = point_embedder.project(point_embedder.PCA_scores[ref_subject_index])
+        # Project mean points
+        mean_points = point_embedder.project(np.zeros(len(subjects)-1))
 
         # Break points back into domains
-        generated_points_split = np.split(generated_points, np.cumsum(domain_n_points))
+        mean_points_split = np.split(mean_points, np.cumsum(domain_n_points))
         ref_points_split = np.split(all_points_transformed[ref_subject_index], np.cumsum(domain_n_points))
 
         # Do warping
-        warped_meshes = []
-        for ref_mesh, ref_points, gen_points in zip(ref_meshes_transformed, ref_points_split, generated_points_split):
+        mean_meshes = []
+        for ref_mesh, ref_points, m_points in zip(ref_meshes_transformed, ref_points_split, mean_points_split):
             warper = sw.MeshWarper()
             warper.generateWarp(ref_mesh, ref_points)
-            warped_mesh = warper.buildMesh(gen_points)
-            warped_meshes.append(warped_mesh)
+            warped_mesh = warper.buildMesh(m_points)
+            mean_meshes.append(warped_mesh)
 
-        # Plot comparison
-        p = pv.Plotter()
-        for warped_mesh, ref_mesh in zip(warped_meshes, ref_meshes_transformed):
-            p.add_mesh(sw.sw2vtkMesh(warped_mesh).extract_all_edges(), color="red")
-            p.add_mesh(sw.sw2vtkMesh(ref_mesh).extract_all_edges(), color="blue")
-        p.show()
+        point_embedder.write_PCA(output_directory, score_option="stdev")
+
+
+        # Write meshes with domain name and PCA domain index
+        # In CreateMeshesSW, the convention is to place the domain name before a dash ("-"). We follow this convention
+        # to find the domain names again.
+        domain_names = [Path(f).stem.split("-")[0] for f in subjects[0].get_local_particle_filenames()]
+
 
 
         pass
 
 
+class SubjectDataPCACorrelationSW(AllItemsTask):
+
+    @staticmethod
+    def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
+             task_config: DictConfig) -> list[Path]:
+        """
+        Find correlations between subject data and PCA components
+
+        Parameters
+        ----------
+        dataloc
+            Dataset Locator
+        dirs_list
+            List of relative paths to the source directories
+        output_directory
+            Directory in which to save results of the work
+        dataset_config
+            Dataset config
+        task_config
+            **source_directory**
+                source directory of the PCA model
+            **results_directory**:
+                subdirectory for results
+            **params**
+                None implemented
+
+        """
+
+        # Load PCA from directory
+        embedder = PCA_Embbeder.from_directory(task_config.source_directory)
+
+        pass 
+
+
 all_tasks = [SmoothLungLobesSW, CreateMeshesSW, SmoothWholeLungsSW, ReferenceSelectionMeshSW, MeshTransformSW,
-             OptimizeMeshesSW, ComputePCASW]
+             OptimizeMeshesSW, ComputePCASW, SubjectDataPCACorrelationSW]
