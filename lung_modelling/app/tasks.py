@@ -412,7 +412,8 @@ class ParseCOPDGeneSubjectGroups(AllItemsTask):
                 filename for COPDGene subject data dict file
             **groups**
                 list of group labels to parse
-            **params**: (Dict): No params currently used for this task
+            **params**: (Dict):
+                No params currently used for this task
 
 
         Returns
@@ -488,7 +489,8 @@ class SelectCOPDGeneSubjectsByValue(AllItemsTask):
                 filename for COPDGene subject data dict file
             **search_values**
                 Dict of key value pairs
-            **params**: (Dict): No params currently used for this task
+            **params**: (Dict):
+                No params currently used for this task
 
 
         Returns
@@ -541,7 +543,8 @@ class InspectMeshes(AllItemsTask):
                 subdirectory within derivative source folder to find source files
             **results_directory**
                 subdirectory for results
-            **params**: (Dict): No params currently used for this task
+            **params**: (Dict):
+                No params currently used for this task
 
 
         Returns

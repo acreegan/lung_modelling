@@ -376,6 +376,123 @@ good coverage in optimization without needing to lower initial relative weightin
 
 </dd></dl>
 
+<dl class="py class">
+<dt class="sig sig-object py" id="lung_modelling.app.tasks.ParseCOPDGeneSubjectGroups">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.tasks.</span></span><span class="sig-name descname"><span class="pre">ParseCOPDGeneSubjectGroups</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#ParseCOPDGeneSubjectGroups"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.ParseCOPDGeneSubjectGroups" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.app.tasks.ParseCOPDGeneSubjectGroups.work">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dirs_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#ParseCOPDGeneSubjectGroups.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.ParseCOPDGeneSubjectGroups.work" title="Link to this definition">¶</a></dt>
+<dd><p>A task to parse subject data from the COPDGene dataset so that it can be added to a shapeworks style config file.</p>
+<p>This is an AllItemsTask even though it involves parsing each individual subject separately because we don’t
+want pass the large subject data array to lots of duplicate threads. Also the parsing should not take long.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataloc</strong> (<a class="reference internal" href="module_reference.html#lung_modelling.workflow_manager.DatasetLocator" title="lung_modelling.workflow_manager.workflow_manager.DatasetLocator"><em>DatasetLocator</em></a>) – Dataset locator for the dataset</p></li>
+<li><p><strong>dirs_list</strong> (<em>list</em>) – List of relative paths to the source directories</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – <dl class="simple">
+<dt><strong>source_directory</strong></dt><dd><p>subdirectory within derivative source folder to find source files</p>
+</dd>
+<dt><strong>results_directory</strong></dt><dd><p>subdirectory for results</p>
+</dd>
+<dt><strong>subject_data_filename</strong></dt><dd><p>filename for COPDGene subject data file</p>
+</dd>
+<dt><strong>subject_data_dict_filename</strong></dt><dd><p>filename for COPDGene subject data dict file</p>
+</dd>
+<dt><strong>groups</strong></dt><dd><p>list of group labels to parse</p>
+</dd>
+<dt><strong>params</strong>: (Dict):</dt><dd><p>No params currently used for this task</p>
+</dd>
+</dl>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>parsed_data</em> – File containing parsed groups</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[<em>Path</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lung_modelling.app.tasks.SelectCOPDGeneSubjectsByValue">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.tasks.</span></span><span class="sig-name descname"><span class="pre">SelectCOPDGeneSubjectsByValue</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#SelectCOPDGeneSubjectsByValue"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.SelectCOPDGeneSubjectsByValue" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.app.tasks.SelectCOPDGeneSubjectsByValue.work">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dirs_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#SelectCOPDGeneSubjectsByValue.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.SelectCOPDGeneSubjectsByValue.work" title="Link to this definition">¶</a></dt>
+<dd><p>Select subjects by value using a dict of key value pairs.</p>
+<p>Selections are combined using AND</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataloc</strong> (<a class="reference internal" href="module_reference.html#lung_modelling.workflow_manager.DatasetLocator" title="lung_modelling.workflow_manager.workflow_manager.DatasetLocator"><em>DatasetLocator</em></a>) – Dataset locator for the dataset</p></li>
+<li><p><strong>dirs_list</strong> (<em>list</em>) – List of relative paths to the source directories</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – <dl class="simple">
+<dt><strong>source_directory</strong></dt><dd><p>subdirectory within derivative source folder to find source files</p>
+</dd>
+<dt><strong>results_directory</strong></dt><dd><p>subdirectory for results</p>
+</dd>
+<dt><strong>subject_data_filename</strong></dt><dd><p>filename for COPDGene subject data file</p>
+</dd>
+<dt><strong>subject_data_dict_filename</strong></dt><dd><p>filename for COPDGene subject data dict file</p>
+</dd>
+<dt><strong>search_values</strong></dt><dd><p>Dict of key value pairs</p>
+</dd>
+<dt><strong>params</strong>: (Dict):</dt><dd><p>No params currently used for this task</p>
+</dd>
+</dl>
+</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lung_modelling.app.tasks.InspectMeshes">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.tasks.</span></span><span class="sig-name descname"><span class="pre">InspectMeshes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#InspectMeshes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.InspectMeshes" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.app.tasks.InspectMeshes.work">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dirs_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#InspectMeshes.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.InspectMeshes.work" title="Link to this definition">¶</a></dt>
+<dd><p>Display groups of meshes</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataloc</strong> (<a class="reference internal" href="module_reference.html#lung_modelling.workflow_manager.DatasetLocator" title="lung_modelling.workflow_manager.workflow_manager.DatasetLocator"><em>DatasetLocator</em></a>) – Dataset locator for the dataset</p></li>
+<li><p><strong>dirs_list</strong> (<em>list</em>) – List of relative paths to the source directories</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – <dl class="simple">
+<dt><strong>source_directory</strong></dt><dd><p>subdirectory within derivative source folder to find source files</p>
+</dd>
+<dt><strong>results_directory</strong></dt><dd><p>subdirectory for results</p>
+</dd>
+<dt><strong>params</strong>: (Dict):</dt><dd><p>No params currently used for this task</p>
+</dd>
+</dl>
+</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
 </section>
 <section id="module-lung_modelling.app.shapeworks_tasks">
 <span id="shapeworks-tasks"></span><h2>Shapeworks Tasks<a class="headerlink" href="#module-lung_modelling.app.shapeworks_tasks" title="Link to this heading">¶</a></h2>
@@ -668,9 +785,79 @@ for both.</p>
 </dd>
 <dt><strong>source_directories_original</strong></dt><dd><p>directories for original (pre-grooming) files</p>
 </dd>
+<dt><strong>source_directory_subject_data</strong></dt><dd><p>optional source directory to add subject groups to shapeworks project</p>
+</dd>
+<dt><strong>image_globs</strong></dt><dd><p>glob to find original files</p>
+</dd>
 <dt><strong>results_directory</strong>:</dt><dd><p>subdirectory for results</p>
 </dd>
 <dt><strong>params</strong></dt><dd><p>shapeworks optimization params</p>
+</dd>
+</dl>
+</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.ComputePCASW">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.shapeworks_tasks.</span></span><span class="sig-name descname"><span class="pre">ComputePCASW</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#ComputePCASW"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.ComputePCASW" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.ComputePCASW.work">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dirs_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#ComputePCASW.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.ComputePCASW.work" title="Link to this definition">¶</a></dt>
+<dd><p>Generate PCA model from the optimized shapeworks particle system</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataloc</strong> (<a class="reference internal" href="module_reference.html#lung_modelling.workflow_manager.DatasetLocator" title="lung_modelling.workflow_manager.workflow_manager.DatasetLocator"><em>DatasetLocator</em></a>) – Dataset Locator</p></li>
+<li><p><strong>dirs_list</strong> (<em>list</em>) – List of relative paths to the source directories</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Dataset config</p></li>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – <dl class="simple">
+<dt><strong>source_directory</strong></dt><dd><p>source directory of the shapeworks particle system</p>
+</dd>
+<dt><strong>source_directory_reference</strong></dt><dd><p>source directory for the reference shape</p>
+</dd>
+<dt><strong>results_directory</strong>:</dt><dd><p>subdirectory for results</p>
+</dd>
+<dt><strong>params</strong></dt><dd><p>None implemented</p>
+</dd>
+</dl>
+</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.SubjectDataPCACorrelationSW">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.shapeworks_tasks.</span></span><span class="sig-name descname"><span class="pre">SubjectDataPCACorrelationSW</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#SubjectDataPCACorrelationSW"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.SubjectDataPCACorrelationSW" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.SubjectDataPCACorrelationSW.work">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dirs_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#SubjectDataPCACorrelationSW.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.SubjectDataPCACorrelationSW.work" title="Link to this definition">¶</a></dt>
+<dd><p>Find correlations between subject data and PCA components</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataloc</strong> (<a class="reference internal" href="module_reference.html#lung_modelling.workflow_manager.DatasetLocator" title="lung_modelling.workflow_manager.workflow_manager.DatasetLocator"><em>DatasetLocator</em></a>) – Dataset Locator</p></li>
+<li><p><strong>dirs_list</strong> (<em>list</em>) – List of relative paths to the source directories</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Dataset config</p></li>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – <dl class="simple">
+<dt><strong>source_directory</strong></dt><dd><p>source directory of the PCA model</p>
+</dd>
+<dt><strong>results_directory</strong>:</dt><dd><p>subdirectory for results</p>
+</dd>
+<dt><strong>params</strong></dt><dd><p>None implemented</p>
 </dd>
 </dl>
 </p></li>

@@ -29,8 +29,10 @@
           <div class="body" role="main">
             
   <h1>Source code for lung_modelling.app.shapeworks_tasks</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">lung_modelling.workflow_manager</span> <span class="kn">import</span> <span class="n">EachItemTask</span><span class="p">,</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">AllItemsTask</span>
-<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span></span><span class="kn">import</span> <span class="nn">itertools</span>
+
+<span class="kn">from</span> <span class="nn">lung_modelling.workflow_manager</span> <span class="kn">import</span> <span class="n">EachItemTask</span><span class="p">,</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">AllItemsTask</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span><span class="p">,</span> <span class="n">PurePosixPath</span>
 <span class="kn">from</span> <span class="nn">omegaconf</span> <span class="kn">import</span> <span class="n">DictConfig</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">shapeworks</span> <span class="k">as</span> <span class="nn">sw</span>
@@ -40,8 +42,11 @@
 <span class="kn">import</span> <span class="nn">subprocess</span>
 <span class="kn">from</span> <span class="nn">pyvista_tools</span> <span class="kn">import</span> <span class="n">pyvista_faces_to_2d</span><span class="p">,</span> <span class="n">remove_shared_faces_with_merge</span>
 <span class="kn">import</span> <span class="nn">csv</span>
-<span class="kn">from</span> <span class="nn">lung_modelling</span> <span class="kn">import</span> <span class="n">find_connected_faces</span><span class="p">,</span> <span class="n">flatten</span><span class="p">,</span> <span class="n">voxel_to_mesh</span><span class="p">,</span> <span class="n">fix_mesh</span>
+<span class="kn">from</span> <span class="nn">lung_modelling</span> <span class="kn">import</span> <span class="n">find_connected_faces</span><span class="p">,</span> <span class="n">flatten</span><span class="p">,</span> <span class="n">voxel_to_mesh</span><span class="p">,</span> <span class="n">fix_mesh</span><span class="p">,</span> <span class="n">PCA_Embbeder</span>
 <span class="kn">import</span> <span class="nn">medpy.io</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">DataAugmentationUtils</span> <span class="kn">import</span> <span class="n">Utils</span><span class="p">,</span> <span class="n">Embedder</span>
+<span class="kn">from</span> <span class="nn">fnmatch</span> <span class="kn">import</span> <span class="n">fnmatch</span>
 
 
 <div class="viewcode-block" id="SmoothLungLobesSW">
@@ -189,7 +194,8 @@
         <span class="n">mesh_files</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">image_file</span> <span class="ow">in</span> <span class="n">image_files</span><span class="p">:</span>
             <span class="n">image_data</span><span class="p">,</span> <span class="n">header</span> <span class="o">=</span> <span class="n">medpy</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">image_file</span><span class="p">)</span>
-            <span class="n">image_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">image_data</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">pad</span><span class="p">:</span>
+                <span class="n">image_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">image_data</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
             <span class="n">mesh</span> <span class="o">=</span> <span class="n">voxel_to_mesh</span><span class="p">(</span><span class="n">image_data</span><span class="p">,</span> <span class="n">spacing</span><span class="o">=</span><span class="n">header</span><span class="o">.</span><span class="n">spacing</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="n">header</span><span class="o">.</span><span class="n">direction</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="n">header</span><span class="o">.</span><span class="n">offset</span><span class="p">,</span>
                                  <span class="n">step_size</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">step_size</span><span class="p">)</span>
             <span class="n">mesh</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">points</span><span class="p">,</span> <span class="n">pyvista_faces_to_2d</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">faces</span><span class="p">))</span>
@@ -198,7 +204,7 @@
                 <span class="n">mesh</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">sw2vtkMesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span>
                 <span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span>
 
-                <span class="n">t_faces</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">decimate_target_faces</span> <span class="o">/</span> <span class="p">(</span><span class="mi">4</span><span class="o">**</span><span class="n">params</span><span class="o">.</span><span class="n">subdivide_passes</span><span class="p">)</span>
+                <span class="n">t_faces</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">decimate_target_faces</span> <span class="o">/</span> <span class="p">(</span><span class="mi">4</span> <span class="o">**</span> <span class="n">params</span><span class="o">.</span><span class="n">subdivide_passes</span><span class="p">)</span>
                 <span class="n">target_reduction</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="n">t_faces</span> <span class="o">/</span> <span class="n">mesh</span><span class="o">.</span><span class="n">n_faces</span><span class="p">)</span>
                 <span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">decimate</span><span class="p">(</span><span class="n">target_reduction</span><span class="o">=</span><span class="n">target_reduction</span><span class="p">,</span>
                                      <span class="n">volume_preservation</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">volume_preservation</span><span class="p">)</span>
@@ -212,7 +218,7 @@
             <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">remesh</span><span class="p">:</span>
                 <span class="c1"># Shapeworks remeshing uses ACVD (vtkIsotropicDiscreteRemeshing). Should be the same as pyACVD with pyvista</span>
                 <span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">remesh</span><span class="p">(</span><span class="n">numVertices</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">remesh_target_points</span><span class="p">,</span>
-                                          <span class="n">adaptivity</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">adaptivity</span><span class="p">)</span>
+                                   <span class="n">adaptivity</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">adaptivity</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">smooth</span><span class="p">:</span>
                 <span class="c1"># Shapeworks smooth uses vtkSmoothPolyData. Should be the same as pyVista</span>
@@ -231,6 +237,7 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">pv_mesh</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">sw2vtkMesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="p">)</span> <span class="k">else</span> <span class="n">mesh</span>
 
+            <span class="c1"># Todo: Pyvista already has a function for this called connectivity</span>
             <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">isolate_mesh</span><span class="p">:</span>
                 <span class="n">_</span><span class="p">,</span> <span class="n">connected_points</span> <span class="o">=</span> <span class="n">find_connected_faces</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">pyvista_faces_to_2d</span><span class="p">(</span><span class="n">pv_mesh</span><span class="o">.</span><span class="n">faces</span><span class="p">)),</span> <span class="n">return_points</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">connected_points</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
@@ -409,7 +416,7 @@
         <span class="n">ref_dir_filename</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="s2">&quot;ref_dir.txt&quot;</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">ref_dir_filename</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">ref_dir_file</span><span class="p">:</span>
             <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">ref_dir_file</span><span class="p">)</span>
-            <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">ref_dir</span><span class="p">)])</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">dirs_list</span><span class="p">[</span><span class="n">ref_index</span><span class="p">][</span><span class="mi">0</span><span class="p">])])</span>
 
         <span class="k">return</span> <span class="p">[</span><span class="n">ref_mesh_combined_filename</span><span class="p">,</span> <span class="o">*</span><span class="n">domain_reference_filenames</span><span class="p">]</span></div>
 </div>
@@ -581,6 +588,10 @@
 <span class="sd">                directories for mesh files</span>
 <span class="sd">            **source_directories_original**</span>
 <span class="sd">                directories for original (pre-grooming) files</span>
+<span class="sd">            **source_directory_subject_data**</span>
+<span class="sd">                optional source directory to add subject groups to shapeworks project</span>
+<span class="sd">            **image_globs**</span>
+<span class="sd">                glob to find original files</span>
 <span class="sd">            **results_directory**:</span>
 <span class="sd">                subdirectory for results</span>
 <span class="sd">            **params**</span>
@@ -590,18 +601,25 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_directory</span><span class="p">):</span>
             <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_directory</span><span class="p">)</span>
 
+        <span class="k">if</span> <span class="s2">&quot;source_directory_subject_data&quot;</span> <span class="ow">in</span> <span class="n">task_config</span><span class="p">:</span>
+            <span class="n">group_data_file</span> <span class="o">=</span> \
+                <span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_pooled_derivative</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory_subject_data</span> <span class="o">/</span> <span class="s2">&quot;*&quot;</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">group_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">group_data_file</span><span class="p">)</span>
+
         <span class="n">subjects</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="nb">dir</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">dirs_list</span><span class="p">:</span>
             <span class="n">subject</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">Subject</span><span class="p">()</span>
             <span class="n">mesh_files</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">source_directory_mesh</span> <span class="ow">in</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directories_mesh</span><span class="p">:</span>
-                <span class="n">mesh_files</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="nb">dir</span> <span class="o">/</span> <span class="n">source_directory_mesh</span> <span class="o">/</span> <span class="s2">&quot;*&quot;</span><span class="p">)))</span>
+                <span class="n">abs_mesh_files</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="nb">dir</span> <span class="o">/</span> <span class="n">source_directory_mesh</span> <span class="o">/</span> <span class="s2">&quot;*&quot;</span><span class="p">))</span>
+                <span class="n">mesh_files</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">)</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">abs_mesh_files</span><span class="p">])</span>
 
             <span class="n">original_files</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">source_directory_original</span> <span class="ow">in</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directories_original</span><span class="p">:</span>
                 <span class="k">for</span> <span class="n">image_glob</span> <span class="ow">in</span> <span class="n">task_config</span><span class="o">.</span><span class="n">image_globs</span><span class="p">:</span>
-                    <span class="n">original_files</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
-                        <span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="nb">dir</span> <span class="o">/</span> <span class="n">source_directory_original</span> <span class="o">/</span> <span class="n">image_glob</span><span class="p">)))</span>
+                    <span class="n">abs_original_files</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span>
+                        <span class="nb">str</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="nb">dir</span> <span class="o">/</span> <span class="n">source_directory_original</span> <span class="o">/</span> <span class="n">image_glob</span><span class="p">))</span>
+                    <span class="n">original_files</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">)</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">abs_original_files</span><span class="p">])</span>
 
             <span class="n">subject</span><span class="o">.</span><span class="n">set_number_of_domains</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">mesh_files</span><span class="p">))</span>
 
@@ -620,8 +638,14 @@
 
             <span class="n">landmark_files</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">source_directory_landmarks</span> <span class="ow">in</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directories_landmarks</span><span class="p">:</span>
-                <span class="n">landmark_files</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="nb">dir</span> <span class="o">/</span> <span class="n">source_directory_landmarks</span> <span class="o">/</span> <span class="s2">&quot;*&quot;</span><span class="p">)))</span>
+                <span class="n">abs_landmark_files</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="nb">dir</span> <span class="o">/</span> <span class="n">source_directory_landmarks</span> <span class="o">/</span> <span class="s2">&quot;*&quot;</span><span class="p">))</span>
+                <span class="n">landmark_files</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">)</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">abs_landmark_files</span><span class="p">])</span>
 
+            <span class="k">if</span> <span class="s2">&quot;source_directory_subject_data&quot;</span> <span class="ow">in</span> <span class="n">task_config</span><span class="p">:</span>
+                <span class="n">subject_dir</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">PurePosixPath</span><span class="p">(</span><span class="nb">dir</span><span class="p">))</span>
+                <span class="n">subject_group_data</span> <span class="o">=</span> <span class="n">group_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">group_data</span><span class="o">.</span><span class="n">dir</span> <span class="o">==</span> <span class="n">subject_dir</span><span class="p">]</span>
+                <span class="n">subject</span><span class="o">.</span><span class="n">set_group_values</span><span class="p">(</span>
+                    <span class="p">{</span><span class="n">column</span><span class="p">:</span> <span class="n">subject_group_data</span><span class="p">[</span><span class="n">column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">subject_group_data</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="mi">1</span><span class="p">:]})</span>
             <span class="n">subject</span><span class="o">.</span><span class="n">set_landmarks_filenames</span><span class="p">(</span><span class="n">landmark_files</span><span class="p">)</span>
             <span class="n">subject</span><span class="o">.</span><span class="n">set_groomed_transforms</span><span class="p">(</span><span class="n">transforms</span><span class="p">)</span>
             <span class="n">subject</span><span class="o">.</span><span class="n">set_groomed_filenames</span><span class="p">(</span><span class="n">mesh_files</span><span class="p">)</span>
@@ -637,6 +661,15 @@
 
         <span class="n">project</span><span class="o">.</span><span class="n">set_parameters</span><span class="p">(</span><span class="s2">&quot;optimize&quot;</span><span class="p">,</span> <span class="n">parameters</span><span class="p">)</span>
 
+        <span class="c1"># Set studio parameters</span>
+        <span class="n">studio_dictionary</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;tool_state&quot;</span><span class="p">:</span> <span class="s2">&quot;analysis&quot;</span>
+        <span class="p">}</span>
+        <span class="n">studio_parameters</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">Parameters</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">studio_dictionary</span><span class="p">:</span>
+            <span class="n">studio_parameters</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">sw</span><span class="o">.</span><span class="n">Variant</span><span class="p">(</span><span class="n">studio_dictionary</span><span class="p">[</span><span class="n">key</span><span class="p">]))</span>
+        <span class="n">project</span><span class="o">.</span><span class="n">set_parameters</span><span class="p">(</span><span class="s2">&quot;studio&quot;</span><span class="p">,</span> <span class="n">studio_parameters</span><span class="p">)</span>
+
         <span class="n">spreadsheet_file</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">output_directory</span><span class="o">.</span><span class="n">stem</span><span class="si">}</span><span class="s2">_shapeworks_project.swproj&quot;</span>
         <span class="n">project</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">spreadsheet_file</span><span class="p">))</span>
 
@@ -649,8 +682,169 @@
 
 
 
+<div class="viewcode-block" id="ComputePCASW">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.ComputePCASW">[docs]</a>
+<span class="k">class</span> <span class="nc">ComputePCASW</span><span class="p">(</span><span class="n">AllItemsTask</span><span class="p">):</span>
+
+<div class="viewcode-block" id="ComputePCASW.work">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.ComputePCASW.work">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dirs_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span>
+             <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate PCA model from the optimized shapeworks particle system</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataloc</span>
+<span class="sd">            Dataset Locator</span>
+<span class="sd">        dirs_list</span>
+<span class="sd">            List of relative paths to the source directories</span>
+<span class="sd">        output_directory</span>
+<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">            Dataset config</span>
+<span class="sd">        task_config</span>
+<span class="sd">            **source_directory**</span>
+<span class="sd">                source directory of the shapeworks particle system</span>
+<span class="sd">            **source_directory_reference**</span>
+<span class="sd">                source directory for the reference shape</span>
+<span class="sd">            **results_directory**:</span>
+<span class="sd">                subdirectory for results</span>
+<span class="sd">            **params**</span>
+<span class="sd">                None implemented</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_directory</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_directory</span><span class="p">)</span>
+
+        <span class="n">project_directory</span> <span class="o">=</span> <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_pooled_derivative</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory</span>
+        <span class="n">shapeworks_project_file</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">project_directory</span> <span class="o">/</span> <span class="s2">&quot;*.swproj&quot;</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">ref_dir_file</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_pooled_derivative</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory_reference</span> <span class="o">/</span> <span class="s2">&quot;*.txt&quot;</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">ref_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">ref_dir_file</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">str</span><span class="p">)))</span>
+
+        <span class="n">project</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">Project</span><span class="p">()</span>
+        <span class="n">project</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">shapeworks_project_file</span><span class="p">)</span>
+        <span class="n">subjects</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">get_subjects</span><span class="p">()</span>
+
+        <span class="c1"># Get the local points and global transforms</span>
+        <span class="n">all_points</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">subject_transforms</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">ref_subject_index</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">subject</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">subjects</span><span class="p">):</span>
+            <span class="c1"># Global transform is the last in the list of subject transforms</span>
+            <span class="n">subject_global_transform</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">subject</span><span class="o">.</span><span class="n">get_groomed_transforms</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">subject_transforms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">subject_global_transform</span><span class="p">)</span>
+
+            <span class="n">local_point_files</span> <span class="o">=</span> <span class="n">subject</span><span class="o">.</span><span class="n">get_local_particle_filenames</span><span class="p">()</span>
+            <span class="n">subject_points</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">local_point_files</span><span class="p">:</span>
+                <span class="n">domain_points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">project_directory</span> <span class="o">/</span> <span class="n">file</span><span class="p">)</span>  <span class="c1"># File paths stored relative to project directory</span>
+                <span class="n">subject_points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">domain_points</span><span class="p">)</span>
+
+            <span class="n">all_points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">subject_points</span><span class="p">)</span>
+
+            <span class="c1"># Find reference subject by comparing against directory we stored earlier</span>
+            <span class="k">if</span> <span class="n">fnmatch</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">subject</span><span class="o">.</span><span class="n">get_groomed_filenames</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">parents</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="sa">f</span><span class="s2">&quot;*</span><span class="si">{</span><span class="n">ref_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">):</span>
+                <span class="n">ref_subject_index</span> <span class="o">=</span> <span class="n">i</span>
+
+        <span class="c1"># Check the number of points in each domain</span>
+        <span class="n">domain_n_points</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">all_points</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+
+        <span class="c1"># Merge points for each subject and apply transform</span>
+        <span class="n">all_points_transformed</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">subject_points</span><span class="p">,</span> <span class="n">transform</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">all_points</span><span class="p">,</span> <span class="n">subject_transforms</span><span class="p">):</span>
+            <span class="n">subject_points</span> <span class="o">=</span> <span class="n">pv</span><span class="o">.</span><span class="n">PointSet</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="o">.</span><span class="n">from_iterable</span><span class="p">(</span><span class="n">subject_points</span><span class="p">)))</span>
+            <span class="n">subject_points_transformed</span> <span class="o">=</span> <span class="n">subject_points</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">transform</span><span class="p">)</span><span class="o">.</span><span class="n">points</span>
+            <span class="n">all_points_transformed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">subject_points_transformed</span><span class="p">)</span>
+
+        <span class="n">all_points_transformed</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">all_points_transformed</span><span class="p">)</span>
+
+        <span class="c1"># Load reference meshes and apply transform</span>
+        <span class="n">ref_meshes_transformed</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">relative_filename</span> <span class="ow">in</span> <span class="n">subjects</span><span class="p">[</span><span class="n">ref_subject_index</span><span class="p">]</span><span class="o">.</span><span class="n">get_groomed_filenames</span><span class="p">():</span>
+            <span class="c1"># File paths stored relative to project directory</span>
+            <span class="n">ref_mesh_filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">project_directory</span><span class="p">,</span> <span class="n">relative_filename</span><span class="p">))</span>
+            <span class="n">ref_mesh</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">ref_mesh_filename</span><span class="p">)</span>
+            <span class="n">ref_mesh_transformed</span> <span class="o">=</span> <span class="n">ref_mesh</span><span class="o">.</span><span class="n">applyTransform</span><span class="p">(</span><span class="n">subject_transforms</span><span class="p">[</span><span class="n">ref_subject_index</span><span class="p">])</span>
+            <span class="n">ref_meshes_transformed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ref_mesh_transformed</span><span class="p">)</span>
+
+        <span class="c1"># Do PCA</span>
+        <span class="c1"># point_embedder = PCA_Embbeder(all_points_transformed, num_dim=len(subjects)-1)</span>
+        <span class="n">point_embedder</span> <span class="o">=</span> <span class="n">PCA_Embbeder</span><span class="p">(</span><span class="n">all_points_transformed</span><span class="p">,</span> <span class="n">percent_variability</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># Project mean points</span>
+        <span class="n">mean_points</span> <span class="o">=</span> <span class="n">point_embedder</span><span class="o">.</span><span class="n">project</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">subjects</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+
+        <span class="c1"># Break points back into domains</span>
+        <span class="n">mean_points_split</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">mean_points</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">domain_n_points</span><span class="p">))</span>
+        <span class="n">ref_points_split</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">all_points_transformed</span><span class="p">[</span><span class="n">ref_subject_index</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">domain_n_points</span><span class="p">))</span>
+
+        <span class="c1"># Do warping</span>
+        <span class="n">mean_meshes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">ref_mesh</span><span class="p">,</span> <span class="n">ref_points</span><span class="p">,</span> <span class="n">m_points</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">ref_meshes_transformed</span><span class="p">,</span> <span class="n">ref_points_split</span><span class="p">,</span> <span class="n">mean_points_split</span><span class="p">):</span>
+            <span class="n">warper</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">MeshWarper</span><span class="p">()</span>
+            <span class="n">warper</span><span class="o">.</span><span class="n">generateWarp</span><span class="p">(</span><span class="n">ref_mesh</span><span class="p">,</span> <span class="n">ref_points</span><span class="p">)</span>
+            <span class="n">warped_mesh</span> <span class="o">=</span> <span class="n">warper</span><span class="o">.</span><span class="n">buildMesh</span><span class="p">(</span><span class="n">m_points</span><span class="p">)</span>
+            <span class="n">mean_meshes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">warped_mesh</span><span class="p">)</span>
+
+        <span class="n">point_embedder</span><span class="o">.</span><span class="n">write_PCA</span><span class="p">(</span><span class="n">output_directory</span><span class="p">,</span> <span class="n">score_option</span><span class="o">=</span><span class="s2">&quot;stdev&quot;</span><span class="p">)</span>
+
+
+        <span class="c1"># Write meshes with domain name and PCA domain index</span>
+        <span class="c1"># In CreateMeshesSW, the convention is to place the domain name before a dash (&quot;-&quot;). We follow this convention</span>
+        <span class="c1"># to find the domain names again.</span>
+        <span class="n">domain_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">Path</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">subjects</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_local_particle_filenames</span><span class="p">()]</span>
+
+
+
+        <span class="k">pass</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="SubjectDataPCACorrelationSW">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.SubjectDataPCACorrelationSW">[docs]</a>
+<span class="k">class</span> <span class="nc">SubjectDataPCACorrelationSW</span><span class="p">(</span><span class="n">AllItemsTask</span><span class="p">):</span>
+
+<div class="viewcode-block" id="SubjectDataPCACorrelationSW.work">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.SubjectDataPCACorrelationSW.work">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dirs_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span>
+             <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find correlations between subject data and PCA components</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataloc</span>
+<span class="sd">            Dataset Locator</span>
+<span class="sd">        dirs_list</span>
+<span class="sd">            List of relative paths to the source directories</span>
+<span class="sd">        output_directory</span>
+<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">            Dataset config</span>
+<span class="sd">        task_config</span>
+<span class="sd">            **source_directory**</span>
+<span class="sd">                source directory of the PCA model</span>
+<span class="sd">            **results_directory**:</span>
+<span class="sd">                subdirectory for results</span>
+<span class="sd">            **params**</span>
+<span class="sd">                None implemented</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Load PCA from directory</span>
+        <span class="n">embedder</span> <span class="o">=</span> <span class="n">PCA_Embbeder</span><span class="o">.</span><span class="n">from_directory</span><span class="p">(</span><span class="n">task_config</span><span class="o">.</span><span class="n">source_directory</span><span class="p">)</span>
+
+        <span class="k">pass</span> </div>
+</div>
+
+
+
 <span class="n">all_tasks</span> <span class="o">=</span> <span class="p">[</span><span class="n">SmoothLungLobesSW</span><span class="p">,</span> <span class="n">CreateMeshesSW</span><span class="p">,</span> <span class="n">SmoothWholeLungsSW</span><span class="p">,</span> <span class="n">ReferenceSelectionMeshSW</span><span class="p">,</span> <span class="n">MeshTransformSW</span><span class="p">,</span>
-             <span class="n">OptimizeMeshesSW</span><span class="p">]</span>
+             <span class="n">OptimizeMeshesSW</span><span class="p">,</span> <span class="n">ComputePCASW</span><span class="p">,</span> <span class="n">SubjectDataPCACorrelationSW</span><span class="p">]</span>
 </pre></div>
 
           </div>
