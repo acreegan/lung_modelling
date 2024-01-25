@@ -1,3 +1,5 @@
+# First workflow in the lung modelling process for the COPDGene dataset.
+# Selects all subjects in the Never Smoked cohort and formats them to be pasted as select_dirs in the next workflow
 dataset_root: null
 log_level: "INFO"
 use_multiprocessing: False
@@ -17,7 +19,20 @@ tasks:
     search_values: {"cohort":"Never smoked" }
     params: {}
 
+  format_subjects:
+    task: "FormatSubjects"
+    source_directory: "selected_subjects"
+    results_directory: "selected_subjects_formatted"
+    input_file_glob: "*.csv"
+    column: "sid"
+    formats:
+      - {prefix: "'*", suffix: "*INSP_B31f*',"}
+      - {prefix: "'*", suffix: "*INSP_STD*',"}
+    delimiter: ","
+    newline: "\n"
+    params: {}
+
   logging:
 
 
-run_tasks: ["select_copdgene_subjects_by_value"]
+run_tasks: ["select_copdgene_subjects_by_value", "format_subjects"]

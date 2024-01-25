@@ -520,6 +520,64 @@ class SelectCOPDGeneSubjectsByValue(AllItemsTask):
         return [Path(selected_subjects_filename)]
 
 
+class FormatSubjects(AllItemsTask):
+
+    @staticmethod
+    def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
+             task_config: DictConfig) -> list[Path]:
+        """
+        Format a list of subjects
+
+        Parameters
+        ----------
+        dataloc
+            Dataset locator for the dataset
+        dirs_list
+            List of relative paths to the source directories
+        output_directory
+            Absolute path of the directory in which to save results of the work function
+        dataset_config
+            Config relating to the entire dataset
+        task_config
+            **source_directory**
+                subdirectory within derivative source folder to find source files
+            **results_directory**:
+                Name of the results folder (Stem of output_directory)
+            **input_file_glob**:
+                glob pattern for input file
+            **column**
+                column to use as subject ids to format
+            **formats**
+                list of dicts specifying prefix and suffix
+            **delimiter**
+                delimiter to use between formats
+            **newline**
+                newline to separate formatted items
+            **params**: (Dict):
+                No params currently used for this task
+
+
+        Returns
+        -------
+        """
+
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
+
+        data_file = \
+        glob(str(dataloc.abs_pooled_derivative / task_config.source_directory / task_config.input_file_glob))[0]
+        data = pd.read_csv(data_file)
+
+        formatted_subjects_filename = output_directory / "formatted_subjects.csv"
+        with open(str(formatted_subjects_filename), "w", newline=task_config.newline) as f:
+            writer = csv.writer(f, delimiter=task_config.delimiter)
+
+            for row in data[task_config.column]:
+                writer.writerow(["{}{}{}".format(fmt.prefix, row, fmt.suffix) for fmt in task_config.formats])
+
+        return [Path(formatted_subjects_filename)]
+
+
 class InspectMeshes(AllItemsTask):
 
     @staticmethod
@@ -611,5 +669,6 @@ class InspectMeshes(AllItemsTask):
         return [Path(selected_dirs_filename)]
 
 
-all_tasks = [ExtractLungLobes, CreateMeshes, ExtractWholeLungs, ReferenceSelectionMesh, ExtractTorso, MeshLandmarksCoarse,
-             ParseCOPDGeneSubjectGroups, SelectCOPDGeneSubjectsByValue, InspectMeshes]
+all_tasks = [ExtractLungLobes, CreateMeshes, ExtractWholeLungs, ReferenceSelectionMesh, ExtractTorso,
+             MeshLandmarksCoarse,
+             ParseCOPDGeneSubjectGroups, SelectCOPDGeneSubjectsByValue, FormatSubjects, InspectMeshes]

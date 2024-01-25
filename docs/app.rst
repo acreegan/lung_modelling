@@ -216,7 +216,7 @@ Below is an example of a workflow configuration file.
 
 
 **datset_root**: Root directory for the dataset on which to run the workflow. If set to null a directory select dialog
-will be created. This can also be overwritten from the command line.
+will be created. This can also be overwritten from the command line (e.g., user_config.dataset_root="C:/path/to/dataset").
 
 **log_level**: Log level for loguru logs
 
