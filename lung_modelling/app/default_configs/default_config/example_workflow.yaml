@@ -9,13 +9,15 @@ tasks:
     skip_dirs: [ ]
     select_dirs: [ ]
 
-  smooth_whole_lungs_sw:
-    results_directory: "smooth_whole_lungs_sw"
+  extract_whole_lungs_sw:
+    task: "ExtractWholeLungsSW"
+    results_directory: "extract_whole_lungs_sw"
     output_filenames: { left_lung: [ "lul", "lll" ], right_lung: [ "rul", "rml", "rll" ] }
     params: { maximumRMSError: 0.009999999776482582, numberOfIterations: 30 }
 
   create_meshes_sw:
-    source_directory: "smooth_whole_lungs_sw"
+    task: "CreateMeshesSW"
+    source_directory: "extract_whole_lungs_sw"
     results_directory: "create_meshes_whole_lungs_sw"
     image_glob: "*.nii"
     params: {
@@ -37,18 +39,30 @@ tasks:
       isolate_mesh: True  }
 
   reference_selection_mesh_sw:
+    task: "ReferenceSelectionMeshSW"
     source_directory: "create_meshes_whole_lungs_sw"
     results_directory: "reference_selection_mesh_whole_lungs_sw"
 
   mesh_transform_sw:
+    task: "MeshTransformSW"
     source_directory_initialize: "reference_selection_mesh_whole_lungs_sw"
-    source_directory: "create_meshes_whole_lungs_sw"
+    source_directories: ["create_meshes_whole_lungs_sw"]
     results_directory: "mesh_transform_sw"
     params: { iterations: 100 }
 
+  mesh_landmarks_lungs:
+    task: "MeshLandmarksCoarse"
+    source_directory: "create_meshes_whole_lungs_sw"
+    results_directory: "mesh_landmarks_coarse_lungs"
+    params: { }
+
   optimize_meshes_sw:
+    task: "OptimizeMeshesSW"
     source_directory_transform: "mesh_transform_sw"
-    source_directory_mesh: "create_meshes_whole_lungs_sw"
+    source_directories_mesh: [ "create_meshes_whole_lungs_sw" ]
+    source_directories_original: [ "extract_whole_lungs_sw"]
+    source_directories_landmarks: [ "mesh_landmarks_coarse_lungs" ]
+    image_globs: [ "*.nii"]
     results_directory: "optimize_meshes_sw"
     params: {
       checkpointing_interval: 200,
@@ -56,9 +70,9 @@ tasks:
       iterations_per_split: 2000,
       optimization_iterations: 2000,
       starting_regularization: 2000,
-      ending_regularization: 20,
+      ending_regularization: 100,
       relative_weighting: 4,
-      initial_relative_weighting: 0.02,
+      initial_relative_weighting: 0.03,
       save_init_splits: 0,
       verbosity: 0,
       use_normals: 1,
@@ -66,11 +80,12 @@ tasks:
       procrustes: 0,
       procrustes_scaling: 1,
       procrustes_rotation_translation: 1,
-      number_of_particles: [ 128,128 ],
-      use_geodesic_distance: 1,
-
+      number_of_particles: [ 128, 128],
+      use_geodesic_distance: 0,
+      use_landmarks: 1
     }
 
   logging:
 
-run_tasks: [ "smooth_whole_lungs_sw", "create_meshes_sw", "reference_selection_mesh_sw", "mesh_transform_sw", "optimize_meshes_sw" ]
+run_tasks: [ "extract_whole_lungs_sw", "create_meshes_sw", "reference_selection_mesh_sw", "mesh_transform_sw",
+             "mesh_landmarks_lungs", "optimize_meshes_sw" ]

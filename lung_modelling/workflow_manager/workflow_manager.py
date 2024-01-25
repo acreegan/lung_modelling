@@ -112,7 +112,7 @@ class EachItemTask(Task):
         source_directory_derivative
             Absolute path of the source directory in the derivative folder of the dataset
         output_directory
-            Directory in which to save results of the work
+            Absolute path of the directory in which to save results of the work function
         dataset_config
             Config relating to the entire dataset
         task_config
@@ -287,7 +287,7 @@ class AllItemsTask(Task):
         dirs_list
             List of relative paths to the source directories
         output_directory
-            Directory in which to save results of the work
+            Absolute path of the directory in which to save results of the work function
         dataset_config
             Config relating to the entire dataset
         task_config

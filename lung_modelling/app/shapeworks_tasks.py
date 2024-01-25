@@ -11,7 +11,8 @@ import numpy as np
 import subprocess
 from pyvista_tools import pyvista_faces_to_2d, remove_shared_faces_with_merge
 import csv
-from lung_modelling import find_connected_faces, flatten, voxel_to_mesh, fix_mesh, PCA_Embbeder
+from lung_modelling import find_connected_faces, flatten, voxel_to_mesh, fix_mesh
+from lung_modelling.shapeworks_libs import PCA_Embbeder
 import medpy.io
 import pandas as pd
 from DataAugmentationUtils import Utils, Embedder
@@ -37,11 +38,11 @@ class SmoothLungLobesSW(EachItemTask):
         source_directory_derivative
             Absolute path of the source directory in the derivative folder of the dataset
         output_directory
-            Directory in which to save results of the work
+            Absolute path of the directory in which to save results of the work function
         dataset_config
             Config relating to the entire dataset
         task_config
-            **results_directory**: subdirectory for results
+            **results_directory**: Name of the results folder (Stem of output_directory)
 
             **output_filenames**: dict providing a mapping from lobe mapping (in dataset config) to output filenames
 
@@ -100,13 +101,13 @@ class CreateMeshesSW(EachItemTask):
         source_directory_derivative
             Absolute path of the source directory in the derivative folder of the dataset
         output_directory
-            Directory in which to save results of the work
+            Absolute path of the directory in which to save results of the work function
         dataset_config
             Config relating to the entire dataset
         task_config
             **source_directory**: subdirectory within derivative source folder to find source files
 
-            **results_directory**: subdirectory for results
+            **results_directory**: Name of the results folder (Stem of output_directory)
 
             **params**: (Dict)
                 **step_size**
@@ -226,11 +227,11 @@ class SmoothWholeLungsSW(EachItemTask):
         source_directory_derivative
             Absolute path of the source directory in the derivative folder of the dataset
         output_directory
-            Directory in which to save results of the work
+            Absolute path of the directory in which to save results of the work function
         dataset_config
             Config relating to the entire dataset
         task_config
-            **results_directory**: subdirectory for results
+            **results_directory**: Name of the results folder (Stem of output_directory)
 
             **output_filenames**: dict providing a mapping from lobe mapping (in dataset config) to output filenames
 
@@ -292,13 +293,13 @@ class ReferenceSelectionMeshSW(AllItemsTask):
         dirs_list
             List of relative paths to the source directories
         output_directory
-            Directory in which to save results of the work
+            Absolute path of the directory in which to save results of the work function
         dataset_config
             Config relating to the entire dataset
         task_config
             **source_directories**: subdirectories within derivative source folder to find source files
 
-            **results_directory**: subdirectory for results
+            **results_directory**: Name of the results folder (Stem of output_directory)
 
 
         Returns
@@ -407,13 +408,13 @@ class MeshTransformSW(EachItemTask):
         source_directory_derivative
             Absolute path of the source directory in the derivative folder of the dataset
         output_directory
-            Directory in which to save results of the work
+            Absolute path of the directory in which to save results of the work function
         dataset_config
             Config relating to the entire dataset
         task_config
             **source_directories**: subdirectories within derivative source folder to find source files
 
-            **results_directory**: subdirectory for results
+            **results_directory**: Name of the results folder (Stem of output_directory)
 
             **params**: (Dict)
                 **iterations**
@@ -501,7 +502,7 @@ class OptimizeMeshesSW(AllItemsTask):
         dirs_list
             List of relative paths to the source directories
         output_directory
-            Directory in which to save results of the work
+            Absolute path of the directory in which to save results of the work function
         dataset_config
             Dataset config
         task_config
@@ -516,7 +517,7 @@ class OptimizeMeshesSW(AllItemsTask):
             **image_globs**
                 glob to find original files
             **results_directory**:
-                subdirectory for results
+                Name of the results folder (Stem of output_directory)
             **params**
                 shapeworks optimization params
 
@@ -618,7 +619,7 @@ class ComputePCASW(AllItemsTask):
         dirs_list
             List of relative paths to the source directories
         output_directory
-            Directory in which to save results of the work
+            Absolute path of the directory in which to save results of the work function
         dataset_config
             Dataset config
         task_config
@@ -627,7 +628,7 @@ class ComputePCASW(AllItemsTask):
             **source_directory_reference**
                 source directory for the reference shape
             **results_directory**:
-                subdirectory for results
+                Name of the results folder (Stem of output_directory)
             **params**
                 None implemented
 
@@ -733,14 +734,14 @@ class SubjectDataPCACorrelationSW(AllItemsTask):
         dirs_list
             List of relative paths to the source directories
         output_directory
-            Directory in which to save results of the work
+            Absolute path of the directory in which to save results of the work function
         dataset_config
             Dataset config
         task_config
             **source_directory**
                 source directory of the PCA model
             **results_directory**:
-                subdirectory for results
+                Name of the results folder (Stem of output_directory)
             **params**
                 None implemented
 

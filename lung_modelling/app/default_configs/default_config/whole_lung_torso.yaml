@@ -16,15 +16,15 @@ tasks:
     output_filename: "torso"
     params: { threshold: -320 }
 
-  smooth_whole_lungs_sw:
-    task: "SmoothWholeLungsSW"
-    results_directory: "smooth_whole_lungs_sw"
+  extract_whole_lungs_sw:
+    task: "ExtractWholeLungsSW"
+    results_directory: "extract_whole_lungs_sw"
     output_filenames: { left_lung: [ "lul", "lll" ], right_lung: [ "rul", "rml", "rll" ] }
     params: { maximumRMSError: 0.009999999776482582, numberOfIterations: 30 }
 
   create_meshes_sw:
     task: "CreateMeshesSW"
-    source_directory: "smooth_whole_lungs_sw"
+    source_directory: "extract_whole_lungs_sw"
     results_directory: "create_meshes_whole_lungs_sw"
     image_glob: "*.mhd"
     params: {
@@ -104,7 +104,7 @@ tasks:
     task: "OptimizeMeshesSW"
     source_directory_transform: "mesh_transform_sw"
     source_directories_mesh: [ "create_meshes_whole_lungs_sw", "create_meshes_torso_sw" ]
-    source_directories_original: [ "smooth_whole_lungs_sw", "extract_torso" ]
+    source_directories_original: [ "extract_whole_lungs_sw", "extract_torso" ]
     source_directories_landmarks: [ "mesh_landmarks_coarse_lungs", "mesh_landmarks_coarse_torso" ]
     source_directory_subject_data: "parsed_subject_data"
     image_globs: [ "*.nii","*.mhd" ]
@@ -132,6 +132,6 @@ tasks:
 
   logging:
 
-run_tasks: [ "smooth_whole_lungs_sw", "extract_torso", "create_meshes_sw", "create_meshes_torso_sw",
+run_tasks: [ "extract_whole_lungs_sw", "extract_torso", "create_meshes_sw", "create_meshes_torso_sw",
              "reference_selection_mesh_sw", "mesh_transform_sw", "mesh_landmarks_lungs", "mesh_landmarks_torso",
              "parse_copdgene_subject_groups", "optimize_meshes_sw" ]

@@ -33,12 +33,10 @@
             
   <section id="workflow-app">
 <h1>Workflow App<a class="headerlink" href="#workflow-app" title="Link to this heading">¶</a></h1>
-<section id="app-usage">
-<h2>App Usage<a class="headerlink" href="#app-usage" title="Link to this heading">¶</a></h2>
 <section id="setup">
-<h3>Setup<a class="headerlink" href="#setup" title="Link to this heading">¶</a></h3>
+<h2>Setup<a class="headerlink" href="#setup" title="Link to this heading">¶</a></h2>
 <p>To use the workflow app, first install the Lung Modelling package. See <a class="reference internal" href="installation.html#installation"><span class="std std-ref">Installation</span></a>
-for instructions</p>
+for instructions.</p>
 <p>Once the package is installed, initialize a user-editable configuration by running:</p>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>lung_modelling<span class="w"> </span><span class="nv">initialize_user_configuration</span><span class="o">=</span>True
 </pre></div>
@@ -49,7 +47,7 @@ for the existing workflow tasks. See the <a class="reference external" href="htt
 for detailed information on how this works.</p>
 </section>
 <section id="running-example-workflow">
-<h3>Running Example Workflow<a class="headerlink" href="#running-example-workflow" title="Link to this heading">¶</a></h3>
+<h2>Running Example Workflow<a class="headerlink" href="#running-example-workflow" title="Link to this heading">¶</a></h2>
 <p>To test the package on example data, first download the <a class="reference external" href="https://github.com/acreegan/lung_modelling/blob/main/example_data/covid_lung_lobe_segmentation.zip">example data file</a>
 and unzip it:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">tar</span> <span class="o">-</span><span class="n">xf</span> <span class="n">covid_lung_segmentation</span><span class="o">.</span><span class="n">zip</span>
@@ -59,13 +57,14 @@ and unzip it:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">lung_modelling</span> <span class="n">user_config</span><span class="o">=</span><span class="n">example_workflow</span>
 </pre></div>
 </div>
-<p>This will bring up a file select dialog. Select the folder covid_lung_lobe_segmentation.</p>
-</section>
+<p>This will bring up a file select dialog. Select the folder covid_lung_lobe_segmentation. The example workflow will
+run, producing a shapeworks project in the pooled_derivative -&gt; optimize_meshes_sw folder.</p>
 </section>
 <section id="dataset-configuration">
 <h2>Dataset Configuration<a class="headerlink" href="#dataset-configuration" title="Link to this heading">¶</a></h2>
-<p>The worfkflow app requires a specific
-directory structure for the dataset. An example of the structure is as follows:</p>
+<p>To run the workflow app on your own dataset, your dataset must be structured in a specific way (following the SPARC data
+structure). It must also contain a file called dataset_config.json, explained below. An example of the structure is as
+follows:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">dataset_name</span><span class="o">/</span>
 <span class="o">|---</span> <span class="n">dataset_config</span><span class="o">.</span><span class="n">json</span>
 <span class="o">|---</span> <span class="n">primary</span>
@@ -83,11 +82,11 @@ individual subject directories. Generated data is placed in the derivative
 directory, with a structure mirroring that of the primary. Any number of sub
 directories can exist before the data files.</p>
 <p>The dataset structure along with information about the files contained in the
-dataset must be specified in a file named dataset_config.json. The
-dataset_config.json for the example dataset is as follows:</p>
+dataset must be specified in a file named dataset_config.json. An example of this is shown below:</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;primary_directory&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;primary&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;derivative_directory&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;derivative&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;pooled_primary_directory&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pooled_primary&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;pooled_derivative_directory&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pooled_derivative&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;directory_index_glob&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;directory_index*.csv&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;data_folder_depth&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
@@ -97,19 +96,148 @@ dataset_config.json for the example dataset is as follows:</p>
 <span class="p">}</span>
 </pre></div>
 </div>
+<p>In the above example, the first 6 items are generic and the final 2 are dataset specific, which can
+be added as necessary and accessed by the workflow tasks.</p>
 <p><strong>primary_directory</strong> refers to the name of the directory holding the primary
 data in the dataset.</p>
 <p><strong>derivative_directory</strong> refers to the name of the directory in which to place
 generated data.</p>
+<p><strong>pooled_primary_directory</strong> refers to the name of the directory holding primary data files which contain
+data on two or more subjects from the dataset (e.g., a subject demographic data dictionary)</p>
 <p><strong>pooled_derivative_directory</strong> refers to the name of the directory in which to place
-data generated from two or more samples combined into a single output file.</p>
+data generated from two or more subjects combined into a single output file.</p>
 <p><strong>directory_index_glob</strong> refers to a glob used to find a pre-built directory
 index of the dataset if it exists.</p>
 <p><strong>data_folder_depth</strong> is the number of folders between the top level dataset
-folder and the data files</p>
+folder and the data files. (e.g., the dataset structure may be: primary -&gt; subject_id -&gt; study_phase -&gt; imaging_mode,
+with data residing in the imaging mode folder, a depth of 4)</p>
 <p><strong>lung_image_glob</strong> refers to a glob used to find lung image data files</p>
 <p><strong>lobe_mapping</strong> specifies the value used to indicate each lung lobe in the
 lung lobe image files.</p>
+</section>
+<section id="workflow-configuration">
+<h2>Workflow Configuration<a class="headerlink" href="#workflow-configuration" title="Link to this heading">¶</a></h2>
+<p>A workflow is specified using a workflow configuration file in yaml format. This file is selected when running the
+run_workflow app by placing it in the user_config directory and setting the user_config parameter from the command line
+(see run example workflow).
+This file specifies both the tasks which will make up the workflow and all the settings or parameters that each task
+requires.</p>
+<p>There are three main sections to the workflow configuration file: The general settings, the tasks list, and the
+run_tasks list.</p>
+<p>Below is an example of a workflow configuration file.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">dataset_root</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+<span class="nt">log_level</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;INFO&quot;</span>
+<span class="nt">use_multiprocessing</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">False</span>
+
+<span class="nt">tasks</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">initialize</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">dataset_config_filename</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;dataset_config.json&quot;</span>
+<span class="w">    </span><span class="nt">use_directory_index</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">False</span>
+<span class="w">    </span><span class="nt">skip_dirs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="w"> </span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="nt">select_dirs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="w"> </span><span class="p p-Indicator">]</span>
+
+<span class="w">  </span><span class="nt">extract_whole_lungs_sw</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">task</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;ExtractWholeLungsSW&quot;</span>
+<span class="w">    </span><span class="nt">results_directory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;extract_whole_lungs_sw&quot;</span>
+<span class="w">    </span><span class="nt">output_filenames</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> left_lung</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="w"> </span><span class="s">&quot;lul&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;lll&quot;</span><span class="w"> </span><span class="p p-Indicator">],</span><span class="nt"> right_lung</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="w"> </span><span class="s">&quot;rul&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;rml&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;rll&quot;</span><span class="w"> </span><span class="p p-Indicator">]</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<span class="w">    </span><span class="nt">params</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> maximumRMSError</span><span class="p">:</span><span class="w"> </span><span class="nv">0.009999999776482582</span><span class="p p-Indicator">,</span><span class="nt"> numberOfIterations</span><span class="p">:</span><span class="w"> </span><span class="nv">30</span><span class="w"> </span><span class="p p-Indicator">}</span>
+
+<span class="w">  </span><span class="nt">create_meshes_sw</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">task</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;CreateMeshesSW&quot;</span>
+<span class="w">    </span><span class="nt">source_directory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;extract_whole_lungs_sw&quot;</span>
+<span class="w">    </span><span class="nt">results_directory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;create_meshes_whole_lungs_sw&quot;</span>
+<span class="w">    </span><span class="nt">image_glob</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;*.nii&quot;</span>
+<span class="w">    </span><span class="nt">params</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span>
+<span class="nt">      pad</span><span class="p">:</span><span class="w"> </span><span class="nv">True</span><span class="p p-Indicator">,</span>
+<span class="nt">      step_size</span><span class="p">:</span><span class="w"> </span><span class="nv">1</span><span class="p p-Indicator">,</span>
+<span class="nt">      decimate</span><span class="p">:</span><span class="w"> </span><span class="nv">True</span><span class="p p-Indicator">,</span>
+<span class="nt">      decimate_target_faces</span><span class="p">:</span><span class="w"> </span><span class="nv">100000</span><span class="p p-Indicator">,</span>
+<span class="nt">      subdivide_passes</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">,</span>
+<span class="nt">      volume_preservation</span><span class="p">:</span><span class="w"> </span><span class="nv">True</span><span class="p p-Indicator">,</span>
+<span class="nt">      remesh</span><span class="p">:</span><span class="w"> </span><span class="nv">True</span><span class="p p-Indicator">,</span>
+<span class="nt">      remesh_target_points</span><span class="p">:</span><span class="w"> </span><span class="nv">40000</span><span class="p p-Indicator">,</span>
+<span class="nt">      adaptivity</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">,</span>
+<span class="nt">      smooth</span><span class="p">:</span><span class="w"> </span><span class="nv">True</span><span class="p p-Indicator">,</span>
+<span class="nt">      smooth_iterations</span><span class="p">:</span><span class="w"> </span><span class="nv">10</span><span class="p p-Indicator">,</span>
+<span class="nt">      relaxation</span><span class="p">:</span><span class="w"> </span><span class="nv">1</span><span class="p p-Indicator">,</span>
+<span class="nt">      fill_holes</span><span class="p">:</span><span class="w"> </span><span class="nv">True</span><span class="p p-Indicator">,</span>
+<span class="nt">      hole_size</span><span class="p">:</span><span class="w"> </span><span class="nv">100</span><span class="p p-Indicator">,</span>
+<span class="nt">      remove_shared_faces</span><span class="p">:</span><span class="w"> </span><span class="nv">True</span><span class="p p-Indicator">,</span>
+<span class="nt">      isolate_mesh</span><span class="p">:</span><span class="w"> </span><span class="nv">True</span><span class="w">  </span><span class="p p-Indicator">}</span>
+
+<span class="w">  </span><span class="nt">reference_selection_mesh_sw</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">task</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;ReferenceSelectionMeshSW&quot;</span>
+<span class="w">    </span><span class="nt">source_directory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;create_meshes_whole_lungs_sw&quot;</span>
+<span class="w">    </span><span class="nt">results_directory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;reference_selection_mesh_whole_lungs_sw&quot;</span>
+
+<span class="w">  </span><span class="nt">mesh_transform_sw</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">task</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;MeshTransformSW&quot;</span>
+<span class="w">    </span><span class="nt">source_directory_initialize</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;reference_selection_mesh_whole_lungs_sw&quot;</span>
+<span class="w">    </span><span class="nt">source_directories</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;create_meshes_whole_lungs_sw&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="nt">results_directory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;mesh_transform_sw&quot;</span>
+<span class="w">    </span><span class="nt">params</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> iterations</span><span class="p">:</span><span class="w"> </span><span class="nv">100</span><span class="w"> </span><span class="p p-Indicator">}</span>
+
+<span class="w">  </span><span class="nt">mesh_landmarks_lungs</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">task</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;MeshLandmarksCoarse&quot;</span>
+<span class="w">    </span><span class="nt">source_directory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;create_meshes_whole_lungs_sw&quot;</span>
+<span class="w">    </span><span class="nt">results_directory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;mesh_landmarks_coarse_lungs&quot;</span>
+<span class="w">    </span><span class="nt">params</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="w"> </span><span class="p p-Indicator">}</span>
+
+<span class="w">  </span><span class="nt">optimize_meshes_sw</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">task</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;OptimizeMeshesSW&quot;</span>
+<span class="w">    </span><span class="nt">source_directory_transform</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;mesh_transform_sw&quot;</span>
+<span class="w">    </span><span class="nt">source_directories_mesh</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="w"> </span><span class="s">&quot;create_meshes_whole_lungs_sw&quot;</span><span class="w"> </span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="nt">source_directories_original</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="w"> </span><span class="s">&quot;extract_whole_lungs_sw&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="nt">source_directories_landmarks</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="w"> </span><span class="s">&quot;mesh_landmarks_coarse_lungs&quot;</span><span class="w"> </span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="nt">image_globs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="w"> </span><span class="s">&quot;*.nii&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="nt">results_directory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;optimize_meshes_sw&quot;</span>
+<span class="w">    </span><span class="nt">params</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span>
+<span class="nt">      checkpointing_interval</span><span class="p">:</span><span class="w"> </span><span class="nv">200</span><span class="p p-Indicator">,</span>
+<span class="nt">      keep_checkpoints</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">,</span>
+<span class="nt">      iterations_per_split</span><span class="p">:</span><span class="w"> </span><span class="nv">2000</span><span class="p p-Indicator">,</span>
+<span class="nt">      optimization_iterations</span><span class="p">:</span><span class="w"> </span><span class="nv">2000</span><span class="p p-Indicator">,</span>
+<span class="nt">      starting_regularization</span><span class="p">:</span><span class="w"> </span><span class="nv">2000</span><span class="p p-Indicator">,</span>
+<span class="nt">      ending_regularization</span><span class="p">:</span><span class="w"> </span><span class="nv">100</span><span class="p p-Indicator">,</span>
+<span class="nt">      relative_weighting</span><span class="p">:</span><span class="w"> </span><span class="nv">4</span><span class="p p-Indicator">,</span>
+<span class="nt">      initial_relative_weighting</span><span class="p">:</span><span class="w"> </span><span class="nv">0.03</span><span class="p p-Indicator">,</span>
+<span class="nt">      save_init_splits</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">,</span>
+<span class="nt">      verbosity</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">,</span>
+<span class="nt">      use_normals</span><span class="p">:</span><span class="w"> </span><span class="nv">1</span><span class="p p-Indicator">,</span>
+<span class="nt">      normals_strength</span><span class="p">:</span><span class="w"> </span><span class="nv">10.0</span><span class="p p-Indicator">,</span>
+<span class="nt">      procrustes</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">,</span>
+<span class="nt">      procrustes_scaling</span><span class="p">:</span><span class="w"> </span><span class="nv">1</span><span class="p p-Indicator">,</span>
+<span class="nt">      procrustes_rotation_translation</span><span class="p">:</span><span class="w"> </span><span class="nv">1</span><span class="p p-Indicator">,</span>
+<span class="nt">      number_of_particles</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="w"> </span><span class="nv">128</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">128</span><span class="p p-Indicator">],</span>
+<span class="nt">      use_geodesic_distance</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">,</span>
+<span class="nt">      use_landmarks</span><span class="p">:</span><span class="w"> </span><span class="nv">1</span>
+<span class="w">    </span><span class="p p-Indicator">}</span>
+
+<span class="w">  </span><span class="nt">logging</span><span class="p">:</span>
+
+<span class="nt">run_tasks</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="w"> </span><span class="s">&quot;smooth_whole_lungs_sw&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;create_meshes_sw&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;reference_selection_mesh_sw&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;mesh_transform_sw&quot;</span><span class="p p-Indicator">,</span>
+<span class="w">             </span><span class="s">&quot;mesh_landmarks_lungs&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;optimize_meshes_sw&quot;</span><span class="w"> </span><span class="p p-Indicator">]</span>
+</pre></div>
+</div>
+<p><strong>datset_root</strong>: Root directory for the dataset on which to run the workflow. If set to null a directory select dialog
+will be created. This can also be overwritten from the command line.</p>
+<p><strong>log_level</strong>: Log level for loguru logs</p>
+<p><strong>use_multiprocessing</strong>: Flag to turn on or off the use of multiprocessing to run EachItemTask tasks in parallel</p>
+<p><strong>tasks</strong>: A list of yaml dictionaries specifying the configuration for tasks to be included in the workflow. The key of
+each dictionary entry can be any string, and is used to refer to the task config in the run_tasks list. The “task”
+element must refer to the class name of a class implementing EachItemTask or AllItemsTask. The remaining elements refer
+to the input parameters of each task. (The sub dictionary params can be used to group parameters that effect the core
+functioning of the task, but this is not enforced).</p>
+<p><strong>run_tasks</strong>: A list of tasks specified by the task labels in the tasks dictionary. This specifies which tasks will be
+run and in which order. (initialize is always run first, and logging is always run last in the workflow. They do not
+need the “task” name element.</p>
+</section>
+<section id="workflow-run-logs">
+<h2>Workflow Run Logs<a class="headerlink" href="#workflow-run-logs" title="Link to this heading">¶</a></h2>
+<p>A completed workflow run is saved in the dataset_root-&gt;logging directory.
+This includes the workflow configuration file and a list of all installed python packages with version numbers.</p>
+<p>The lung_modelling package uses setuptools-scm to provide up to date version numbers.
+If the package is installed from github or run unedited from a cloned github repository, the version number will allow
+identification of which commit was used during the logged run.</p>
 </section>
 </section>
 
@@ -134,7 +262,14 @@ lung lobe image files.</p>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Lung Modelling</a></li>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="user_guide.html">User Guide</a><ul class="current">
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Workflow App</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Workflow App</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#running-example-workflow">Running Example Workflow</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dataset-configuration">Dataset Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#workflow-configuration">Workflow Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#workflow-run-logs">Workflow Run Logs</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="workflow_manager.html">Workflow Manager</a></li>
 </ul>
 </li>

@@ -33,8 +33,11 @@
             
   <section id="task-reference">
 <h1>Task Reference<a class="headerlink" href="#task-reference" title="Link to this heading">¶</a></h1>
+<p>Documentation for tasks implementing the workflow_manager EachItemTask or AllItemTask interfaces, along with
+the workflow_manager internal tasks.</p>
 <section id="workflow-manager-tasks">
 <h2>Workflow Manager Tasks<a class="headerlink" href="#workflow-manager-tasks" title="Link to this heading">¶</a></h2>
+<p>Internal workflow_manager tasks.</p>
 <dl class="py function">
 <dt class="sig sig-object py">
 <span class="sig-prename descclassname"><span class="pre">lung_modelling.workflow_manager.</span></span><span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset_root</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/workflow_manager/workflow_manager.html#initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
@@ -99,16 +102,17 @@ No parameters are currently in use for this task_config</p></li>
 </dd></dl>
 
 </section>
-<section id="module-lung_modelling.app.tasks">
-<span id="standard-tasks"></span><h2>Standard Tasks<a class="headerlink" href="#module-lung_modelling.app.tasks" title="Link to this heading">¶</a></h2>
-<dl class="py class">
-<dt class="sig sig-object py" id="lung_modelling.app.tasks.SmoothLungLobes">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.tasks.</span></span><span class="sig-name descname"><span class="pre">SmoothLungLobes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#SmoothLungLobes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.SmoothLungLobes" title="Link to this definition">¶</a></dt>
+<section id="standard-tasks">
+<h2>Standard Tasks<a class="headerlink" href="#standard-tasks" title="Link to this heading">¶</a></h2>
+<p>Tasks not using the shapeworks library as a dependency.</p>
+<dl class="py class" id="module-lung_modelling.app.tasks">
+<dt class="sig sig-object py" id="lung_modelling.app.tasks.ExtractLungLobes">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.tasks.</span></span><span class="sig-name descname"><span class="pre">ExtractLungLobes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#ExtractLungLobes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.ExtractLungLobes" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 </dl>
 <dl class="py method">
-<dt class="sig sig-object py" id="lung_modelling.app.tasks.SmoothLungLobes.initialize">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#SmoothLungLobes.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.SmoothLungLobes.initialize" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="lung_modelling.app.tasks.ExtractLungLobes.initialize">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#ExtractLungLobes.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.ExtractLungLobes.initialize" title="Link to this definition">¶</a></dt>
 <dd><p>A method to be called before multiprocessing to load data required by all items. This should only be used to
 load data to avoid multiple simultaneous file access by the work function. It should not create or modify any files.</p>
 <dl class="field-list simple">
@@ -116,17 +120,17 @@ load data to avoid multiple simultaneous file access by the work function. It sh
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="lung_modelling.app.tasks.SmoothLungLobes.work">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_directory_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_directory_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initialize_result</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#SmoothLungLobes.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.SmoothLungLobes.work" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="lung_modelling.app.tasks.ExtractLungLobes.work">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_directory_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_directory_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initialize_result</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#ExtractLungLobes.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.ExtractLungLobes.work" title="Link to this definition">¶</a></dt>
 <dd><p>Pre-process lung lobe segmentation by extracting lobe labels and applying antialiasing.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>source_directory_primary</strong> (<em>Path</em>) – Absolute path of the source directory in the primary folder of the dataset</p></li>
 <li><p><strong>source_directory_derivative</strong> (<em>Path</em>) – Absolute path of the source directory in the derivative folder of the dataset</p></li>
-<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Absolute path of the directory in which to save results of the work function</p></li>
 <li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
-<li><p><strong>task_config</strong> (<em>DictConfig</em>) – <p><strong>results_directory</strong>: subdirectory for results</p>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – <p><strong>results_directory</strong>: Name of the results folder (Stem of output_directory)</p>
 <p><strong>output_filenames</strong>: dict providing a mapping from lobe mapping (in dataset config) to output filenames</p>
 <dl class="simple">
 <dt><strong>params</strong>: (Dict)</dt><dd><dl class="simple">
@@ -150,13 +154,13 @@ load data to avoid multiple simultaneous file access by the work function. It sh
 </dd></dl>
 
 <dl class="py class">
-<dt class="sig sig-object py" id="lung_modelling.app.tasks.SmoothWholeLungs">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.tasks.</span></span><span class="sig-name descname"><span class="pre">SmoothWholeLungs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#SmoothWholeLungs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.SmoothWholeLungs" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="lung_modelling.app.tasks.ExtractWholeLungs">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.tasks.</span></span><span class="sig-name descname"><span class="pre">ExtractWholeLungs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#ExtractWholeLungs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.ExtractWholeLungs" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 </dl>
 <dl class="py method">
-<dt class="sig sig-object py" id="lung_modelling.app.tasks.SmoothWholeLungs.initialize">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#SmoothWholeLungs.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.SmoothWholeLungs.initialize" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="lung_modelling.app.tasks.ExtractWholeLungs.initialize">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#ExtractWholeLungs.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.ExtractWholeLungs.initialize" title="Link to this definition">¶</a></dt>
 <dd><p>A method to be called before multiprocessing to load data required by all items. This should only be used to
 load data to avoid multiple simultaneous file access by the work function. It should not create or modify any files.</p>
 <dl class="field-list simple">
@@ -164,17 +168,17 @@ load data to avoid multiple simultaneous file access by the work function. It sh
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="lung_modelling.app.tasks.SmoothWholeLungs.work">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_directory_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_directory_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initialize_result</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#SmoothWholeLungs.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.SmoothWholeLungs.work" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="lung_modelling.app.tasks.ExtractWholeLungs.work">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_directory_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_directory_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initialize_result</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/tasks.html#ExtractWholeLungs.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.tasks.ExtractWholeLungs.work" title="Link to this definition">¶</a></dt>
 <dd><p>Pre-process lung segmentation by extracting whole lung and applying antialiasing.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>source_directory_primary</strong> (<em>Path</em>) – Absolute path of the source directory in the primary folder of the dataset</p></li>
 <li><p><strong>source_directory_derivative</strong> (<em>Path</em>) – Absolute path of the source directory in the derivative folder of the dataset</p></li>
-<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Absolute path of the directory in which to save results of the work function</p></li>
 <li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
-<li><p><strong>task_config</strong> (<em>DictConfig</em>) – <p><strong>results_directory</strong>: subdirectory for results</p>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – <p><strong>results_directory</strong>: Name of the results folder (Stem of output_directory)</p>
 <p><strong>output_filenames</strong>: dict providing a mapping from lobe mapping (in dataset config) to output filenames</p>
 <dl class="simple">
 <dt><strong>params</strong>: (Dict)</dt><dd><dl class="simple">
@@ -220,10 +224,10 @@ load data to avoid multiple simultaneous file access by the work function. It sh
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>source_directory_primary</strong> (<em>Path</em>) – Absolute path of the source directory in the primary folder of the dataset</p></li>
 <li><p><strong>source_directory_derivative</strong> (<em>Path</em>) – Absolute path of the source directory in the derivative folder of the dataset</p></li>
-<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Absolute path of the directory in which to save results of the work function</p></li>
 <li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
 <li><p><strong>task_config</strong> (<em>DictConfig</em>) – <p><strong>source_directory</strong>: subdirectory within derivative source folder to find source files</p>
-<p><strong>results_directory</strong>: subdirectory for results</p>
+<p><strong>results_directory</strong>: Name of the results folder (Stem of output_directory)</p>
 <dl class="simple">
 <dt><strong>params</strong>: (Dict)</dt><dd><dl class="simple">
 <dt><strong>n_iter</strong>, <strong>feature_smoothing</strong>, <strong>edge_angle</strong>, <strong>feature_angle</strong>, <strong>relaxation_factor</strong>:</dt><dd><p>Params for pyvista smooth</p>
@@ -265,7 +269,7 @@ load data to avoid multiple simultaneous file access by the work function. It sh
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>dataloc</strong> (<a class="reference internal" href="module_reference.html#lung_modelling.workflow_manager.DatasetLocator" title="lung_modelling.workflow_manager.workflow_manager.DatasetLocator"><em>DatasetLocator</em></a>) – Dataset locator for the dataset</p></li>
 <li><p><strong>dirs_list</strong> (<em>Path</em>) – List of relative paths to the source directories</p></li>
-<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Absolute path of the directory in which to save results of the work function</p></li>
 <li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
 <li><p><strong>task_config</strong> (<em>DictConfig</em>) – Task specific config</p></li>
 </ul>
@@ -304,10 +308,10 @@ load data to avoid multiple simultaneous file access by the work function. It sh
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>source_directory_primary</strong> (<em>Path</em>) – Absolute path of the source directory in the primary folder of the dataset</p></li>
 <li><p><strong>source_directory_derivative</strong> (<em>Path</em>) – Absolute path of the source directory in the derivative folder of the dataset</p></li>
-<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Absolute path of the directory in which to save results of the work function</p></li>
 <li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
 <li><p><strong>task_config</strong> (<em>DictConfig</em>) – <p><strong>source_directory</strong>: subdirectory for dicom files</p>
-<p><strong>results_directory</strong>: subdirectory for results</p>
+<p><strong>results_directory</strong>: Name of the results folder (Stem of output_directory)</p>
 <p><strong>output_filename</strong>: filename for torso image (not including extension)</p>
 <dl class="simple">
 <dt><strong>params</strong>: (Dict)</dt><dd><dl class="simple">
@@ -356,10 +360,10 @@ good coverage in optimization without needing to lower initial relative weightin
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>source_directory_primary</strong> (<em>Path</em>) – Absolute path of the source directory in the primary folder of the dataset</p></li>
 <li><p><strong>source_directory_derivative</strong> (<em>Path</em>) – Absolute path of the source directory in the derivative folder of the dataset</p></li>
-<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Absolute path of the directory in which to save results of the work function</p></li>
 <li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
 <li><p><strong>task_config</strong> (<em>DictConfig</em>) – <p><strong>source_directory</strong>: subdirectory within derivative source folder to find source files</p>
-<p><strong>results_directory</strong>: subdirectory for results</p>
+<p><strong>results_directory</strong>: Name of the results folder (Stem of output_directory)</p>
 <p><strong>params</strong>: (Dict): No params currently used for this task</p>
 </p></li>
 <li><p><strong>initialize_result</strong> – Return dict from the initialize function</p></li>
@@ -392,12 +396,12 @@ want pass the large subject data array to lots of duplicate threads. Also the pa
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>dataloc</strong> (<a class="reference internal" href="module_reference.html#lung_modelling.workflow_manager.DatasetLocator" title="lung_modelling.workflow_manager.workflow_manager.DatasetLocator"><em>DatasetLocator</em></a>) – Dataset locator for the dataset</p></li>
 <li><p><strong>dirs_list</strong> (<em>list</em>) – List of relative paths to the source directories</p></li>
-<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Absolute path of the directory in which to save results of the work function</p></li>
 <li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
 <li><p><strong>task_config</strong> (<em>DictConfig</em>) – <dl class="simple">
 <dt><strong>source_directory</strong></dt><dd><p>subdirectory within derivative source folder to find source files</p>
 </dd>
-<dt><strong>results_directory</strong></dt><dd><p>subdirectory for results</p>
+<dt><strong>results_directory</strong>:</dt><dd><p>Name of the results folder (Stem of output_directory)</p>
 </dd>
 <dt><strong>subject_data_filename</strong></dt><dd><p>filename for COPDGene subject data file</p>
 </dd>
@@ -437,12 +441,12 @@ want pass the large subject data array to lots of duplicate threads. Also the pa
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>dataloc</strong> (<a class="reference internal" href="module_reference.html#lung_modelling.workflow_manager.DatasetLocator" title="lung_modelling.workflow_manager.workflow_manager.DatasetLocator"><em>DatasetLocator</em></a>) – Dataset locator for the dataset</p></li>
 <li><p><strong>dirs_list</strong> (<em>list</em>) – List of relative paths to the source directories</p></li>
-<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Absolute path of the directory in which to save results of the work function</p></li>
 <li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
 <li><p><strong>task_config</strong> (<em>DictConfig</em>) – <dl class="simple">
 <dt><strong>source_directory</strong></dt><dd><p>subdirectory within derivative source folder to find source files</p>
 </dd>
-<dt><strong>results_directory</strong></dt><dd><p>subdirectory for results</p>
+<dt><strong>results_directory</strong>:</dt><dd><p>Name of the results folder (Stem of output_directory)</p>
 </dd>
 <dt><strong>subject_data_filename</strong></dt><dd><p>filename for COPDGene subject data file</p>
 </dd>
@@ -475,12 +479,12 @@ want pass the large subject data array to lots of duplicate threads. Also the pa
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>dataloc</strong> (<a class="reference internal" href="module_reference.html#lung_modelling.workflow_manager.DatasetLocator" title="lung_modelling.workflow_manager.workflow_manager.DatasetLocator"><em>DatasetLocator</em></a>) – Dataset locator for the dataset</p></li>
 <li><p><strong>dirs_list</strong> (<em>list</em>) – List of relative paths to the source directories</p></li>
-<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Absolute path of the directory in which to save results of the work function</p></li>
 <li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
 <li><p><strong>task_config</strong> (<em>DictConfig</em>) – <dl class="simple">
 <dt><strong>source_directory</strong></dt><dd><p>subdirectory within derivative source folder to find source files</p>
 </dd>
-<dt><strong>results_directory</strong></dt><dd><p>subdirectory for results</p>
+<dt><strong>results_directory</strong>:</dt><dd><p>Name of the results folder (Stem of output_directory)</p>
 </dd>
 <dt><strong>params</strong>: (Dict):</dt><dd><p>No params currently used for this task</p>
 </dd>
@@ -494,9 +498,10 @@ want pass the large subject data array to lots of duplicate threads. Also the pa
 </dd></dl>
 
 </section>
-<section id="module-lung_modelling.app.shapeworks_tasks">
-<span id="shapeworks-tasks"></span><h2>Shapeworks Tasks<a class="headerlink" href="#module-lung_modelling.app.shapeworks_tasks" title="Link to this heading">¶</a></h2>
-<dl class="py class">
+<section id="shapeworks-tasks">
+<h2>Shapeworks Tasks<a class="headerlink" href="#shapeworks-tasks" title="Link to this heading">¶</a></h2>
+<p>Tasks using the shapeworks library as a dependency.</p>
+<dl class="py class" id="module-lung_modelling.app.shapeworks_tasks">
 <dt class="sig sig-object py" id="lung_modelling.app.shapeworks_tasks.SmoothLungLobesSW">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.app.shapeworks_tasks.</span></span><span class="sig-name descname"><span class="pre">SmoothLungLobesSW</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/app/shapeworks_tasks.html#SmoothLungLobesSW"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.app.shapeworks_tasks.SmoothLungLobesSW" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
@@ -519,9 +524,9 @@ load data to avoid multiple simultaneous file access by the work function. It sh
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>source_directory_primary</strong> (<em>Path</em>) – Absolute path of the source directory in the primary folder of the dataset</p></li>
 <li><p><strong>source_directory_derivative</strong> (<em>Path</em>) – Absolute path of the source directory in the derivative folder of the dataset</p></li>
-<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Absolute path of the directory in which to save results of the work function</p></li>
 <li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
-<li><p><strong>task_config</strong> (<em>DictConfig</em>) – <p><strong>results_directory</strong>: subdirectory for results</p>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – <p><strong>results_directory</strong>: Name of the results folder (Stem of output_directory)</p>
 <p><strong>output_filenames</strong>: dict providing a mapping from lobe mapping (in dataset config) to output filenames</p>
 <dl class="simple">
 <dt><strong>params</strong>: (Dict)</dt><dd><dl class="simple">
@@ -569,10 +574,10 @@ should be the subject number) is appended to the file names, delimited by a dash
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>source_directory_primary</strong> (<em>Path</em>) – Absolute path of the source directory in the primary folder of the dataset</p></li>
 <li><p><strong>source_directory_derivative</strong> (<em>Path</em>) – Absolute path of the source directory in the derivative folder of the dataset</p></li>
-<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Absolute path of the directory in which to save results of the work function</p></li>
 <li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
 <li><p><strong>task_config</strong> (<em>DictConfig</em>) – <p><strong>source_directory</strong>: subdirectory within derivative source folder to find source files</p>
-<p><strong>results_directory</strong>: subdirectory for results</p>
+<p><strong>results_directory</strong>: Name of the results folder (Stem of output_directory)</p>
 <dl class="simple">
 <dt><strong>params</strong>: (Dict)</dt><dd><dl class="simple">
 <dt><strong>step_size</strong></dt><dd><p>Step size to use for marching cubes. Higher values result in coarser geometry but can prevent meshes
@@ -634,9 +639,9 @@ load data to avoid multiple simultaneous file access by the work function. It sh
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>source_directory_primary</strong> (<em>Path</em>) – Absolute path of the source directory in the primary folder of the dataset</p></li>
 <li><p><strong>source_directory_derivative</strong> (<em>Path</em>) – Absolute path of the source directory in the derivative folder of the dataset</p></li>
-<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Absolute path of the directory in which to save results of the work function</p></li>
 <li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
-<li><p><strong>task_config</strong> (<em>DictConfig</em>) – <p><strong>results_directory</strong>: subdirectory for results</p>
+<li><p><strong>task_config</strong> (<em>DictConfig</em>) – <p><strong>results_directory</strong>: Name of the results folder (Stem of output_directory)</p>
 <p><strong>output_filenames</strong>: dict providing a mapping from lobe mapping (in dataset config) to output filenames</p>
 <dl class="simple">
 <dt><strong>params</strong>: (Dict)</dt><dd><dl class="simple">
@@ -674,10 +679,10 @@ load data to avoid multiple simultaneous file access by the work function. It sh
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>dataloc</strong> (<a class="reference internal" href="module_reference.html#lung_modelling.workflow_manager.DatasetLocator" title="lung_modelling.workflow_manager.workflow_manager.DatasetLocator"><em>DatasetLocator</em></a>) – Dataset locator for the dataset</p></li>
 <li><p><strong>dirs_list</strong> (<em>list</em>) – List of relative paths to the source directories</p></li>
-<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Absolute path of the directory in which to save results of the work function</p></li>
 <li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
 <li><p><strong>task_config</strong> (<em>DictConfig</em>) – <p><strong>source_directories</strong>: subdirectories within derivative source folder to find source files</p>
-<p><strong>results_directory</strong>: subdirectory for results</p>
+<p><strong>results_directory</strong>: Name of the results folder (Stem of output_directory)</p>
 </p></li>
 </ul>
 </dd>
@@ -736,10 +741,10 @@ for both.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>source_directory_primary</strong> (<em>Path</em>) – Absolute path of the source directory in the primary folder of the dataset</p></li>
 <li><p><strong>source_directory_derivative</strong> (<em>Path</em>) – Absolute path of the source directory in the derivative folder of the dataset</p></li>
-<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Absolute path of the directory in which to save results of the work function</p></li>
 <li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
 <li><p><strong>task_config</strong> (<em>DictConfig</em>) – <p><strong>source_directories</strong>: subdirectories within derivative source folder to find source files</p>
-<p><strong>results_directory</strong>: subdirectory for results</p>
+<p><strong>results_directory</strong>: Name of the results folder (Stem of output_directory)</p>
 <dl class="simple">
 <dt><strong>params</strong>: (Dict)</dt><dd><dl class="simple">
 <dt><strong>iterations</strong></dt><dd><p>Iterations for shapeworks alignment function</p>
@@ -776,7 +781,7 @@ for both.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>dataloc</strong> (<a class="reference internal" href="module_reference.html#lung_modelling.workflow_manager.DatasetLocator" title="lung_modelling.workflow_manager.workflow_manager.DatasetLocator"><em>DatasetLocator</em></a>) – Dataset Locator</p></li>
 <li><p><strong>dirs_list</strong> – List of relative paths to the source directories</p></li>
-<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Absolute path of the directory in which to save results of the work function</p></li>
 <li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Dataset config</p></li>
 <li><p><strong>task_config</strong> (<em>DictConfig</em>) – <dl class="simple">
 <dt><strong>source_directory_transform</strong></dt><dd><p>directory for transform files</p>
@@ -789,7 +794,7 @@ for both.</p>
 </dd>
 <dt><strong>image_globs</strong></dt><dd><p>glob to find original files</p>
 </dd>
-<dt><strong>results_directory</strong>:</dt><dd><p>subdirectory for results</p>
+<dt><strong>results_directory</strong>:</dt><dd><p>Name of the results folder (Stem of output_directory)</p>
 </dd>
 <dt><strong>params</strong></dt><dd><p>shapeworks optimization params</p>
 </dd>
@@ -816,14 +821,14 @@ for both.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>dataloc</strong> (<a class="reference internal" href="module_reference.html#lung_modelling.workflow_manager.DatasetLocator" title="lung_modelling.workflow_manager.workflow_manager.DatasetLocator"><em>DatasetLocator</em></a>) – Dataset Locator</p></li>
 <li><p><strong>dirs_list</strong> (<em>list</em>) – List of relative paths to the source directories</p></li>
-<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Absolute path of the directory in which to save results of the work function</p></li>
 <li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Dataset config</p></li>
 <li><p><strong>task_config</strong> (<em>DictConfig</em>) – <dl class="simple">
 <dt><strong>source_directory</strong></dt><dd><p>source directory of the shapeworks particle system</p>
 </dd>
 <dt><strong>source_directory_reference</strong></dt><dd><p>source directory for the reference shape</p>
 </dd>
-<dt><strong>results_directory</strong>:</dt><dd><p>subdirectory for results</p>
+<dt><strong>results_directory</strong>:</dt><dd><p>Name of the results folder (Stem of output_directory)</p>
 </dd>
 <dt><strong>params</strong></dt><dd><p>None implemented</p>
 </dd>
@@ -850,12 +855,12 @@ for both.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>dataloc</strong> (<a class="reference internal" href="module_reference.html#lung_modelling.workflow_manager.DatasetLocator" title="lung_modelling.workflow_manager.workflow_manager.DatasetLocator"><em>DatasetLocator</em></a>) – Dataset Locator</p></li>
 <li><p><strong>dirs_list</strong> (<em>list</em>) – List of relative paths to the source directories</p></li>
-<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Absolute path of the directory in which to save results of the work function</p></li>
 <li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Dataset config</p></li>
 <li><p><strong>task_config</strong> (<em>DictConfig</em>) – <dl class="simple">
 <dt><strong>source_directory</strong></dt><dd><p>source directory of the PCA model</p>
 </dd>
-<dt><strong>results_directory</strong>:</dt><dd><p>subdirectory for results</p>
+<dt><strong>results_directory</strong>:</dt><dd><p>Name of the results folder (Stem of output_directory)</p>
 </dd>
 <dt><strong>params</strong></dt><dd><p>None implemented</p>
 </dd>
@@ -894,8 +899,29 @@ for both.</p>
 <li class="toctree-l1"><a class="reference internal" href="user_guide.html">User Guide</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Task Reference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#workflow-manager-tasks">Workflow Manager Tasks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#module-lung_modelling.app.tasks">Standard Tasks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#module-lung_modelling.app.shapeworks_tasks">Shapeworks Tasks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#standard-tasks">Standard Tasks</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.app.tasks.ExtractLungLobes"><code class="docutils literal notranslate"><span class="pre">ExtractLungLobes</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.app.tasks.ExtractWholeLungs"><code class="docutils literal notranslate"><span class="pre">ExtractWholeLungs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.app.tasks.CreateMeshes"><code class="docutils literal notranslate"><span class="pre">CreateMeshes</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.app.tasks.ReferenceSelectionMesh"><code class="docutils literal notranslate"><span class="pre">ReferenceSelectionMesh</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.app.tasks.ExtractTorso"><code class="docutils literal notranslate"><span class="pre">ExtractTorso</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.app.tasks.MeshLandmarksCoarse"><code class="docutils literal notranslate"><span class="pre">MeshLandmarksCoarse</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.app.tasks.ParseCOPDGeneSubjectGroups"><code class="docutils literal notranslate"><span class="pre">ParseCOPDGeneSubjectGroups</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.app.tasks.SelectCOPDGeneSubjectsByValue"><code class="docutils literal notranslate"><span class="pre">SelectCOPDGeneSubjectsByValue</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.app.tasks.InspectMeshes"><code class="docutils literal notranslate"><span class="pre">InspectMeshes</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#shapeworks-tasks">Shapeworks Tasks</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.app.shapeworks_tasks.SmoothLungLobesSW"><code class="docutils literal notranslate"><span class="pre">SmoothLungLobesSW</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.app.shapeworks_tasks.CreateMeshesSW"><code class="docutils literal notranslate"><span class="pre">CreateMeshesSW</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.app.shapeworks_tasks.SmoothWholeLungsSW"><code class="docutils literal notranslate"><span class="pre">SmoothWholeLungsSW</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.app.shapeworks_tasks.ReferenceSelectionMeshSW"><code class="docutils literal notranslate"><span class="pre">ReferenceSelectionMeshSW</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.app.shapeworks_tasks.MeshTransformSW"><code class="docutils literal notranslate"><span class="pre">MeshTransformSW</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.app.shapeworks_tasks.OptimizeMeshesSW"><code class="docutils literal notranslate"><span class="pre">OptimizeMeshesSW</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.app.shapeworks_tasks.ComputePCASW"><code class="docutils literal notranslate"><span class="pre">ComputePCASW</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.app.shapeworks_tasks.SubjectDataPCACorrelationSW"><code class="docutils literal notranslate"><span class="pre">SubjectDataPCACorrelationSW</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="module_reference.html">Module Reference</a></li>

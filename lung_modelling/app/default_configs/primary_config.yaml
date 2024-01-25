@@ -1,13 +1,15 @@
+# Top level primary config for the run_workflow app that allows us to switch between configs in the default_config
+# directory or the user_config directory
 defaults:
   - _self_
-  - default_config: whole_lung
-  - optional user_config: whole_lung
-  - override hydra/hydra_logging: disabled
+  - default_config: example_workflow
+  - optional user_config: example_workflow
+  - override hydra/hydra_logging: disabled # Logging disabled since workflow_manager handles logging workflow runs
   - override hydra/job_logging: disabled
 
 hydra:
   searchpath:
-    - file://.
+    - file://. # Search for configs relative to the working directory (This is where user_config will be)
   output_subdir: null
   run:
     dir: .

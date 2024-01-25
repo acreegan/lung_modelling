@@ -18,7 +18,7 @@ import csv
 from medpy.io import load
 
 
-class SmoothLungLobes(EachItemTask):
+class ExtractLungLobes(EachItemTask):
 
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
@@ -37,11 +37,11 @@ class SmoothLungLobes(EachItemTask):
         source_directory_derivative
             Absolute path of the source directory in the derivative folder of the dataset
         output_directory
-            Directory in which to save results of the work
+            Absolute path of the directory in which to save results of the work function
         dataset_config
             Config relating to the entire dataset
         task_config
-            **results_directory**: subdirectory for results
+            **results_directory**: Name of the results folder (Stem of output_directory)
 
             **output_filenames**: dict providing a mapping from lobe mapping (in dataset config) to output filenames
 
@@ -80,7 +80,7 @@ class SmoothLungLobes(EachItemTask):
         return smoothed_files
 
 
-class SmoothWholeLungs(EachItemTask):
+class ExtractWholeLungs(EachItemTask):
 
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
@@ -99,11 +99,11 @@ class SmoothWholeLungs(EachItemTask):
         source_directory_derivative
             Absolute path of the source directory in the derivative folder of the dataset
         output_directory
-            Directory in which to save results of the work
+            Absolute path of the directory in which to save results of the work function
         dataset_config
             Config relating to the entire dataset
         task_config
-            **results_directory**: subdirectory for results
+            **results_directory**: Name of the results folder (Stem of output_directory)
 
             **output_filenames**: dict providing a mapping from lobe mapping (in dataset config) to output filenames
 
@@ -164,13 +164,13 @@ class CreateMeshes(EachItemTask):
         source_directory_derivative
             Absolute path of the source directory in the derivative folder of the dataset
         output_directory
-            Directory in which to save results of the work
+            Absolute path of the directory in which to save results of the work function
         dataset_config
             Config relating to the entire dataset
         task_config
             **source_directory**: subdirectory within derivative source folder to find source files
 
-            **results_directory**: subdirectory for results
+            **results_directory**: Name of the results folder (Stem of output_directory)
 
             **params**: (Dict)
                 **n_iter**, **feature_smoothing**, **edge_angle**, **feature_angle**, **relaxation_factor**:
@@ -231,7 +231,7 @@ class ReferenceSelectionMesh(AllItemsTask):
         dirs_list
             List of relative paths to the source directories
         output_directory
-            Directory in which to save results of the work
+            Absolute path of the directory in which to save results of the work function
         dataset_config
             Config relating to the entire dataset
         task_config
@@ -266,13 +266,13 @@ class ExtractTorso(EachItemTask):
         source_directory_derivative
             Absolute path of the source directory in the derivative folder of the dataset
         output_directory
-            Directory in which to save results of the work
+            Absolute path of the directory in which to save results of the work function
         dataset_config
             Config relating to the entire dataset
         task_config
             **source_directory**: subdirectory for dicom files
 
-            **results_directory**: subdirectory for results
+            **results_directory**: Name of the results folder (Stem of output_directory)
 
             **output_filename**: filename for torso image (not including extension)
 
@@ -326,13 +326,13 @@ class MeshLandmarksCoarse(EachItemTask):
         source_directory_derivative
             Absolute path of the source directory in the derivative folder of the dataset
         output_directory
-            Directory in which to save results of the work
+            Absolute path of the directory in which to save results of the work function
         dataset_config
             Config relating to the entire dataset
         task_config
             **source_directory**: subdirectory within derivative source folder to find source files
 
-            **results_directory**: subdirectory for results
+            **results_directory**: Name of the results folder (Stem of output_directory)
 
             **params**: (Dict): No params currently used for this task
 
@@ -398,14 +398,14 @@ class ParseCOPDGeneSubjectGroups(AllItemsTask):
         dirs_list
             List of relative paths to the source directories
         output_directory
-            Directory in which to save results of the work
+            Absolute path of the directory in which to save results of the work function
         dataset_config
             Config relating to the entire dataset
         task_config
             **source_directory**
                 subdirectory within derivative source folder to find source files
-            **results_directory**
-                subdirectory for results
+            **results_directory**:
+                Name of the results folder (Stem of output_directory)
             **subject_data_filename**
                 filename for COPDGene subject data file
             **subject_data_dict_filename**
@@ -475,14 +475,14 @@ class SelectCOPDGeneSubjectsByValue(AllItemsTask):
         dirs_list
             List of relative paths to the source directories
         output_directory
-            Directory in which to save results of the work
+            Absolute path of the directory in which to save results of the work function
         dataset_config
             Config relating to the entire dataset
         task_config
             **source_directory**
                 subdirectory within derivative source folder to find source files
-            **results_directory**
-                subdirectory for results
+            **results_directory**:
+                Name of the results folder (Stem of output_directory)
             **subject_data_filename**
                 filename for COPDGene subject data file
             **subject_data_dict_filename**
@@ -535,14 +535,14 @@ class InspectMeshes(AllItemsTask):
         dirs_list
             List of relative paths to the source directories
         output_directory
-            Directory in which to save results of the work
+            Absolute path of the directory in which to save results of the work function
         dataset_config
             Config relating to the entire dataset
         task_config
             **source_directory**
                 subdirectory within derivative source folder to find source files
-            **results_directory**
-                subdirectory for results
+            **results_directory**:
+                Name of the results folder (Stem of output_directory)
             **params**: (Dict):
                 No params currently used for this task
 
@@ -611,5 +611,5 @@ class InspectMeshes(AllItemsTask):
         return [Path(selected_dirs_filename)]
 
 
-all_tasks = [SmoothLungLobes, CreateMeshes, SmoothWholeLungs, ReferenceSelectionMesh, ExtractTorso, MeshLandmarksCoarse,
+all_tasks = [ExtractLungLobes, CreateMeshes, ExtractWholeLungs, ReferenceSelectionMesh, ExtractTorso, MeshLandmarksCoarse,
              ParseCOPDGeneSubjectGroups, SelectCOPDGeneSubjectsByValue, InspectMeshes]

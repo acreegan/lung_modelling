@@ -49,19 +49,19 @@
 <span class="kn">from</span> <span class="nn">medpy.io</span> <span class="kn">import</span> <span class="n">load</span>
 
 
-<div class="viewcode-block" id="SmoothLungLobes">
-<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.SmoothLungLobes">[docs]</a>
-<span class="k">class</span> <span class="nc">SmoothLungLobes</span><span class="p">(</span><span class="n">EachItemTask</span><span class="p">):</span>
+<div class="viewcode-block" id="ExtractLungLobes">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.ExtractLungLobes">[docs]</a>
+<span class="k">class</span> <span class="nc">ExtractLungLobes</span><span class="p">(</span><span class="n">EachItemTask</span><span class="p">):</span>
 
-<div class="viewcode-block" id="SmoothLungLobes.initialize">
-<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.SmoothLungLobes.initialize">[docs]</a>
+<div class="viewcode-block" id="ExtractLungLobes.initialize">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.ExtractLungLobes.initialize">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
         <span class="k">pass</span></div>
 
 
-<div class="viewcode-block" id="SmoothLungLobes.work">
-<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.SmoothLungLobes.work">[docs]</a>
+<div class="viewcode-block" id="ExtractLungLobes.work">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.ExtractLungLobes.work">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">source_directory_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
              <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">initialize_result</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
@@ -75,11 +75,11 @@
 <span class="sd">        source_directory_derivative</span>
 <span class="sd">            Absolute path of the source directory in the derivative folder of the dataset</span>
 <span class="sd">        output_directory</span>
-<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">            Absolute path of the directory in which to save results of the work function</span>
 <span class="sd">        dataset_config</span>
 <span class="sd">            Config relating to the entire dataset</span>
 <span class="sd">        task_config</span>
-<span class="sd">            **results_directory**: subdirectory for results</span>
+<span class="sd">            **results_directory**: Name of the results folder (Stem of output_directory)</span>
 
 <span class="sd">            **output_filenames**: dict providing a mapping from lobe mapping (in dataset config) to output filenames</span>
 
@@ -120,19 +120,19 @@
 
 
 
-<div class="viewcode-block" id="SmoothWholeLungs">
-<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.SmoothWholeLungs">[docs]</a>
-<span class="k">class</span> <span class="nc">SmoothWholeLungs</span><span class="p">(</span><span class="n">EachItemTask</span><span class="p">):</span>
+<div class="viewcode-block" id="ExtractWholeLungs">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.ExtractWholeLungs">[docs]</a>
+<span class="k">class</span> <span class="nc">ExtractWholeLungs</span><span class="p">(</span><span class="n">EachItemTask</span><span class="p">):</span>
 
-<div class="viewcode-block" id="SmoothWholeLungs.initialize">
-<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.SmoothWholeLungs.initialize">[docs]</a>
+<div class="viewcode-block" id="ExtractWholeLungs.initialize">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.ExtractWholeLungs.initialize">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
         <span class="k">pass</span></div>
 
 
-<div class="viewcode-block" id="SmoothWholeLungs.work">
-<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.SmoothWholeLungs.work">[docs]</a>
+<div class="viewcode-block" id="ExtractWholeLungs.work">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.ExtractWholeLungs.work">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">source_directory_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
              <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">initialize_result</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
@@ -146,11 +146,11 @@
 <span class="sd">        source_directory_derivative</span>
 <span class="sd">            Absolute path of the source directory in the derivative folder of the dataset</span>
 <span class="sd">        output_directory</span>
-<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">            Absolute path of the directory in which to save results of the work function</span>
 <span class="sd">        dataset_config</span>
 <span class="sd">            Config relating to the entire dataset</span>
 <span class="sd">        task_config</span>
-<span class="sd">            **results_directory**: subdirectory for results</span>
+<span class="sd">            **results_directory**: Name of the results folder (Stem of output_directory)</span>
 
 <span class="sd">            **output_filenames**: dict providing a mapping from lobe mapping (in dataset config) to output filenames</span>
 
@@ -220,13 +220,13 @@
 <span class="sd">        source_directory_derivative</span>
 <span class="sd">            Absolute path of the source directory in the derivative folder of the dataset</span>
 <span class="sd">        output_directory</span>
-<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">            Absolute path of the directory in which to save results of the work function</span>
 <span class="sd">        dataset_config</span>
 <span class="sd">            Config relating to the entire dataset</span>
 <span class="sd">        task_config</span>
 <span class="sd">            **source_directory**: subdirectory within derivative source folder to find source files</span>
 
-<span class="sd">            **results_directory**: subdirectory for results</span>
+<span class="sd">            **results_directory**: Name of the results folder (Stem of output_directory)</span>
 
 <span class="sd">            **params**: (Dict)</span>
 <span class="sd">                **n_iter**, **feature_smoothing**, **edge_angle**, **feature_angle**, **relaxation_factor**:</span>
@@ -293,7 +293,7 @@
 <span class="sd">        dirs_list</span>
 <span class="sd">            List of relative paths to the source directories</span>
 <span class="sd">        output_directory</span>
-<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">            Absolute path of the directory in which to save results of the work function</span>
 <span class="sd">        dataset_config</span>
 <span class="sd">            Config relating to the entire dataset</span>
 <span class="sd">        task_config</span>
@@ -337,13 +337,13 @@
 <span class="sd">        source_directory_derivative</span>
 <span class="sd">            Absolute path of the source directory in the derivative folder of the dataset</span>
 <span class="sd">        output_directory</span>
-<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">            Absolute path of the directory in which to save results of the work function</span>
 <span class="sd">        dataset_config</span>
 <span class="sd">            Config relating to the entire dataset</span>
 <span class="sd">        task_config</span>
 <span class="sd">            **source_directory**: subdirectory for dicom files</span>
 
-<span class="sd">            **results_directory**: subdirectory for results</span>
+<span class="sd">            **results_directory**: Name of the results folder (Stem of output_directory)</span>
 
 <span class="sd">            **output_filename**: filename for torso image (not including extension)</span>
 
@@ -406,13 +406,13 @@
 <span class="sd">        source_directory_derivative</span>
 <span class="sd">            Absolute path of the source directory in the derivative folder of the dataset</span>
 <span class="sd">        output_directory</span>
-<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">            Absolute path of the directory in which to save results of the work function</span>
 <span class="sd">        dataset_config</span>
 <span class="sd">            Config relating to the entire dataset</span>
 <span class="sd">        task_config</span>
 <span class="sd">            **source_directory**: subdirectory within derivative source folder to find source files</span>
 
-<span class="sd">            **results_directory**: subdirectory for results</span>
+<span class="sd">            **results_directory**: Name of the results folder (Stem of output_directory)</span>
 
 <span class="sd">            **params**: (Dict): No params currently used for this task</span>
 
@@ -484,14 +484,14 @@
 <span class="sd">        dirs_list</span>
 <span class="sd">            List of relative paths to the source directories</span>
 <span class="sd">        output_directory</span>
-<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">            Absolute path of the directory in which to save results of the work function</span>
 <span class="sd">        dataset_config</span>
 <span class="sd">            Config relating to the entire dataset</span>
 <span class="sd">        task_config</span>
 <span class="sd">            **source_directory**</span>
 <span class="sd">                subdirectory within derivative source folder to find source files</span>
-<span class="sd">            **results_directory**</span>
-<span class="sd">                subdirectory for results</span>
+<span class="sd">            **results_directory**:</span>
+<span class="sd">                Name of the results folder (Stem of output_directory)</span>
 <span class="sd">            **subject_data_filename**</span>
 <span class="sd">                filename for COPDGene subject data file</span>
 <span class="sd">            **subject_data_dict_filename**</span>
@@ -567,14 +567,14 @@
 <span class="sd">        dirs_list</span>
 <span class="sd">            List of relative paths to the source directories</span>
 <span class="sd">        output_directory</span>
-<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">            Absolute path of the directory in which to save results of the work function</span>
 <span class="sd">        dataset_config</span>
 <span class="sd">            Config relating to the entire dataset</span>
 <span class="sd">        task_config</span>
 <span class="sd">            **source_directory**</span>
 <span class="sd">                subdirectory within derivative source folder to find source files</span>
-<span class="sd">            **results_directory**</span>
-<span class="sd">                subdirectory for results</span>
+<span class="sd">            **results_directory**:</span>
+<span class="sd">                Name of the results folder (Stem of output_directory)</span>
 <span class="sd">            **subject_data_filename**</span>
 <span class="sd">                filename for COPDGene subject data file</span>
 <span class="sd">            **subject_data_dict_filename**</span>
@@ -633,14 +633,14 @@
 <span class="sd">        dirs_list</span>
 <span class="sd">            List of relative paths to the source directories</span>
 <span class="sd">        output_directory</span>
-<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">            Absolute path of the directory in which to save results of the work function</span>
 <span class="sd">        dataset_config</span>
 <span class="sd">            Config relating to the entire dataset</span>
 <span class="sd">        task_config</span>
 <span class="sd">            **source_directory**</span>
 <span class="sd">                subdirectory within derivative source folder to find source files</span>
-<span class="sd">            **results_directory**</span>
-<span class="sd">                subdirectory for results</span>
+<span class="sd">            **results_directory**:</span>
+<span class="sd">                Name of the results folder (Stem of output_directory)</span>
 <span class="sd">            **params**: (Dict):</span>
 <span class="sd">                No params currently used for this task</span>
 
@@ -711,7 +711,7 @@
 
 
 
-<span class="n">all_tasks</span> <span class="o">=</span> <span class="p">[</span><span class="n">SmoothLungLobes</span><span class="p">,</span> <span class="n">CreateMeshes</span><span class="p">,</span> <span class="n">SmoothWholeLungs</span><span class="p">,</span> <span class="n">ReferenceSelectionMesh</span><span class="p">,</span> <span class="n">ExtractTorso</span><span class="p">,</span> <span class="n">MeshLandmarksCoarse</span><span class="p">,</span>
+<span class="n">all_tasks</span> <span class="o">=</span> <span class="p">[</span><span class="n">ExtractLungLobes</span><span class="p">,</span> <span class="n">CreateMeshes</span><span class="p">,</span> <span class="n">ExtractWholeLungs</span><span class="p">,</span> <span class="n">ReferenceSelectionMesh</span><span class="p">,</span> <span class="n">ExtractTorso</span><span class="p">,</span> <span class="n">MeshLandmarksCoarse</span><span class="p">,</span>
              <span class="n">ParseCOPDGeneSubjectGroups</span><span class="p">,</span> <span class="n">SelectCOPDGeneSubjectsByValue</span><span class="p">,</span> <span class="n">InspectMeshes</span><span class="p">]</span>
 </pre></div>
 

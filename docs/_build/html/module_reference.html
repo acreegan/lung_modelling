@@ -30,8 +30,11 @@
 
           <div class="body" role="main">
             
-  <section id="module-lung_modelling.workflow_manager">
-<span id="module-reference"></span><h1>Module Reference<a class="headerlink" href="#module-lung_modelling.workflow_manager" title="Link to this heading">¶</a></h1>
+  <section id="module-reference">
+<h1>Module Reference<a class="headerlink" href="#module-reference" title="Link to this heading">¶</a></h1>
+<p>Documentation for python modules in the Lung Modelling repository</p>
+<section id="module-lung_modelling.workflow_manager">
+<span id="workflow-manager"></span><h2>workflow_manager<a class="headerlink" href="#module-lung_modelling.workflow_manager" title="Link to this heading">¶</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="lung_modelling.workflow_manager.DatasetLocator">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lung_modelling.workflow_manager.</span></span><span class="sig-name descname"><span class="pre">DatasetLocator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">root</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rel_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rel_derivative</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rel_pooled_primary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rel_pooled_derivative</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/workflow_manager/workflow_manager.html#DatasetLocator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.workflow_manager.DatasetLocator" title="Link to this definition">¶</a></dt>
@@ -69,7 +72,7 @@ representing the files created.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>source_directory_primary</strong> (<em>Path</em>) – Absolute path of the source directory in the primary folder of the dataset</p></li>
 <li><p><strong>source_directory_derivative</strong> (<em>Path</em>) – Absolute path of the source directory in the derivative folder of the dataset</p></li>
-<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Absolute path of the directory in which to save results of the work function</p></li>
 <li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
 <li><p><strong>task_config</strong> (<em>DictConfig</em>) – Task specific config</p></li>
 <li><p><strong>initialize_result</strong> – </p></li>
@@ -134,7 +137,7 @@ representing the files created.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>dataloc</strong> (<a class="reference internal" href="#lung_modelling.workflow_manager.DatasetLocator" title="lung_modelling.workflow_manager.workflow_manager.DatasetLocator"><em>DatasetLocator</em></a>) – Dataset locator for the dataset</p></li>
 <li><p><strong>dirs_list</strong> (<em>list</em>) – List of relative paths to the source directories</p></li>
-<li><p><strong>output_directory</strong> (<em>Path</em>) – Directory in which to save results of the work</p></li>
+<li><p><strong>output_directory</strong> (<em>Path</em>) – Absolute path of the directory in which to save results of the work function</p></li>
 <li><p><strong>dataset_config</strong> (<em>DictConfig</em>) – Config relating to the entire dataset</p></li>
 <li><p><strong>task_config</strong> (<em>DictConfig</em>) – Task specific config</p></li>
 </ul>
@@ -334,6 +337,7 @@ or “logging”. The task name defines which config dict will be passed to it w
 </dd></dl>
 
 </section>
+</section>
 
 
           </div>
@@ -358,17 +362,20 @@ or “logging”. The task name defines which config dict will be passed to it w
 <li class="toctree-l1"><a class="reference internal" href="user_guide.html">User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="task_reference.html">Task Reference</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Module Reference</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#lung_modelling.workflow_manager.DatasetLocator"><code class="docutils literal notranslate"><span class="pre">DatasetLocator</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#lung_modelling.workflow_manager.EachItemTask"><code class="docutils literal notranslate"><span class="pre">EachItemTask</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#lung_modelling.workflow_manager.AllItemsTask"><code class="docutils literal notranslate"><span class="pre">AllItemsTask</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#lung_modelling.workflow_manager.initialize"><code class="docutils literal notranslate"><span class="pre">initialize()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#lung_modelling.workflow_manager.gather_directories"><code class="docutils literal notranslate"><span class="pre">gather_directories()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#lung_modelling.workflow_manager.exception_monitor"><code class="docutils literal notranslate"><span class="pre">exception_monitor()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#lung_modelling.workflow_manager.args_unpacker"><code class="docutils literal notranslate"><span class="pre">args_unpacker()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#lung_modelling.workflow_manager.log_workflow"><code class="docutils literal notranslate"><span class="pre">log_workflow()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#lung_modelling.workflow_manager.get_unique_file_name"><code class="docutils literal notranslate"><span class="pre">get_unique_file_name()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#lung_modelling.workflow_manager.print_results"><code class="docutils literal notranslate"><span class="pre">print_results()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#lung_modelling.workflow_manager.WorkflowManager"><code class="docutils literal notranslate"><span class="pre">WorkflowManager</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-lung_modelling.workflow_manager">workflow_manager</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.workflow_manager.DatasetLocator"><code class="docutils literal notranslate"><span class="pre">DatasetLocator</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.workflow_manager.EachItemTask"><code class="docutils literal notranslate"><span class="pre">EachItemTask</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.workflow_manager.AllItemsTask"><code class="docutils literal notranslate"><span class="pre">AllItemsTask</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.workflow_manager.initialize"><code class="docutils literal notranslate"><span class="pre">initialize()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.workflow_manager.gather_directories"><code class="docutils literal notranslate"><span class="pre">gather_directories()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.workflow_manager.exception_monitor"><code class="docutils literal notranslate"><span class="pre">exception_monitor()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.workflow_manager.args_unpacker"><code class="docutils literal notranslate"><span class="pre">args_unpacker()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.workflow_manager.log_workflow"><code class="docutils literal notranslate"><span class="pre">log_workflow()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.workflow_manager.get_unique_file_name"><code class="docutils literal notranslate"><span class="pre">get_unique_file_name()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.workflow_manager.print_results"><code class="docutils literal notranslate"><span class="pre">print_results()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lung_modelling.workflow_manager.WorkflowManager"><code class="docutils literal notranslate"><span class="pre">WorkflowManager</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

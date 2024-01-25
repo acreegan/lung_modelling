@@ -42,7 +42,8 @@
 <span class="kn">import</span> <span class="nn">subprocess</span>
 <span class="kn">from</span> <span class="nn">pyvista_tools</span> <span class="kn">import</span> <span class="n">pyvista_faces_to_2d</span><span class="p">,</span> <span class="n">remove_shared_faces_with_merge</span>
 <span class="kn">import</span> <span class="nn">csv</span>
-<span class="kn">from</span> <span class="nn">lung_modelling</span> <span class="kn">import</span> <span class="n">find_connected_faces</span><span class="p">,</span> <span class="n">flatten</span><span class="p">,</span> <span class="n">voxel_to_mesh</span><span class="p">,</span> <span class="n">fix_mesh</span><span class="p">,</span> <span class="n">PCA_Embbeder</span>
+<span class="kn">from</span> <span class="nn">lung_modelling</span> <span class="kn">import</span> <span class="n">find_connected_faces</span><span class="p">,</span> <span class="n">flatten</span><span class="p">,</span> <span class="n">voxel_to_mesh</span><span class="p">,</span> <span class="n">fix_mesh</span>
+<span class="kn">from</span> <span class="nn">lung_modelling.shapeworks_libs</span> <span class="kn">import</span> <span class="n">PCA_Embbeder</span>
 <span class="kn">import</span> <span class="nn">medpy.io</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 <span class="kn">from</span> <span class="nn">DataAugmentationUtils</span> <span class="kn">import</span> <span class="n">Utils</span><span class="p">,</span> <span class="n">Embedder</span>
@@ -75,11 +76,11 @@
 <span class="sd">        source_directory_derivative</span>
 <span class="sd">            Absolute path of the source directory in the derivative folder of the dataset</span>
 <span class="sd">        output_directory</span>
-<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">            Absolute path of the directory in which to save results of the work function</span>
 <span class="sd">        dataset_config</span>
 <span class="sd">            Config relating to the entire dataset</span>
 <span class="sd">        task_config</span>
-<span class="sd">            **results_directory**: subdirectory for results</span>
+<span class="sd">            **results_directory**: Name of the results folder (Stem of output_directory)</span>
 
 <span class="sd">            **output_filenames**: dict providing a mapping from lobe mapping (in dataset config) to output filenames</span>
 
@@ -147,13 +148,13 @@
 <span class="sd">        source_directory_derivative</span>
 <span class="sd">            Absolute path of the source directory in the derivative folder of the dataset</span>
 <span class="sd">        output_directory</span>
-<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">            Absolute path of the directory in which to save results of the work function</span>
 <span class="sd">        dataset_config</span>
 <span class="sd">            Config relating to the entire dataset</span>
 <span class="sd">        task_config</span>
 <span class="sd">            **source_directory**: subdirectory within derivative source folder to find source files</span>
 
-<span class="sd">            **results_directory**: subdirectory for results</span>
+<span class="sd">            **results_directory**: Name of the results folder (Stem of output_directory)</span>
 
 <span class="sd">            **params**: (Dict)</span>
 <span class="sd">                **step_size**</span>
@@ -282,11 +283,11 @@
 <span class="sd">        source_directory_derivative</span>
 <span class="sd">            Absolute path of the source directory in the derivative folder of the dataset</span>
 <span class="sd">        output_directory</span>
-<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">            Absolute path of the directory in which to save results of the work function</span>
 <span class="sd">        dataset_config</span>
 <span class="sd">            Config relating to the entire dataset</span>
 <span class="sd">        task_config</span>
-<span class="sd">            **results_directory**: subdirectory for results</span>
+<span class="sd">            **results_directory**: Name of the results folder (Stem of output_directory)</span>
 
 <span class="sd">            **output_filenames**: dict providing a mapping from lobe mapping (in dataset config) to output filenames</span>
 
@@ -354,13 +355,13 @@
 <span class="sd">        dirs_list</span>
 <span class="sd">            List of relative paths to the source directories</span>
 <span class="sd">        output_directory</span>
-<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">            Absolute path of the directory in which to save results of the work function</span>
 <span class="sd">        dataset_config</span>
 <span class="sd">            Config relating to the entire dataset</span>
 <span class="sd">        task_config</span>
 <span class="sd">            **source_directories**: subdirectories within derivative source folder to find source files</span>
 
-<span class="sd">            **results_directory**: subdirectory for results</span>
+<span class="sd">            **results_directory**: Name of the results folder (Stem of output_directory)</span>
 
 
 <span class="sd">        Returns</span>
@@ -478,13 +479,13 @@
 <span class="sd">        source_directory_derivative</span>
 <span class="sd">            Absolute path of the source directory in the derivative folder of the dataset</span>
 <span class="sd">        output_directory</span>
-<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">            Absolute path of the directory in which to save results of the work function</span>
 <span class="sd">        dataset_config</span>
 <span class="sd">            Config relating to the entire dataset</span>
 <span class="sd">        task_config</span>
 <span class="sd">            **source_directories**: subdirectories within derivative source folder to find source files</span>
 
-<span class="sd">            **results_directory**: subdirectory for results</span>
+<span class="sd">            **results_directory**: Name of the results folder (Stem of output_directory)</span>
 
 <span class="sd">            **params**: (Dict)</span>
 <span class="sd">                **iterations**</span>
@@ -578,7 +579,7 @@
 <span class="sd">        dirs_list</span>
 <span class="sd">            List of relative paths to the source directories</span>
 <span class="sd">        output_directory</span>
-<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">            Absolute path of the directory in which to save results of the work function</span>
 <span class="sd">        dataset_config</span>
 <span class="sd">            Dataset config</span>
 <span class="sd">        task_config</span>
@@ -593,7 +594,7 @@
 <span class="sd">            **image_globs**</span>
 <span class="sd">                glob to find original files</span>
 <span class="sd">            **results_directory**:</span>
-<span class="sd">                subdirectory for results</span>
+<span class="sd">                Name of the results folder (Stem of output_directory)</span>
 <span class="sd">            **params**</span>
 <span class="sd">                shapeworks optimization params</span>
 
@@ -701,7 +702,7 @@
 <span class="sd">        dirs_list</span>
 <span class="sd">            List of relative paths to the source directories</span>
 <span class="sd">        output_directory</span>
-<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">            Absolute path of the directory in which to save results of the work function</span>
 <span class="sd">        dataset_config</span>
 <span class="sd">            Dataset config</span>
 <span class="sd">        task_config</span>
@@ -710,7 +711,7 @@
 <span class="sd">            **source_directory_reference**</span>
 <span class="sd">                source directory for the reference shape</span>
 <span class="sd">            **results_directory**:</span>
-<span class="sd">                subdirectory for results</span>
+<span class="sd">                Name of the results folder (Stem of output_directory)</span>
 <span class="sd">            **params**</span>
 <span class="sd">                None implemented</span>
 
@@ -822,14 +823,14 @@
 <span class="sd">        dirs_list</span>
 <span class="sd">            List of relative paths to the source directories</span>
 <span class="sd">        output_directory</span>
-<span class="sd">            Directory in which to save results of the work</span>
+<span class="sd">            Absolute path of the directory in which to save results of the work function</span>
 <span class="sd">        dataset_config</span>
 <span class="sd">            Dataset config</span>
 <span class="sd">        task_config</span>
 <span class="sd">            **source_directory**</span>
 <span class="sd">                source directory of the PCA model</span>
 <span class="sd">            **results_directory**:</span>
-<span class="sd">                subdirectory for results</span>
+<span class="sd">                Name of the results folder (Stem of output_directory)</span>
 <span class="sd">            **params**</span>
 <span class="sd">                None implemented</span>
 
