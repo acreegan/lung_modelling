@@ -12,7 +12,7 @@ Once the package is installed, initialize a user-editable configuration by runni
 
 .. code-block:: shell
 
-    python -m lung_modelling initialize_user_configuration=True
+    python -m lung_modelling initialize_user_config=True
 
 This should create a folder named user_config in your working directory. The user
 config folder contains .yaml files will all the editable configuration parameters

@@ -465,7 +465,7 @@ class SelectCOPDGeneSubjectsByValue(AllItemsTask):
     def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
              task_config: DictConfig) -> list[Path]:
         """
-        Selects subjects from the COPDGene dataset by value using a dict of key value pairs representing collumns and
+        Selects subjects from the COPDGene dataset by value using a dict of key value pairs representing columns and
         values in the subject data file. If multiple columns are specified, only subjects which match all values are
         selected.
 
@@ -501,6 +501,9 @@ class SelectCOPDGeneSubjectsByValue(AllItemsTask):
 
         Returns
         -------
+        List containing the output file path
+            Format: csv
+            Columns: sid, dirpath
         """
 
         if not os.path.exists(output_directory):
@@ -558,7 +561,10 @@ class FormatSubjects(AllItemsTask):
     def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
              task_config: DictConfig) -> list[Path]:
         """
-        Format a list of subjects
+        Format a list of subjects. Input data is filtered by key value pairs as in SelectCOPDGeneSubjectsByValue.
+        Output is a csv file with rows consisting of elements from the input data column formatted with a prefix and
+        suffix. If multiple formats are specified, each is an additional column in the output file, using the same input
+        cell. Delimiter and newline characters are configurable.
 
         Parameters
         ----------
@@ -579,6 +585,8 @@ class FormatSubjects(AllItemsTask):
                 glob pattern for input file
             **column**
                 column to use as subject ids to format
+            **search_values**:
+                Dict of key value pairs
             **formats**
                 list of dicts specifying prefix and suffix
             **delimiter**
@@ -591,6 +599,7 @@ class FormatSubjects(AllItemsTask):
 
         Returns
         -------
+        List containing the output file path
         """
 
         if not os.path.exists(output_directory):
@@ -600,11 +609,15 @@ class FormatSubjects(AllItemsTask):
             glob(str(dataloc.abs_pooled_derivative / task_config.source_directory / task_config.input_file_glob))[0]
         data = pd.read_csv(data_file)
 
+        match = data.copy()
+        for key, value in dict(task_config.search_values).items():
+            match = match.loc[match[key] == value]
+
         formatted_subjects_filename = output_directory / "formatted_subjects.csv"
         with open(str(formatted_subjects_filename), "w", newline=task_config.newline) as f:
             writer = csv.writer(f, delimiter=task_config.delimiter)
 
-            for row in data[task_config.column]:
+            for row in match[task_config.column]:
                 writer.writerow(["{}{}{}".format(fmt.prefix, row, fmt.suffix) for fmt in task_config.formats])
 
         return [Path(formatted_subjects_filename)]
@@ -616,7 +629,14 @@ class InspectMeshes(AllItemsTask):
     def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
              task_config: DictConfig) -> list[Path]:
         """
-        Display groups of meshes
+        Display groups of meshes, allowing the user to select from them. The selected and non-selected directories are
+        recorded in an output file. This allows manual inspection for exclusion, for example of torso scans that are
+        incomplete.
+
+        If the target output file already exists, it is used to set the initial selection state of any mesh that is in
+        the current list. Note: using the output file as input is normally dangerous and not recommended because it
+        breaks idempotency. It is used in this case since this is a user input task (we can't rely on the user to behave
+        the same way multiple times anyway). This allows the user to review past selections.
 
         Parameters
         ----------
@@ -639,23 +659,34 @@ class InspectMeshes(AllItemsTask):
 
         Returns
         -------
+        List containing the output file path
+            Format: csv
+            Columns: dirpath, selected
         """
 
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
 
+        df_dirs = pd.DataFrame(data=np.array([[d[0] for d in dirs_list], [False] * len(dirs_list)]).T,
+                               columns=["dirpath", "selected"])
+
+        inspected_dirs_filename = output_directory / "inspected_dirs.csv"
+        if len(glob(str(inspected_dirs_filename))) > 0:
+            inspected_dirs_previous = pd.read_csv(inspected_dirs_filename)
+            previous_selected = inspected_dirs_previous[inspected_dirs_previous.selected == True]
+            df_dirs.selected[df_dirs.dirpath.isin(previous_selected.dirpath.apply(Path))] = True
+
         n_per_window = 9
         n_windows = math.ceil(len(dirs_list) / n_per_window)
-        selected_dirs = dict()
-        for window_index, i in enumerate(range(0, len(dirs_list), n_per_window)):
+        for window_index, i in enumerate(range(0, len(df_dirs), n_per_window)):
             shape = (3, 3)
             p = pv.Plotter(shape=shape)
 
             for j in range(n_per_window):
-                if i + j >= len(dirs_list):
+                if i + j >= len(df_dirs):
                     break
 
-                dir = dirs_list[i + j][0]
+                dir = df_dirs.dirpath.iloc[i + j]
                 p.subplot(*np.unravel_index(j, shape))
                 file = glob(str(dataloc.abs_derivative / dir / task_config.source_directory / "*"))[0]
 
@@ -671,7 +702,7 @@ class InspectMeshes(AllItemsTask):
                         self.dir = dir
 
                     def __call__(self, state):
-                        selected_dirs[self.dir] = state
+                        df_dirs.selected[df_dirs.dirpath == Path(self.dir)] = state
                         if state:
                             print(f"Selected: {self.dir}")
                         else:
@@ -679,26 +710,15 @@ class InspectMeshes(AllItemsTask):
 
                 p.add_mesh(mesh)
                 p.add_title(Path(dir).stem, font_size=8)
-                p.add_checkbox_button_widget(update_selected(dir))
+                p.add_checkbox_button_widget(update_selected(dir), value=df_dirs.selected[df_dirs.dirpath == Path(dir)])
 
             p.link_views()
             p.show(title=f"Window {window_index + 1}/{n_windows}")
 
-        print(f"Selected dirs:")
-        for dir, value in selected_dirs.items():
-            if value:
-                print(str(dir))
+        df_dirs.dirpath = df_dirs.dirpath.apply(PurePosixPath)
+        df_dirs.to_csv(inspected_dirs_filename, index=False)
 
-        selected_dirs_filename = output_directory / "selected_dirs.csv"
-        with open(str(selected_dirs_filename), "w") as selected_dirs_file:
-            writer = csv.writer(selected_dirs_file)
-            writer.writerow(["dir"])
-
-            for dir, value in selected_dirs.items():
-                if value:
-                    writer.writerow([dir])
-
-        return [Path(selected_dirs_filename)]
+        return [Path(inspected_dirs_filename)]
 
 
 all_tasks = [ExtractLungLobes, CreateMeshes, ExtractWholeLungs, ReferenceSelectionMesh, ExtractTorso,

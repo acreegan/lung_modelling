@@ -130,7 +130,20 @@ tasks:
     results_directory: "mesh_inspection_never_smoked_INSP"
     params: {}
 
+  format_subjects:
+    task: "FormatSubjects"
+    source_directory: "mesh_inspection_never_smoked_INSP"
+    results_directory: "mesh_inspection_never_smoked_INSP_formatted"
+    input_file_glob: "*.csv"
+    column: "dirpath"
+    search_values: { "selected": False }
+    formats:
+      - { prefix: "'", suffix: "'," }
+    delimiter: " "
+    newline: "\n"
+    params: { }
+
   logging:
 
 
-run_tasks: ["extract_torso", "create_meshes_sw", "inspect_meshes" ]
+run_tasks: ["extract_torso", "create_meshes_sw", "inspect_meshes", "format_subjects" ]
