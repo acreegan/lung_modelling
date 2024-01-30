@@ -16,6 +16,7 @@ import pyvista as pv
 import pandas as pd
 import csv
 from medpy.io import load
+import fnmatch
 
 
 class ExtractLungLobes(EachItemTask):
@@ -508,6 +509,46 @@ class SelectCOPDGeneSubjectsByValue(AllItemsTask):
             match = match.loc[match[key] == value]
 
         subjects = match["sid"].values
+
+
+        # Make sure we have them unzipped
+            # Check id is in dirs list
+        # Make sure we have CT
+            # Check CTMissingReason is 0
+            # Check segmented lobes appear in the folders in dirs list
+
+
+        # Check that all data folders that match the specified kernel actually have the segmented lobes
+        # this assumes directory index exists
+        index_file = glob(str(dataloc.root / dataset_config.directory_index_glob))[0]
+        index = pd.read_csv(index_file)
+        index_data_folders = index[[len(Path(i).parts) == dataset_config.data_folder_depth-1 for i in index.dirpath]].copy()
+        index_data_folders["sid"] = [str(Path(i).parts[0]) for i in index_data_folders.dirpath]
+
+        gold_zero = data[data.finalgold_baseline == 0]
+        gold_zero_present = gold_zero[gold_zero.sid.isin(index_data_folders.sid)]
+        gold_zero_present_with_CT = gold_zero_present[gold_zero_present.CTMissing_Reason == 0].copy()
+        gold_zero_present_with_CT = gold_zero_present_with_CT.set_index("sid")
+
+        # Find the data folder labelled with the CT kernel
+        gold_zero_present_with_CT["kernel_label"] = ["STD" if i == "STANDARD" else i for i in
+                                                     gold_zero_present_with_CT.kernel]
+        index_data_folders_gz = index_data_folders[
+            [i in gold_zero_present_with_CT.index for i in index_data_folders.sid]]
+        a = index_data_folders_gz[
+            [len(fnmatch.filter([i], f"*_{gold_zero_present_with_CT.loc[j].kernel_label}_*")) > 0 for i, j in
+             zip(index_data_folders_gz.dirpath, index_data_folders_gz.sid)]]
+
+        all_have_lobes = np.all([len(fnmatch.filter([i], "*Lobes.mhd*")) > 0 for i in a.files])
+        if not all_have_lobes:
+            lobe_culprit = np.where([len(fnmatch.filter([i], "*Lobes.mhd*")) <= 0 for i in a.files])
+
+        all_have_insp_exp = len(a) == len(gold_zero_present_with_CT)*2
+        if not all_have_insp_exp:
+            # Find where the culprit is
+            z = [sum([i == j for j in a.sid]) for i in a.sid]
+            insp_exp_culprit = np.where(np.array(z)==1)
+
 
         selected_subjects_filename = output_directory / "selected_subjects.csv"
         with open(str(selected_subjects_filename), "w") as ref_dir_file:
