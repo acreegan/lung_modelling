@@ -465,9 +465,12 @@ class SelectCOPDGeneSubjectsByValue(AllItemsTask):
     def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
              task_config: DictConfig) -> list[Path]:
         """
-        Select subjects by value using a dict of key value pairs.
+        Selects subjects from the COPDGene dataset by value using a dict of key value pairs representing collumns and
+        values in the subject data file. If multiple columns are specified, only subjects which match all values are
+        selected.
 
-        Selections are combined using AND
+        Selections are also filtered by whether CT data is present, and which ventilation state is desired (
+        End inspiratory (INSP), or end expiratory (EXP))
 
         Parameters
         ----------
@@ -490,6 +493,8 @@ class SelectCOPDGeneSubjectsByValue(AllItemsTask):
                 filename for COPDGene subject data dict file
             **search_values**
                 Dict of key value pairs
+            **insp_exp**:
+                ventilation state to select. options: "INSP", or "EXP"
             **params**: (Dict):
                 No params currently used for this task
 
@@ -504,59 +509,45 @@ class SelectCOPDGeneSubjectsByValue(AllItemsTask):
         data_file = dataloc.abs_pooled_primary / task_config.source_directory / task_config.subject_data_filename
         data = pd.read_csv(data_file, sep="\t")
 
+        # Match desired values in the subject data
+        # -------------------------------------------------------------------------------------------------------------
         match = data.copy()
         for key, value in dict(task_config.search_values).items():
             match = match.loc[match[key] == value]
 
-        subjects = match["sid"].values
+        dirpaths = [item[0] for item in dirs_list]
+        dirpaths = pd.DataFrame(data=np.array([[path.parts[0] for path in dirpaths], dirpaths]).T,
+                                columns=["sid", "dirpath"])
 
+        # Filter selected subjects checking that data exists and is labelled as good
+        # -------------------------------------------------------------------------------------------------------------
+        # Make sure we are only using subjects that are present in the filesystem
+        match = match.loc[match.sid.isin(dirpaths.sid)]
+        # Only use subjects that have good CT data
+        match = match[match.CTMissing_Reason == 0]
+        match["kernel_label"] = ["STD" if i == "STANDARD" else i for i in match.kernel]
+        match = match.set_index("sid")
+        dirpaths_match = dirpaths.loc[dirpaths.sid.isin(match.index)]
+        dirpaths_match = dirpaths_match[[len(fnmatch.filter([i], f"*_{match.loc[j].kernel_label}_*")) > 0
+                                         for i, j in zip(dirpaths_match.dirpath, dirpaths_match.sid)]]
+        # All directories that match the kernel label of a subject should have Lobes.mhd file
+        dirpaths_match = dirpaths_match[[len(glob(str(Path(dataloc.abs_primary / i) / "*Lobes.mhd"))) > 0
+                                         for i in dirpaths_match.dirpath]]
 
-        # Make sure we have them unzipped
-            # Check id is in dirs list
-        # Make sure we have CT
-            # Check CTMissingReason is 0
-            # Check segmented lobes appear in the folders in dirs list
+        # Filter selected directories using desired ventilation state
+        # --------------------------------------------------------------------------------------------------------------
+        dirpaths_match = dirpaths_match[
+            [len(fnmatch.filter([i], f"*_{task_config.insp_exp}_*")) > 0 for i in dirpaths_match.dirpath]]
 
-
-        # Check that all data folders that match the specified kernel actually have the segmented lobes
-        # this assumes directory index exists
-        index_file = glob(str(dataloc.root / dataset_config.directory_index_glob))[0]
-        index = pd.read_csv(index_file)
-        index_data_folders = index[[len(Path(i).parts) == dataset_config.data_folder_depth-1 for i in index.dirpath]].copy()
-        index_data_folders["sid"] = [str(Path(i).parts[0]) for i in index_data_folders.dirpath]
-
-        gold_zero = data[data.finalgold_baseline == 0]
-        gold_zero_present = gold_zero[gold_zero.sid.isin(index_data_folders.sid)]
-        gold_zero_present_with_CT = gold_zero_present[gold_zero_present.CTMissing_Reason == 0].copy()
-        gold_zero_present_with_CT = gold_zero_present_with_CT.set_index("sid")
-
-        # Find the data folder labelled with the CT kernel
-        gold_zero_present_with_CT["kernel_label"] = ["STD" if i == "STANDARD" else i for i in
-                                                     gold_zero_present_with_CT.kernel]
-        index_data_folders_gz = index_data_folders[
-            [i in gold_zero_present_with_CT.index for i in index_data_folders.sid]]
-        a = index_data_folders_gz[
-            [len(fnmatch.filter([i], f"*_{gold_zero_present_with_CT.loc[j].kernel_label}_*")) > 0 for i, j in
-             zip(index_data_folders_gz.dirpath, index_data_folders_gz.sid)]]
-
-        all_have_lobes = np.all([len(fnmatch.filter([i], "*Lobes.mhd*")) > 0 for i in a.files])
-        if not all_have_lobes:
-            lobe_culprit = np.where([len(fnmatch.filter([i], "*Lobes.mhd*")) <= 0 for i in a.files])
-
-        all_have_insp_exp = len(a) == len(gold_zero_present_with_CT)*2
-        if not all_have_insp_exp:
-            # Find where the culprit is
-            z = [sum([i == j for j in a.sid]) for i in a.sid]
-            insp_exp_culprit = np.where(np.array(z)==1)
-
-
+        # Write Results
+        # ---------------------------------------------------------------------------------------------------------------
         selected_subjects_filename = output_directory / "selected_subjects.csv"
         with open(str(selected_subjects_filename), "w") as ref_dir_file:
             writer = csv.writer(ref_dir_file)
-            writer.writerow(["sid"])
+            writer.writerow(["sid", "dirpath"])
 
-            for row in subjects:
-                writer.writerow([row])
+            for row in range(len(dirpaths_match)):
+                writer.writerow([dirpaths_match.iloc[row].sid, PurePosixPath(dirpaths_match.iloc[row].dirpath)])
 
         return [Path(selected_subjects_filename)]
 
@@ -606,7 +597,7 @@ class FormatSubjects(AllItemsTask):
             os.makedirs(output_directory)
 
         data_file = \
-        glob(str(dataloc.abs_pooled_derivative / task_config.source_directory / task_config.input_file_glob))[0]
+            glob(str(dataloc.abs_pooled_derivative / task_config.source_directory / task_config.input_file_glob))[0]
         data = pd.read_csv(data_file)
 
         formatted_subjects_filename = output_directory / "formatted_subjects.csv"

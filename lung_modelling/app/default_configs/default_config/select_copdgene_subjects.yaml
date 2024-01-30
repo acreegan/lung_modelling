@@ -14,21 +14,21 @@ tasks:
   select_copdgene_subjects_by_value:
     task: "SelectCOPDGeneSubjectsByValue"
     source_directory: "subject_data"
-    results_directory: "selected_subjects"
+    results_directory: "selected_subjects_never_smoked_INSP"
     subject_data_filename: "COPDGene_Phase1_SM_NS_25OCT21.txt"
     search_values: {"cohort":"Never smoked" }
+    insp_exp: "INSP"
     params: {}
 
   format_subjects:
     task: "FormatSubjects"
-    source_directory: "selected_subjects"
-    results_directory: "selected_subjects_formatted"
+    source_directory: "selected_subjects_never_smoked_INSP"
+    results_directory: "selected_subjects_never_smoked_INSP_formatted"
     input_file_glob: "*.csv"
-    column: "sid"
+    column: "dirpath"
     formats:
-      - {prefix: "'*", suffix: "*INSP_B31f*',"}
-      - {prefix: "'*", suffix: "*INSP_STD*',"}
-    delimiter: ","
+      - {prefix: "'", suffix: "',"}
+    delimiter: " "
     newline: "\n"
     params: {}
 
