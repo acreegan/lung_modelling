@@ -7,7 +7,7 @@ use_multiprocessing: False
 tasks:
   initialize:
     dataset_config_filename: "dataset_config.json"
-    use_directory_index: False
+    use_directory_index: True
     skip_dirs: []
     select_dirs: []
 

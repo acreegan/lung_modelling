@@ -495,6 +495,8 @@ class OptimizeMeshesSW(AllItemsTask):
         """
         Run the shapeworks optimize command
 
+        Todo: This should return the files it creates (at least the shapeworks project...)
+
         Parameters
         ----------
         dataloc

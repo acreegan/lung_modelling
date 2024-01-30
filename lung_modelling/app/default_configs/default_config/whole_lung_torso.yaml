@@ -126,7 +126,7 @@ tasks:
       procrustes_scaling: 1,
       procrustes_rotation_translation: 1,
       number_of_particles: [ 128, 128, 256 ],
-      use_geodesic_distance: 1,
+      use_geodesic_distance: 0,
       use_landmarks: 1
     }
 
