@@ -38,7 +38,7 @@
 <p>To use the workflow app, first install the Lung Modelling package. See <a class="reference internal" href="installation.html#installation"><span class="std std-ref">Installation</span></a>
 for instructions.</p>
 <p>Once the package is installed, initialize a user-editable configuration by running:</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>lung_modelling<span class="w"> </span><span class="nv">initialize_user_configuration</span><span class="o">=</span>True
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>lung_modelling<span class="w"> </span><span class="nv">initialize_user_config</span><span class="o">=</span>True
 </pre></div>
 </div>
 <p>This should create a folder named user_config in your working directory. The user
@@ -219,7 +219,7 @@ run_tasks list.</p>
 </pre></div>
 </div>
 <p><strong>datset_root</strong>: Root directory for the dataset on which to run the workflow. If set to null a directory select dialog
-will be created. This can also be overwritten from the command line.</p>
+will be created. This can also be overwritten from the command line (e.g., user_config.dataset_root=”C:/path/to/dataset”).</p>
 <p><strong>log_level</strong>: Log level for loguru logs</p>
 <p><strong>use_multiprocessing</strong>: Flag to turn on or off the use of multiprocessing to run EachItemTask tasks in parallel</p>
 <p><strong>tasks</strong>: A list of yaml dictionaries specifying the configuration for tasks to be included in the workflow. The key of

@@ -47,6 +47,7 @@
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 <span class="kn">import</span> <span class="nn">csv</span>
 <span class="kn">from</span> <span class="nn">medpy.io</span> <span class="kn">import</span> <span class="n">load</span>
+<span class="kn">import</span> <span class="nn">fnmatch</span>
 
 
 <div class="viewcode-block" id="ExtractLungLobes">
@@ -556,9 +557,12 @@
     <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dirs_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span>
              <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Select subjects by value using a dict of key value pairs.</span>
+<span class="sd">        Selects subjects from the COPDGene dataset by value using a dict of key value pairs representing columns and</span>
+<span class="sd">        values in the subject data file. If multiple columns are specified, only subjects which match all values are</span>
+<span class="sd">        selected.</span>
 
-<span class="sd">        Selections are combined using AND</span>
+<span class="sd">        Selections are also filtered by whether CT data is present, and which ventilation state is desired (</span>
+<span class="sd">        End inspiratory (INSP), or end expiratory (EXP))</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -581,12 +585,17 @@
 <span class="sd">                filename for COPDGene subject data dict file</span>
 <span class="sd">            **search_values**</span>
 <span class="sd">                Dict of key value pairs</span>
+<span class="sd">            **insp_exp**:</span>
+<span class="sd">                ventilation state to select. options: &quot;INSP&quot;, or &quot;EXP&quot;</span>
 <span class="sd">            **params**: (Dict):</span>
 <span class="sd">                No params currently used for this task</span>
 
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
+<span class="sd">        List containing the output file path</span>
+<span class="sd">            Format: csv</span>
+<span class="sd">            Columns: sid, dirpath</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_directory</span><span class="p">):</span>
@@ -595,21 +604,121 @@
         <span class="n">data_file</span> <span class="o">=</span> <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_pooled_primary</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">subject_data_filename</span>
         <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data_file</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">)</span>
 
+        <span class="c1"># Match desired values in the subject data</span>
+        <span class="c1"># -------------------------------------------------------------------------------------------------------------</span>
         <span class="n">match</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">dict</span><span class="p">(</span><span class="n">task_config</span><span class="o">.</span><span class="n">search_values</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="n">match</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">match</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">==</span> <span class="n">value</span><span class="p">]</span>
 
-        <span class="n">subjects</span> <span class="o">=</span> <span class="n">match</span><span class="p">[</span><span class="s2">&quot;sid&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">dirpaths</span> <span class="o">=</span> <span class="p">[</span><span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">dirs_list</span><span class="p">]</span>
+        <span class="n">dirpaths</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">path</span><span class="o">.</span><span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">dirpaths</span><span class="p">],</span> <span class="n">dirpaths</span><span class="p">])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+                                <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;sid&quot;</span><span class="p">,</span> <span class="s2">&quot;dirpath&quot;</span><span class="p">])</span>
 
+        <span class="c1"># Filter selected subjects checking that data exists and is labelled as good</span>
+        <span class="c1"># -------------------------------------------------------------------------------------------------------------</span>
+        <span class="c1"># Make sure we are only using subjects that are present in the filesystem</span>
+        <span class="n">match</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">match</span><span class="o">.</span><span class="n">sid</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">dirpaths</span><span class="o">.</span><span class="n">sid</span><span class="p">)]</span>
+        <span class="c1"># Only use subjects that have good CT data</span>
+        <span class="n">match</span> <span class="o">=</span> <span class="n">match</span><span class="p">[</span><span class="n">match</span><span class="o">.</span><span class="n">CTMissing_Reason</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="k">match</span><span class="p">[</span><span class="s2">&quot;kernel_label&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;STD&quot;</span> <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="s2">&quot;STANDARD&quot;</span> <span class="k">else</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">match</span><span class="o">.</span><span class="n">kernel</span><span class="p">]</span>
+        <span class="n">match</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;sid&quot;</span><span class="p">)</span>
+        <span class="n">dirpaths_match</span> <span class="o">=</span> <span class="n">dirpaths</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">dirpaths</span><span class="o">.</span><span class="n">sid</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">index</span><span class="p">)]</span>
+        <span class="n">dirpaths_match</span> <span class="o">=</span> <span class="n">dirpaths_match</span><span class="p">[[</span><span class="nb">len</span><span class="p">(</span><span class="n">fnmatch</span><span class="o">.</span><span class="n">filter</span><span class="p">([</span><span class="n">i</span><span class="p">],</span> <span class="sa">f</span><span class="s2">&quot;*_</span><span class="si">{</span><span class="n">match</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">kernel_label</span><span class="si">}</span><span class="s2">_*&quot;</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">0</span>
+                                         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">dirpaths_match</span><span class="o">.</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">dirpaths_match</span><span class="o">.</span><span class="n">sid</span><span class="p">)]]</span>
+        <span class="c1"># All directories that match the kernel label of a subject should have Lobes.mhd file</span>
+        <span class="n">dirpaths_match</span> <span class="o">=</span> <span class="n">dirpaths_match</span><span class="p">[[</span><span class="nb">len</span><span class="p">(</span><span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_primary</span> <span class="o">/</span> <span class="n">i</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;*Lobes.mhd&quot;</span><span class="p">)))</span> <span class="o">&gt;</span> <span class="mi">0</span>
+                                         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">dirpaths_match</span><span class="o">.</span><span class="n">dirpath</span><span class="p">]]</span>
+
+        <span class="c1"># Filter selected directories using desired ventilation state</span>
+        <span class="c1"># --------------------------------------------------------------------------------------------------------------</span>
+        <span class="n">dirpaths_match</span> <span class="o">=</span> <span class="n">dirpaths_match</span><span class="p">[</span>
+            <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">fnmatch</span><span class="o">.</span><span class="n">filter</span><span class="p">([</span><span class="n">i</span><span class="p">],</span> <span class="sa">f</span><span class="s2">&quot;*_</span><span class="si">{</span><span class="n">task_config</span><span class="o">.</span><span class="n">insp_exp</span><span class="si">}</span><span class="s2">_*&quot;</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">dirpaths_match</span><span class="o">.</span><span class="n">dirpath</span><span class="p">]]</span>
+
+        <span class="c1"># Write Results</span>
+        <span class="c1"># ---------------------------------------------------------------------------------------------------------------</span>
         <span class="n">selected_subjects_filename</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="s2">&quot;selected_subjects.csv&quot;</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">selected_subjects_filename</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">ref_dir_file</span><span class="p">:</span>
             <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">ref_dir_file</span><span class="p">)</span>
-            <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="s2">&quot;sid&quot;</span><span class="p">])</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="s2">&quot;sid&quot;</span><span class="p">,</span> <span class="s2">&quot;dirpath&quot;</span><span class="p">])</span>
 
-            <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">subjects</span><span class="p">:</span>
-                <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="n">row</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dirpaths_match</span><span class="p">)):</span>
+                <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="n">dirpaths_match</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">row</span><span class="p">]</span><span class="o">.</span><span class="n">sid</span><span class="p">,</span> <span class="n">PurePosixPath</span><span class="p">(</span><span class="n">dirpaths_match</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">row</span><span class="p">]</span><span class="o">.</span><span class="n">dirpath</span><span class="p">)])</span>
 
         <span class="k">return</span> <span class="p">[</span><span class="n">Path</span><span class="p">(</span><span class="n">selected_subjects_filename</span><span class="p">)]</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="FormatSubjects">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.FormatSubjects">[docs]</a>
+<span class="k">class</span> <span class="nc">FormatSubjects</span><span class="p">(</span><span class="n">AllItemsTask</span><span class="p">):</span>
+
+<div class="viewcode-block" id="FormatSubjects.work">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.FormatSubjects.work">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dirs_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span>
+             <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Format a list of subjects. Input data is filtered by key value pairs as in SelectCOPDGeneSubjectsByValue.</span>
+<span class="sd">        Output is a csv file with rows consisting of elements from the input data column formatted with a prefix and</span>
+<span class="sd">        suffix. If multiple formats are specified, each is an additional column in the output file, using the same input</span>
+<span class="sd">        cell. Delimiter and newline characters are configurable.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataloc</span>
+<span class="sd">            Dataset locator for the dataset</span>
+<span class="sd">        dirs_list</span>
+<span class="sd">            List of relative paths to the source directories</span>
+<span class="sd">        output_directory</span>
+<span class="sd">            Absolute path of the directory in which to save results of the work function</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">            Config relating to the entire dataset</span>
+<span class="sd">        task_config</span>
+<span class="sd">            **source_directory**</span>
+<span class="sd">                subdirectory within derivative source folder to find source files</span>
+<span class="sd">            **results_directory**:</span>
+<span class="sd">                Name of the results folder (Stem of output_directory)</span>
+<span class="sd">            **input_file_glob**:</span>
+<span class="sd">                glob pattern for input file</span>
+<span class="sd">            **column**</span>
+<span class="sd">                column to use as subject ids to format</span>
+<span class="sd">            **search_values**:</span>
+<span class="sd">                Dict of key value pairs</span>
+<span class="sd">            **formats**</span>
+<span class="sd">                list of dicts specifying prefix and suffix</span>
+<span class="sd">            **delimiter**</span>
+<span class="sd">                delimiter to use between formats</span>
+<span class="sd">            **newline**</span>
+<span class="sd">                newline to separate formatted items</span>
+<span class="sd">            **params**: (Dict):</span>
+<span class="sd">                No params currently used for this task</span>
+
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        List containing the output file path</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_directory</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_directory</span><span class="p">)</span>
+
+        <span class="n">data_file</span> <span class="o">=</span> \
+            <span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_pooled_derivative</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">input_file_glob</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data_file</span><span class="p">)</span>
+
+        <span class="n">match</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">dict</span><span class="p">(</span><span class="n">task_config</span><span class="o">.</span><span class="n">search_values</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">match</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">match</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">==</span> <span class="n">value</span><span class="p">]</span>
+
+        <span class="n">formatted_subjects_filename</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="s2">&quot;formatted_subjects.csv&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">formatted_subjects_filename</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="n">task_config</span><span class="o">.</span><span class="n">newline</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">task_config</span><span class="o">.</span><span class="n">delimiter</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">match</span><span class="p">[</span><span class="n">task_config</span><span class="o">.</span><span class="n">column</span><span class="p">]:</span>
+                <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="s2">&quot;</span><span class="si">{}{}{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">fmt</span><span class="o">.</span><span class="n">prefix</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">fmt</span><span class="o">.</span><span class="n">suffix</span><span class="p">)</span> <span class="k">for</span> <span class="n">fmt</span> <span class="ow">in</span> <span class="n">task_config</span><span class="o">.</span><span class="n">formats</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="n">Path</span><span class="p">(</span><span class="n">formatted_subjects_filename</span><span class="p">)]</span></div>
 </div>
 
 
@@ -624,7 +733,14 @@
     <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dirs_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span>
              <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Display groups of meshes</span>
+<span class="sd">        Display groups of meshes, allowing the user to select from them. The selected and non-selected directories are</span>
+<span class="sd">        recorded in an output file. This allows manual inspection for exclusion, for example of torso scans that are</span>
+<span class="sd">        incomplete.</span>
+
+<span class="sd">        If the target output file already exists, it is used to set the initial selection state of any mesh that is in</span>
+<span class="sd">        the current list. Note: using the output file as input is normally dangerous and not recommended because it</span>
+<span class="sd">        breaks idempotency. It is used in this case since this is a user input task (we can&#39;t rely on the user to behave</span>
+<span class="sd">        the same way multiple times anyway). This allows the user to review past selections.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -647,23 +763,34 @@
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
+<span class="sd">        List containing the output file path</span>
+<span class="sd">            Format: csv</span>
+<span class="sd">            Columns: dirpath, selected</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_directory</span><span class="p">):</span>
             <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_directory</span><span class="p">)</span>
 
+        <span class="n">df_dirs</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dirs_list</span><span class="p">],</span> <span class="p">[</span><span class="kc">False</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">dirs_list</span><span class="p">)])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+                               <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;dirpath&quot;</span><span class="p">,</span> <span class="s2">&quot;selected&quot;</span><span class="p">])</span>
+
+        <span class="n">inspected_dirs_filename</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="s2">&quot;inspected_dirs.csv&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">inspected_dirs_filename</span><span class="p">)))</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">inspected_dirs_previous</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">inspected_dirs_filename</span><span class="p">)</span>
+            <span class="n">previous_selected</span> <span class="o">=</span> <span class="n">inspected_dirs_previous</span><span class="p">[</span><span class="n">inspected_dirs_previous</span><span class="o">.</span><span class="n">selected</span> <span class="o">==</span> <span class="kc">True</span><span class="p">]</span>
+            <span class="n">df_dirs</span><span class="o">.</span><span class="n">selected</span><span class="p">[</span><span class="n">df_dirs</span><span class="o">.</span><span class="n">dirpath</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">previous_selected</span><span class="o">.</span><span class="n">dirpath</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">Path</span><span class="p">))]</span> <span class="o">=</span> <span class="kc">True</span>
+
         <span class="n">n_per_window</span> <span class="o">=</span> <span class="mi">9</span>
         <span class="n">n_windows</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dirs_list</span><span class="p">)</span> <span class="o">/</span> <span class="n">n_per_window</span><span class="p">)</span>
-        <span class="n">selected_dirs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">window_index</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">dirs_list</span><span class="p">),</span> <span class="n">n_per_window</span><span class="p">)):</span>
+        <span class="k">for</span> <span class="n">window_index</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">df_dirs</span><span class="p">),</span> <span class="n">n_per_window</span><span class="p">)):</span>
             <span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
             <span class="n">p</span> <span class="o">=</span> <span class="n">pv</span><span class="o">.</span><span class="n">Plotter</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">)</span>
 
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_per_window</span><span class="p">):</span>
-                <span class="k">if</span> <span class="n">i</span> <span class="o">+</span> <span class="n">j</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dirs_list</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">+</span> <span class="n">j</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">df_dirs</span><span class="p">):</span>
                     <span class="k">break</span>
 
-                <span class="nb">dir</span> <span class="o">=</span> <span class="n">dirs_list</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="n">j</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="nb">dir</span> <span class="o">=</span> <span class="n">df_dirs</span><span class="o">.</span><span class="n">dirpath</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="n">j</span><span class="p">]</span>
                 <span class="n">p</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">unravel_index</span><span class="p">(</span><span class="n">j</span><span class="p">,</span> <span class="n">shape</span><span class="p">))</span>
                 <span class="n">file</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="nb">dir</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory</span> <span class="o">/</span> <span class="s2">&quot;*&quot;</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
 
@@ -679,7 +806,7 @@
                         <span class="bp">self</span><span class="o">.</span><span class="n">dir</span> <span class="o">=</span> <span class="nb">dir</span>
 
                     <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
-                        <span class="n">selected_dirs</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dir</span><span class="p">]</span> <span class="o">=</span> <span class="n">state</span>
+                        <span class="n">df_dirs</span><span class="o">.</span><span class="n">selected</span><span class="p">[</span><span class="n">df_dirs</span><span class="o">.</span><span class="n">dirpath</span> <span class="o">==</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dir</span><span class="p">)]</span> <span class="o">=</span> <span class="n">state</span>
                         <span class="k">if</span> <span class="n">state</span><span class="p">:</span>
                             <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Selected: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
                         <span class="k">else</span><span class="p">:</span>
@@ -687,32 +814,22 @@
 
                 <span class="n">p</span><span class="o">.</span><span class="n">add_mesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span>
                 <span class="n">p</span><span class="o">.</span><span class="n">add_title</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="nb">dir</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="p">,</span> <span class="n">font_size</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
-                <span class="n">p</span><span class="o">.</span><span class="n">add_checkbox_button_widget</span><span class="p">(</span><span class="n">update_selected</span><span class="p">(</span><span class="nb">dir</span><span class="p">))</span>
+                <span class="n">p</span><span class="o">.</span><span class="n">add_checkbox_button_widget</span><span class="p">(</span><span class="n">update_selected</span><span class="p">(</span><span class="nb">dir</span><span class="p">),</span> <span class="n">value</span><span class="o">=</span><span class="n">df_dirs</span><span class="o">.</span><span class="n">selected</span><span class="p">[</span><span class="n">df_dirs</span><span class="o">.</span><span class="n">dirpath</span> <span class="o">==</span> <span class="n">Path</span><span class="p">(</span><span class="nb">dir</span><span class="p">)])</span>
 
             <span class="n">p</span><span class="o">.</span><span class="n">link_views</span><span class="p">()</span>
             <span class="n">p</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Window </span><span class="si">{</span><span class="n">window_index</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">n_windows</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Selected dirs:&quot;</span><span class="p">)</span>
-        <span class="k">for</span> <span class="nb">dir</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">selected_dirs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">value</span><span class="p">:</span>
-                <span class="nb">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">dir</span><span class="p">))</span>
+        <span class="n">df_dirs</span><span class="o">.</span><span class="n">dirpath</span> <span class="o">=</span> <span class="n">df_dirs</span><span class="o">.</span><span class="n">dirpath</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">PurePosixPath</span><span class="p">)</span>
+        <span class="n">df_dirs</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">inspected_dirs_filename</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
-        <span class="n">selected_dirs_filename</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="s2">&quot;selected_dirs.csv&quot;</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">selected_dirs_filename</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">selected_dirs_file</span><span class="p">:</span>
-            <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">selected_dirs_file</span><span class="p">)</span>
-            <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="s2">&quot;dir&quot;</span><span class="p">])</span>
-
-            <span class="k">for</span> <span class="nb">dir</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">selected_dirs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                <span class="k">if</span> <span class="n">value</span><span class="p">:</span>
-                    <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="nb">dir</span><span class="p">])</span>
-
-        <span class="k">return</span> <span class="p">[</span><span class="n">Path</span><span class="p">(</span><span class="n">selected_dirs_filename</span><span class="p">)]</span></div>
+        <span class="k">return</span> <span class="p">[</span><span class="n">Path</span><span class="p">(</span><span class="n">inspected_dirs_filename</span><span class="p">)]</span></div>
 </div>
 
 
 
-<span class="n">all_tasks</span> <span class="o">=</span> <span class="p">[</span><span class="n">ExtractLungLobes</span><span class="p">,</span> <span class="n">CreateMeshes</span><span class="p">,</span> <span class="n">ExtractWholeLungs</span><span class="p">,</span> <span class="n">ReferenceSelectionMesh</span><span class="p">,</span> <span class="n">ExtractTorso</span><span class="p">,</span> <span class="n">MeshLandmarksCoarse</span><span class="p">,</span>
-             <span class="n">ParseCOPDGeneSubjectGroups</span><span class="p">,</span> <span class="n">SelectCOPDGeneSubjectsByValue</span><span class="p">,</span> <span class="n">InspectMeshes</span><span class="p">]</span>
+<span class="n">all_tasks</span> <span class="o">=</span> <span class="p">[</span><span class="n">ExtractLungLobes</span><span class="p">,</span> <span class="n">CreateMeshes</span><span class="p">,</span> <span class="n">ExtractWholeLungs</span><span class="p">,</span> <span class="n">ReferenceSelectionMesh</span><span class="p">,</span> <span class="n">ExtractTorso</span><span class="p">,</span>
+             <span class="n">MeshLandmarksCoarse</span><span class="p">,</span>
+             <span class="n">ParseCOPDGeneSubjectGroups</span><span class="p">,</span> <span class="n">SelectCOPDGeneSubjectsByValue</span><span class="p">,</span> <span class="n">FormatSubjects</span><span class="p">,</span> <span class="n">InspectMeshes</span><span class="p">]</span>
 </pre></div>
 
           </div>

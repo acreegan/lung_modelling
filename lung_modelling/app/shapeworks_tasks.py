@@ -19,7 +19,7 @@ from DataAugmentationUtils import Utils, Embedder
 from fnmatch import fnmatch
 
 
-class SmoothLungLobesSW(EachItemTask):
+class ExtractLungLobesSW(EachItemTask):
 
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
@@ -208,7 +208,7 @@ class CreateMeshesSW(EachItemTask):
         return mesh_files
 
 
-class SmoothWholeLungsSW(EachItemTask):
+class ExtractWholeLungsSW(EachItemTask):
 
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
@@ -755,5 +755,5 @@ class SubjectDataPCACorrelationSW(AllItemsTask):
         pass 
 
 
-all_tasks = [SmoothLungLobesSW, CreateMeshesSW, SmoothWholeLungsSW, ReferenceSelectionMeshSW, MeshTransformSW,
+all_tasks = [ExtractLungLobesSW, CreateMeshesSW, ExtractWholeLungsSW, ReferenceSelectionMeshSW, MeshTransformSW,
              OptimizeMeshesSW, ComputePCASW, SubjectDataPCACorrelationSW]

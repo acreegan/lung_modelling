@@ -50,19 +50,19 @@
 <span class="kn">from</span> <span class="nn">fnmatch</span> <span class="kn">import</span> <span class="n">fnmatch</span>
 
 
-<div class="viewcode-block" id="SmoothLungLobesSW">
-<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.SmoothLungLobesSW">[docs]</a>
-<span class="k">class</span> <span class="nc">SmoothLungLobesSW</span><span class="p">(</span><span class="n">EachItemTask</span><span class="p">):</span>
+<div class="viewcode-block" id="ExtractLungLobesSW">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.ExtractLungLobesSW">[docs]</a>
+<span class="k">class</span> <span class="nc">ExtractLungLobesSW</span><span class="p">(</span><span class="n">EachItemTask</span><span class="p">):</span>
 
-<div class="viewcode-block" id="SmoothLungLobesSW.initialize">
-<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.SmoothLungLobesSW.initialize">[docs]</a>
+<div class="viewcode-block" id="ExtractLungLobesSW.initialize">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.ExtractLungLobesSW.initialize">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
         <span class="k">pass</span></div>
 
 
-<div class="viewcode-block" id="SmoothLungLobesSW.work">
-<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.SmoothLungLobesSW.work">[docs]</a>
+<div class="viewcode-block" id="ExtractLungLobesSW.work">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.ExtractLungLobesSW.work">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">source_directory_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
              <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">initialize_result</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
@@ -257,19 +257,19 @@
 
 
 
-<div class="viewcode-block" id="SmoothWholeLungsSW">
-<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.SmoothWholeLungsSW">[docs]</a>
-<span class="k">class</span> <span class="nc">SmoothWholeLungsSW</span><span class="p">(</span><span class="n">EachItemTask</span><span class="p">):</span>
+<div class="viewcode-block" id="ExtractWholeLungsSW">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.ExtractWholeLungsSW">[docs]</a>
+<span class="k">class</span> <span class="nc">ExtractWholeLungsSW</span><span class="p">(</span><span class="n">EachItemTask</span><span class="p">):</span>
 
-<div class="viewcode-block" id="SmoothWholeLungsSW.initialize">
-<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.SmoothWholeLungsSW.initialize">[docs]</a>
+<div class="viewcode-block" id="ExtractWholeLungsSW.initialize">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.ExtractWholeLungsSW.initialize">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
         <span class="k">pass</span></div>
 
 
-<div class="viewcode-block" id="SmoothWholeLungsSW.work">
-<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.SmoothWholeLungsSW.work">[docs]</a>
+<div class="viewcode-block" id="ExtractWholeLungsSW.work">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.ExtractWholeLungsSW.work">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">source_directory_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
              <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">initialize_result</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
@@ -572,6 +572,8 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Run the shapeworks optimize command</span>
 
+<span class="sd">        Todo: This should return the files it creates (at least the shapeworks project...)</span>
+
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        dataloc</span>
@@ -844,7 +846,7 @@
 
 
 
-<span class="n">all_tasks</span> <span class="o">=</span> <span class="p">[</span><span class="n">SmoothLungLobesSW</span><span class="p">,</span> <span class="n">CreateMeshesSW</span><span class="p">,</span> <span class="n">SmoothWholeLungsSW</span><span class="p">,</span> <span class="n">ReferenceSelectionMeshSW</span><span class="p">,</span> <span class="n">MeshTransformSW</span><span class="p">,</span>
+<span class="n">all_tasks</span> <span class="o">=</span> <span class="p">[</span><span class="n">ExtractLungLobesSW</span><span class="p">,</span> <span class="n">CreateMeshesSW</span><span class="p">,</span> <span class="n">ExtractWholeLungsSW</span><span class="p">,</span> <span class="n">ReferenceSelectionMeshSW</span><span class="p">,</span> <span class="n">MeshTransformSW</span><span class="p">,</span>
              <span class="n">OptimizeMeshesSW</span><span class="p">,</span> <span class="n">ComputePCASW</span><span class="p">,</span> <span class="n">SubjectDataPCACorrelationSW</span><span class="p">]</span>
 </pre></div>
 
