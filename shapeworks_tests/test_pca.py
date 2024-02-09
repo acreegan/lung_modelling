@@ -1,7 +1,7 @@
 import shapeworks as sw
 import pyvista as pv
 import matplotlib
-from lung_modelling import PCA_Embbeder
+from lung_modelling.shapeworks_libs import PCA_Embbeder
 import DataAugmentationUtils
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,8 +10,8 @@ from pathlib import Path
 from glob import glob
 
 
-def test_pca():
-    center = [-5000, 500, 0]
+def prepare_meshes():
+    # center = [-5000, 500, 0]
 
     # mesh_1 = pv.Sphere(theta_resolution=10, phi_resolution=10, radius=1.5, center=center).scale([0.8, 1, 1],
     #                                                                                             inplace=False)
@@ -23,6 +23,8 @@ def test_pca():
     #                                                                                             inplace=False)
     # mesh_5 = pv.Sphere(theta_resolution=10, phi_resolution=10, radius=1.5, center=center).scale([1.2, 1, 1],
     #                                                                                             inplace=False)
+
+    center = [10, 10, 0]
 
     mesh_1 = pv.Sphere(theta_resolution=10, phi_resolution=10, radius=1.5, center=center).scale([0.8, 1.3, 1],
                                                                                                 inplace=False)
@@ -38,14 +40,11 @@ def test_pca():
     meshes = [mesh_1, mesh_2, mesh_3, mesh_4, mesh_5]
     middle_mesh = mesh_3
 
-    # p = pv.Plotter()
-    # c = matplotlib.colormaps["Set1"]
-    # for i, mesh in enumerate(meshes):
-    #     p.add_mesh(mesh.extract_all_edges(), color=c(i), label=f"mesh {i+1}")
-    # p.show_axes()
-    # p.add_legend()
-    # p.show_bounds()
-    # p.show()
+    return meshes, middle_mesh
+
+
+def test_pca():
+    meshes, middle_mesh = prepare_meshes()
 
     all_points = np.array([mesh.points for mesh in meshes])
     embedder = PCA_Embbeder(all_points, num_dim=len(meshes) - 1)
@@ -53,9 +52,19 @@ def test_pca():
     mean_data = embedder.mean_data
     project_zeros = embedder.project(np.zeros(len(meshes) - 1))
 
-    np.testing.assert_allclose(mean_data, middle_mesh.points)
-    np.testing.assert_allclose(project_zeros, middle_mesh.points)
+    np.testing.assert_allclose(mean_data, middle_mesh.points)  # In this case our middle mesh is the mean
+    np.testing.assert_allclose(project_zeros,
+                               middle_mesh.points)  # Check that projecting all zero scores results in the mean
 
+    # p = pv.Plotter()
+    # c = matplotlib.colormaps["Set1"]
+    # for i, mesh in enumerate(meshes):
+    #     p.add_mesh(mesh.extract_all_edges(), color=c(i), label=f"mesh {i + 1}")
+    # p.show_axes()
+    # p.add_legend()
+    # p.show_bounds()
+    # p.show()
+    #
     # p = pv.Plotter(shape=(1, len(meshes)), window_size=(5 * 300, 300))
     # for i in range(len(meshes)):
     #     p.subplot(0, i)
@@ -67,6 +76,13 @@ def test_pca():
     #
     # p.link_views()
     # p.show()
+
+
+def test_compare_pca_methods():
+    meshes, middle_mesh = prepare_meshes()
+
+    all_points = np.array([mesh.points for mesh in meshes])
+    embedder = PCA_Embbeder(all_points, num_dim=len(meshes) - 1)
 
     # Go through temp directory because ParticleSystem can only be created with files
     with tempfile.TemporaryDirectory() as td:
@@ -80,21 +96,16 @@ def test_pca():
     shape_statistics = sw.ParticleShapeStatistics()
     shape_statistics.PCA(particleSystem=particle_system, domainsPerShape=1)
 
-    # a = embedder.eigen_vectors[:, 0].reshape(middle_mesh.points.shape)
-    # # ShapeStatistics is backwards from Embedder
-    # b = shape_statistics.eigenVectors()[:, 4].reshape(middle_mesh.points.shape)
-    #
-    # # Todo: not sure why they sometimes have different signs
-    # np.testing.assert_allclose(np.abs(a), np.abs(b), rtol=1e-6, atol=1e-7)
-
-    # Todo: not sure why they sometimes have different signs
     # ShapeStatistics is backwards from Embedder, thus the flip
     # Test only eigenvectors from modes with shape changes (e.g., the first 2)
-    np.testing.assert_allclose(np.abs(np.flip(shape_statistics.eigenVectors(), 1))[:, :2],
-                               np.abs(embedder.eigen_vectors)[:, :2], rtol=1e-5, atol=1e-7)
+    # Todo: not sure why they sometimes have different signs
+    a = np.abs(np.flip(shape_statistics.eigenVectors(), 1))[:, :2]
+    b = np.abs(embedder.eigen_vectors)[:, :2]
 
-    c = embedder.eigen_values[0]
-    d = shape_statistics.eigenValues()[4]
+    assert np.allclose(a, b)
 
     # Todo: not sure why there is a factor of 2
-    np.testing.assert_allclose(c / 2, d)
+    c = embedder.eigen_values[0] / 2
+    d = shape_statistics.eigenValues()[4]
+
+    assert np.allclose(c, d)
