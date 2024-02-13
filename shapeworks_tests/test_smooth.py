@@ -1,5 +1,5 @@
 from pathlib import Path
-from lung_modelling.app.shapeworks_tasks import SmoothWholeLungsSW
+from lung_modelling.app.shapeworks_tasks import ExtractWholeLungsSW
 from lung_modelling.workflow_manager import DatasetLocator
 import pyvista as pv
 import tempfile
@@ -51,7 +51,7 @@ def test_smooth_whole_lungs_sw():
             "lobe_mapping": {"lul": 1, "lll": 2}
         })
 
-        results = SmoothWholeLungsSW.work(source_directory_primary=dataloc.abs_primary / dir[0],
+        results = ExtractWholeLungsSW.work(source_directory_primary=dataloc.abs_primary / dir[0],
                                           source_directory_derivative=dataloc.abs_derivative / dir[0],
                                           output_directory=dataloc.abs_derivative / dir[0] / output_directory,
                                           dataset_config=datset_config,

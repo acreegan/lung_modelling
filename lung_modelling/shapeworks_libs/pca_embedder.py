@@ -1,28 +1,14 @@
 import os
 import numpy as np
 from shapeworks.utils import sw_message
-from DataAugmentationUtils.Embedder import Embedder, PCA_Embbeder
+from DataAugmentationUtils.Embedder import Embedder
 from pathlib import Path
 from glob import glob
 
 
 # instance of embedder that uses PCA for dimension reduction
 # Updated by Andrew Creegan from the version in Shapeworks to allow saving and loading from file
-# TODO: Allow init to accept none. Then run_PCA will not run. User will need to load
-#       Add a function to load PCA from arrays: eigenvectors, eigenvalues, and mean data (or mean mesh???)
-#       Add a factory function to load from directory. Allow reloading original scores, just stdevs, or no scores
-#       Tidy up write_PCA function and allow options for exporting scores (to match what we will load)
-#       Change project function to use mean data instead of raw data. run_PCA will need to compute this too.
-#       Change percent variability calculation to use greater or equal to allow percent_variability of 1
-#       Allow to project using stdevs rather than full PCA Instance
-#       Write tests to make sure this PCA calculation behaves the same way as the other one in Shapeworks
-#
-# Todo 2024
-#       Design a consistent approach to numdim. Numdim is the number of columns of the PCA scores.
-#       So do we need self.numdim for project? or do we just count the rows in PCA instance?
-
 class PCA_Embbeder(Embedder):
-    # overriding abstract methods
     def __init__(self, data_matrix=None, num_dim=0, percent_variability=0.95):
         """
         Initialize the PCA_Embedder. If data_matrix is provided, a PCA model is generated.
@@ -34,13 +20,14 @@ class PCA_Embbeder(Embedder):
         data_matrix
             Data to use to generate a PCA model
         num_dim
-            Number of PCA dimensions to keep in the model. (Max is data_matrix.shape[0]-1, i.e., the maximum number of
+            Number of PCA dimensions to keep in the generated PCA scores. (Max is data_matrix.shape[0]-1, i.e., the maximum number of
             modes of variation is one less than the number of samples used to build the model.
             If set to zero, the maximum number of dimensions are kept.
         percent_variability
-            Percentage of the variation in the input data to keep in the model, scaled to between 0 and 1.
+            Percentage of the variation in the input data to keep in the generated PCA scores, scaled to between 0 and 1.
             This is only used if num_dim is not set.
         """
+        super().__init__(data_matrix)
         self.PCA_scores = None
         self.eigen_vectors = None
         self.eigen_values = None
@@ -51,7 +38,6 @@ class PCA_Embbeder(Embedder):
             self.mean_data = np.mean(self.data_matrix, axis=0)
             self.run_PCA(num_dim, percent_variability)
 
-    # run PCA on data_matrix for PCA_Embedder
     def run_PCA(self, num_dim, percent_variability):
         """
         Perform principal component analysis on the data_matrix.
@@ -101,8 +87,6 @@ class PCA_Embbeder(Embedder):
         self.eigen_values = eigen_values
         return num_dim
 
-    # write PCA info to files
-    # TODO: save scores if desired
     def write_PCA(self, out_dir: Path, score_option="stdev", suffix="txt"):
         """
         Write PCA data to a specified directory.
@@ -142,22 +126,29 @@ class PCA_Embbeder(Embedder):
     def project_with_stdev(self, PCA_instance_stdevs):
         """
         Based on knowledge of the standard deviations of the original PCA scores, generate a PCA instance given desired
-        number of standard devations from the mean. Then run project.
+        number of standard deviations from the mean. Then run project.
 
         E.g., I want to reconstruct data that would have resulted in +2sd from the mean of mode 1, -1sd from the mean of
         mode 2.. etc.
 
         If self.stdevs exists, use that (might have been loaded from directory like that)
         Otherwise, we should have the original data. So use that
-        Otherwize, we don't have enough informatoin...
+        Otherwise, we don't have enough information...
 
         Parameters
         ----------
         PCA_instance_stdevs
         """
 
+        if self.PCA_scores is not None:
+            self.score_stdevs = np.std(self.PCA_scores, axis=0)
 
-    # projects embedded array into data
+        if self.score_stdevs is not None:
+            PCA_instance = self.score_stdevs * PCA_instance_stdevs
+            return self.project(PCA_instance)
+        else:
+            raise ValueError("PCA score standard deviations not known")
+
     def project(self, PCA_instance):
         """
         Maps a given set of scores to the data values (e.g., coordinate points) they represent, given the embedded
@@ -181,6 +172,17 @@ class PCA_Embbeder(Embedder):
         return data_instance
 
     def load_PCA(self, mean_data, eigen_values, eigen_vectors, scores=None, score_stdevs=None):
+        """
+        Load PCA model from arrays
+
+        Parameters
+        ----------
+        mean_data
+        eigen_values
+        eigen_vectors
+        scores
+        score_stdevs
+        """
         self.mean_data = mean_data
         self.eigen_values = eigen_values
         self.eigen_vectors = eigen_vectors
@@ -189,6 +191,20 @@ class PCA_Embbeder(Embedder):
 
     @classmethod
     def from_directory(cls, directory: Path):
+        """
+        Factory function to create a PCA_embedder instance by loading saved data from a specified directory.
+
+        Parameters
+        ----------
+        directory
+            Directory from which to load data
+
+        Returns
+        -------
+        embedder
+            PCA_embedder instance
+
+        """
         directory = Path(directory)
 
         mean = np.loadtxt(glob(str(directory / "mean*")))
@@ -213,9 +229,9 @@ class PCA_Embbeder(Embedder):
 
         return embedder
 
-    # returns embedded form of data_matrix
     def getEmbeddedMatrix(self):
         """
+        Get the embedded form of data_matrix
 
         Returns
         -------
