@@ -31,7 +31,6 @@ class PCA_Embbeder(Embedder):
         self.PCA_scores = None
         self.eigen_vectors = None
         self.eigen_values = None
-        self.score_stdevs = None
 
         if data_matrix is not None:
             self.data_matrix = data_matrix
@@ -87,7 +86,7 @@ class PCA_Embbeder(Embedder):
         self.eigen_values = eigen_values
         return num_dim
 
-    def write_PCA(self, out_dir: Path, score_option="stdev", suffix="txt"):
+    def write_PCA(self, out_dir: Path, score_option="full", suffix="txt"):
         """
         Write PCA data to a specified directory.
 
@@ -97,9 +96,8 @@ class PCA_Embbeder(Embedder):
             Directory in which to save PCA data
         score_option
             Option for how to save PCA scores. The full scores can be used to recreate the data used to create the
-            model, which may be privileged information, so options are provided to save only the standard deviations
-            or no information about the scores. Options are:
-                stdev: Save only standard deviations of scores
+            model, which may be privileged information, so options are provided to save no information about the scores.
+            Options are:
                 full: Save complete scores
                 Otherwise: Don't save scores
         suffix
@@ -109,10 +107,7 @@ class PCA_Embbeder(Embedder):
         if not os.path.exists(out_dir):
             os.makedirs(out_dir)
         if score_option == "full":
-            np.save(str(out_dir / f'original_PCA_scores.{suffix}'), self.PCA_scores)
-        elif score_option == "stdev":
-            stdevs = np.std(self.PCA_scores, axis=0)
-            np.save(str(out_dir / f'stdev_original_PCA_scores.{suffix}'), stdevs)
+            np.savetxt(str(out_dir / f'original_PCA_scores.{suffix}'), self.PCA_scores)
 
         mean = np.mean(self.data_matrix, axis=0)
         np.savetxt(str(out_dir / f'mean.{suffix}'), mean)
@@ -122,32 +117,6 @@ class PCA_Embbeder(Embedder):
             data = self.eigen_vectors[:, i]
             data = data.reshape(self.data_matrix.shape[1:])
             np.savetxt(nm, data)
-
-    def project_with_stdev(self, PCA_instance_stdevs):
-        """
-        Based on knowledge of the standard deviations of the original PCA scores, generate a PCA instance given desired
-        number of standard deviations from the mean. Then run project.
-
-        E.g., I want to reconstruct data that would have resulted in +2sd from the mean of mode 1, -1sd from the mean of
-        mode 2.. etc.
-
-        If self.stdevs exists, use that (might have been loaded from directory like that)
-        Otherwise, we should have the original data. So use that
-        Otherwise, we don't have enough information...
-
-        Parameters
-        ----------
-        PCA_instance_stdevs
-        """
-
-        if self.PCA_scores is not None:
-            self.score_stdevs = np.std(self.PCA_scores, axis=0)
-
-        if self.score_stdevs is not None:
-            PCA_instance = self.score_stdevs * PCA_instance_stdevs
-            return self.project(PCA_instance)
-        else:
-            raise ValueError("PCA score standard deviations not known")
 
     def project(self, PCA_instance):
         """
@@ -171,7 +140,7 @@ class PCA_Embbeder(Embedder):
         data_instance = data_instance.reshape(self.mean_data.shape)
         return data_instance
 
-    def load_PCA(self, mean_data, eigen_values, eigen_vectors, scores=None, score_stdevs=None):
+    def load_PCA(self, mean_data, eigen_values, eigen_vectors, scores=None):
         """
         Load PCA model from arrays
 
@@ -181,13 +150,11 @@ class PCA_Embbeder(Embedder):
         eigen_values
         eigen_vectors
         scores
-        score_stdevs
         """
         self.mean_data = mean_data
         self.eigen_values = eigen_values
         self.eigen_vectors = eigen_vectors
         self.PCA_scores = scores
-        self.score_stdevs = score_stdevs
 
     @classmethod
     def from_directory(cls, directory: Path):
@@ -207,25 +174,25 @@ class PCA_Embbeder(Embedder):
         """
         directory = Path(directory)
 
-        mean = np.loadtxt(glob(str(directory / "mean*")))
-        eigen_values = np.loadtxt(glob(str(directory / "eigenvalues*")))
+        mean = np.loadtxt(glob(str(directory / "mean*"))[0])
+        eigen_values = np.loadtxt(glob(str(directory / "eigenvalues*"))[0])
         eigen_vectors = []
-        for file in glob(str(directory / "pcamode*")):
-            eigen_vector = np.loadtxt(file)
-            eigen_vectors.append(eigen_vector)
 
-        eigen_vectors = np.array(eigen_vectors)
+        eigen_vector_files = glob(str(directory / "pcamode*"))
+        eigen_vector_files.sort(key=lambda f: int(str(Path(f).stem).split("pcamode")[-1]))  # Sort numerically by name
+        for file in eigen_vector_files:
+            eigen_vector = np.flip(np.loadtxt(file))
+            eigen_vectors.append(eigen_vector.reshape((-1)))
+
+        eigen_vectors = np.rot90(np.array(eigen_vectors))
 
         embedder = cls()
 
-        if scores_glob := glob(str(directory / "stdev_original_PCA_scores*")):
-            stdevs = np.loadtxt(scores_glob[0])
-            embedder.score_stdevs = stdevs
-        elif scores_glob := glob(str(directory / "original_PCA_scores*")):
+        scores = None
+        if scores_glob := glob(str(directory / "original_PCA_scores*")):
             scores = np.loadtxt(scores_glob[0])
-            embedder.PCA_scores = scores
 
-        embedder.load_PCA(mean, eigen_values, eigen_vectors)
+        embedder.load_PCA(mean, eigen_values, eigen_vectors, scores=scores)
 
         return embedder
 
