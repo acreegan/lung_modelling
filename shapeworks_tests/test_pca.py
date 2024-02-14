@@ -77,7 +77,6 @@ def test_compare_pca_methods():
     np.testing.assert_allclose(pca_loadings[:, 0], embedder.PCA_scores[:, 0])
 
 
-# Todo finish this
 def test_pca_load_and_save():
     # Prepare meshes...
     std = 0.5
@@ -118,3 +117,38 @@ def test_pca_load_and_save():
     for scores, p in zip(embedder.PCA_scores, points):
         np.testing.assert_allclose(embedder.project(scores), p)
         np.testing.assert_allclose(embedder_2.project(scores), p)
+
+
+def test_pca_percent_variability():
+    # Prepare meshes with multiple shape modes
+    std_x = 0.5
+    mean_x = 1.5
+    std_y = 0.4
+    mean_y = 1.4
+    n_samples = 40
+
+    rng = np.random.default_rng(0)
+    scales_x = rng.normal(mean_x, std_x, n_samples)
+    scales_y = rng.normal(mean_y, std_y, n_samples)
+
+    meshes = []
+    for scale_x, scale_y in zip(scales_x, scales_y):
+        mesh = pv.Sphere(theta_resolution=20, phi_resolution=20, radius=1.5, center=[0, 0, 0]).scale(
+            [scale_x, scale_y, 1],
+            inplace=False)
+        meshes.append(mesh)
+
+    points = np.array([mesh.points for mesh in meshes])
+    # Add some noise. The test fails without this
+    points = points + rng.normal(0, 0.01, points.shape)
+
+    # Create PCA embedder
+    embedder1 = PCA_Embbeder(points, percent_variability=0.5)
+    embedder2 = PCA_Embbeder(points, percent_variability=1)
+
+    assert len(embedder1.PCA_scores[0]) == 1
+    assert len(embedder2.PCA_scores[0]) == (len(meshes) - 1)
+
+    # Can project with lower number of scores with no problems
+    embedder1.project(embedder1.PCA_scores[0])
+    embedder2.project(embedder2.PCA_scores[0])
