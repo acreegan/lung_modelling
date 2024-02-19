@@ -439,7 +439,7 @@ class ParseCOPDGeneSubjectGroups(AllItemsTask):
         group_data_header = ["dir", *task_config.groups]
         group_values = []
         for dir, _, _ in dirs_list:
-            sid = dir.stem.split("_")[0]
+            sid = dir.parts[dataset_config.subject_id_folder_depth-2]  # -1 because dirs start after primary/derivative, -1 again to zero index
             subject_group_values = []
             subject_group_values.append(str(PurePosixPath(dir)))
             for group in task_config.groups:
@@ -519,7 +519,7 @@ class SelectCOPDGeneSubjectsByValue(AllItemsTask):
             match = match.loc[match[key] == value]
 
         dirpaths = [item[0] for item in dirs_list]
-        dirpaths = pd.DataFrame(data=np.array([[path.parts[0] for path in dirpaths], dirpaths]).T,
+        dirpaths = pd.DataFrame(data=np.array([[path.parts[dataset_config.subject_id_folder_depth-2] for path in dirpaths], dirpaths]).T,
                                 columns=["sid", "dirpath"])
 
         # Filter selected subjects checking that data exists and is labelled as good

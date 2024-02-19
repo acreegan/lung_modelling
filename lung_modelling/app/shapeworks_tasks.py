@@ -17,6 +17,7 @@ import medpy.io
 import pandas as pd
 from DataAugmentationUtils import Utils, Embedder
 from fnmatch import fnmatch
+import re
 
 
 class ExtractLungLobesSW(EachItemTask):
@@ -159,7 +160,7 @@ class CreateMeshesSW(EachItemTask):
                 mesh = mesh.clean()
 
                 t_faces = params.decimate_target_faces / (4 ** params.subdivide_passes)
-                target_reduction = 1 - (t_faces / mesh.n_faces)
+                target_reduction = 1 - (t_faces / mesh.n_faces_strict)
                 mesh = mesh.decimate(target_reduction=target_reduction,
                                      volume_preservation=params.volume_preservation)
 
@@ -186,7 +187,7 @@ class CreateMeshesSW(EachItemTask):
             if params.remove_shared_faces:
                 pv_mesh = sw.sw2vtkMesh(mesh) if isinstance(mesh, sw.Mesh) else mesh
                 pv_mesh = remove_shared_faces_with_merge([pv_mesh])
-                if pv_mesh.n_faces == 0:
+                if pv_mesh.n_faces_strict == 0:
                     raise ValueError("Generated mesh is empty")
             else:
                 pv_mesh = sw.sw2vtkMesh(mesh) if isinstance(mesh, sw.Mesh) else mesh
@@ -647,6 +648,8 @@ class ComputePCASW(AllItemsTask):
         project.load(shapeworks_project_file)
         subjects = project.get_subjects()
 
+        # Apply transform to points and reference mesh
+        # --------------------------------------------------------------------------------------------------------------
         # Get the local points and global transforms
         all_points = []
         subject_transforms = []
@@ -690,11 +693,13 @@ class ComputePCASW(AllItemsTask):
             ref_meshes_transformed.append(ref_mesh_transformed)
 
         # Do PCA
-        # point_embedder = PCA_Embbeder(all_points_transformed, num_dim=len(subjects)-1)
+        # --------------------------------------------------------------------------------------------------------------
         point_embedder = PCA_Embbeder(all_points_transformed, percent_variability=1)
 
+        # Generate mean mesh for saving / subsequent warping
+        # --------------------------------------------------------------------------------------------------------------
         # Project mean points
-        mean_points = point_embedder.project(np.zeros(len(subjects)-1))
+        mean_points = point_embedder.project(np.zeros(len(subjects) - 1))
 
         # Break points back into domains
         mean_points_split = np.split(mean_points, np.cumsum(domain_n_points))
@@ -708,17 +713,21 @@ class ComputePCASW(AllItemsTask):
             warped_mesh = warper.buildMesh(m_points)
             mean_meshes.append(warped_mesh)
 
-        point_embedder.write_PCA(output_directory, score_option="stdev")
+        # Get path relative to derivative from path relative to shapeworks project. Then get sids
+        mesh_dirpaths = [subject.get_groomed_filenames()[0].split(str(dataloc.rel_derivative))[-1] for subject in
+                         subjects]
+        sids = [Path(path).parts[dataset_config.subject_id_folder_depth - 1] for path in
+                mesh_dirpaths]  # -1 this time because it starts with a slash
 
+        point_embedder.write_PCA(output_directory, pca_score_ids=sids)
 
-        # Write meshes with domain name and PCA domain index
-        # In CreateMeshesSW, the convention is to place the domain name before a dash ("-"). We follow this convention
-        # to find the domain names again.
-        domain_names = [Path(f).stem.split("-")[0] for f in subjects[0].get_local_particle_filenames()]
+        # Write domain names and domain n_points. These are in the order used in the pca embedder, so we can use these
+        # to split back into domains
+        domain_names = [re.search(task_config.mesh_file_domain_name_regex, str(Path(f).stem)).group()
+                        for f in subjects[0].get_local_particle_filenames()]
 
-
-
-        pass
+        domain_df = pd.DataFrame(data=np.array([domain_names, domain_n_points]).T, columns=["domain_name", "n_points"])
+        domain_df.to_csv(output_directory / "domains.csv", index=False)
 
 
 class SubjectDataPCACorrelationSW(AllItemsTask):
@@ -740,7 +749,7 @@ class SubjectDataPCACorrelationSW(AllItemsTask):
         dataset_config
             Dataset config
         task_config
-            **source_directory**
+            **source_directory_pca**
                 source directory of the PCA model
             **results_directory**:
                 Name of the results folder (Stem of output_directory)
@@ -749,10 +758,53 @@ class SubjectDataPCACorrelationSW(AllItemsTask):
 
         """
 
-        # Load PCA from directory
-        embedder = PCA_Embbeder.from_directory(task_config.source_directory)
+        pca_directory = dataloc.abs_pooled_derivative / task_config.source_directory_pca
+        embedder = PCA_Embbeder.from_directory(pca_directory)
+        sids = pd.read_csv(glob(str(pca_directory / "original_PCA_scores*"))[0], usecols=["id"])["id"].values
+        domain_df = pd.read_csv(pca_directory / "domains.csv")
 
-        pass 
+        data_file = dataloc.abs_pooled_primary / task_config.source_directory_subject_data / task_config.subject_data_filename
+        data = pd.read_csv(data_file, sep="\t")
+
+        print("hello")
+
+        # Just whack it all in a sklearn linearRegression model
+
+        pass
+
+
+class GenerateMeshesWithSubjectDataSW(AllItemsTask):
+
+    @staticmethod
+    def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
+             task_config: DictConfig) -> list[Path]:
+        """
+        Use subject data regression model and PCA model to generate meshes based on subject data.
+
+        Parameters
+        ----------
+        dataloc
+            Dataset Locator
+        dirs_list
+            List of relative paths to the source directories
+        output_directory
+            Absolute path of the directory in which to save results of the work function
+        dataset_config
+            Dataset config
+        task_config
+            **source_directory**
+                source directory of Todo:finish this
+            **results_directory**:
+                Name of the results folder (Stem of output_directory)
+            **params**
+                None implemented
+
+        """
+
+        if task_config.source_directory_parent == "primary":
+            pca_directory = dataloc.abs_pooled_primary / task_config.source_directory
+        else:
+            pca_directory = dataloc.abs_pooled_derivative / task_config.source_directory
 
 
 all_tasks = [ExtractLungLobesSW, CreateMeshesSW, ExtractWholeLungsSW, ReferenceSelectionMeshSW, MeshTransformSW,

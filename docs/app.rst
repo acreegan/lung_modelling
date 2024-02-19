@@ -75,12 +75,13 @@ dataset must be specified in a file named dataset_config.json. An example of thi
       "pooled_derivative_directory": "pooled_derivative",
       "directory_index_glob": "directory_index*.csv",
       "data_folder_depth": 2,
+      "subject_id_folder_depth": 2,
       "lung_image_glob": "*.nii",
       "lobe_mapping": {"rul": 3, "rml": 4, "rll": 5, "lul": 1,
                         "lll": 2}
     }
 
-In the above example, the first 6 items are generic and the final 2 are dataset specific, which can
+In the above example, the first 6 items are generic and the final 3 are dataset specific, which can
 be added as necessary and accessed by the workflow tasks.
 
 **primary_directory** refers to the name of the directory holding the primary
@@ -101,6 +102,10 @@ index of the dataset if it exists.
 **data_folder_depth** is the number of folders between the top level dataset
 folder and the data files. (e.g., the dataset structure may be: primary -> subject_id -> study_phase -> imaging_mode,
 with data residing in the imaging mode folder, a depth of 4)
+
+**subject_id_folder_depth** is the number of folders between the top level dataset
+folder and a folder with a name that can be used as a unique identifier for a single
+subject
 
 **lung_image_glob** refers to a glob used to find lung image data files
 

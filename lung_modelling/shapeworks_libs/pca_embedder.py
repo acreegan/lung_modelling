@@ -1,9 +1,11 @@
 import os
 import numpy as np
+import pandas as pd
 from shapeworks.utils import sw_message
 from DataAugmentationUtils.Embedder import Embedder
 from pathlib import Path
 from glob import glob
+import fnmatch
 
 
 # instance of embedder that uses PCA for dimension reduction
@@ -75,7 +77,10 @@ class PCA_Embbeder(Embedder):
         # matrix, but the last column is not used in the model because it describes no variation.
         cumDst = np.cumsum(eigen_values) / np.sum(eigen_values)
         if num_dim == 0:
-            num_dim = np.where(cumDst >= float(percent_variability))[0][0] + 1
+            # Greater than or close. So we can specify 1 to retain all modes, but still get an answer if floating point
+            # error makes it just a bit less.
+            num_dim = np.where(np.logical_or(cumDst > float(percent_variability),
+                                             np.isclose(cumDst, float(percent_variability))))[0][0] + 1
         W = eigen_vectors[:, :num_dim]
         PCA_scores = np.matmul(centered_data_matrix_2d.T, W)
         sw_message(f"The PCA modes of particles being retained : {num_dim}")
@@ -86,7 +91,7 @@ class PCA_Embbeder(Embedder):
         self.eigen_values = eigen_values
         return num_dim
 
-    def write_PCA(self, out_dir: Path, score_option="full", suffix="txt"):
+    def write_PCA(self, out_dir: Path, score_option="full", suffix="txt", pca_score_ids=None):
         """
         Write PCA data to a specified directory.
 
@@ -107,7 +112,12 @@ class PCA_Embbeder(Embedder):
         if not os.path.exists(out_dir):
             os.makedirs(out_dir)
         if score_option == "full":
-            np.savetxt(str(out_dir / f'original_PCA_scores.{suffix}'), self.PCA_scores)
+            scores = pd.DataFrame(data=self.PCA_scores,
+                                  columns=[f"mode {i + 1}" for i in range(self.PCA_scores.shape[1])])
+            if pca_score_ids is not None:
+                scores.insert(0, "id", pca_score_ids)
+
+            scores.to_csv(out_dir / f"original_PCA_scores.{suffix}", index=False)
 
         mean = np.mean(self.data_matrix, axis=0)
         np.savetxt(str(out_dir / f'mean.{suffix}'), mean)
@@ -190,7 +200,7 @@ class PCA_Embbeder(Embedder):
 
         scores = None
         if scores_glob := glob(str(directory / "original_PCA_scores*")):
-            scores = np.loadtxt(scores_glob[0])
+            scores = pd.read_csv(scores_glob[0], usecols=lambda col: len(fnmatch.filter([col], "mode*")) > 0).values
 
         embedder.load_PCA(mean, eigen_values, eigen_vectors, scores=scores)
 

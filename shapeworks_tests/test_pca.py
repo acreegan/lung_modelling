@@ -7,8 +7,6 @@ from pathlib import Path
 from glob import glob
 from sklearn.decomposition import PCA
 
-parent_dir = Path(__file__).parent
-
 
 def test_compare_pca_methods():
     # Prepare meshes with known stdev
