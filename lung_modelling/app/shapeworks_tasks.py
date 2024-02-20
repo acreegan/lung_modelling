@@ -18,6 +18,9 @@ import pandas as pd
 from DataAugmentationUtils import Utils, Embedder
 from fnmatch import fnmatch
 import re
+from sklearn import linear_model
+import matplotlib.pyplot as plt
+from scipy.spatial import cKDTree as KDTree
 
 
 class ExtractLungLobesSW(EachItemTask):
@@ -760,18 +763,95 @@ class SubjectDataPCACorrelationSW(AllItemsTask):
 
         pca_directory = dataloc.abs_pooled_derivative / task_config.source_directory_pca
         embedder = PCA_Embbeder.from_directory(pca_directory)
-        sids = pd.read_csv(glob(str(pca_directory / "original_PCA_scores*"))[0], usecols=["id"])["id"].values
-        domain_df = pd.read_csv(pca_directory / "domains.csv")
+        scores_df = pd.read_csv(glob(str(pca_directory / "original_PCA_scores*"))[0])
+        # domain_df = pd.read_csv(pca_directory / "domains.csv")
+
+        # This should be incorporated into PCA_Embedder. i.e., we want to save all the scores, but later compute
+        # how many to use to preserve a given percent_variability. so a method for num_dim from percent_variability
+        # also maybe access cumDst so we can plot compactness
+        cumDst = np.cumsum(embedder.eigen_values) / np.sum(embedder.eigen_values)
+        num_dim = np.where(np.logical_or(cumDst > float(task_config.params.percent_variability),
+                                         np.isclose(cumDst, float(task_config.params.percent_variability))))[0][0] + 1
 
         data_file = dataloc.abs_pooled_primary / task_config.source_directory_subject_data / task_config.subject_data_filename
         data = pd.read_csv(data_file, sep="\t")
 
-        print("hello")
+        # # Just whack it all in a sklearn linearRegression model
+        # --------------------------------------------------------------------------------------------------------
+        # Get subject data at the right ids and cols
+        subject_data = data.loc[data.sid.isin(scores_df.id)].loc[data.Phase_study == task_config.study_phase][
+            task_config.subject_data_keys]
+        scores = scores_df.filter(like="mode").iloc[:, :num_dim]
 
-        # Just whack it all in a sklearn linearRegression model
+        # Drop rows where we don't have all subject data
+        # (otherwise see https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-values)
+        subject_data = subject_data.dropna()
+        scores = scores.loc[scores_df.id.isin(data.loc[subject_data.index].sid)]
+
+        reg = linear_model.LinearRegression().fit(subject_data, scores)
+        reg_score = reg.score(subject_data, scores)
+
+        # Compare
+        # ------------------------------------------------------------------------------------------------------------
+        real_points = [embedder.project(scores.iloc[i].values) for i in range(scores.shape[0])]
+        predicted_points = [embedder.project(reg.predict([subject_data.iloc[i]])[0]) for i in
+                            range(subject_data.shape[0])]
+
+        avg_errors = []
+        for r_points, p_points in zip(real_points, predicted_points):
+            errors = np.linalg.norm(r_points - p_points, axis=1)
+            avg_error = np.average(errors)
+            avg_errors.append(avg_error)
+
+        # KDTREE nearest neighbor
+        avg_dists = []
+        for r_points in real_points:
+            tree = KDTree(r_points)
+            dist, idx = tree.query(r_points[0], k=2)  # Get the second-nearest point for each (first will be itself)
+            avg_dist = np.average(dist)
+            avg_dists.append(avg_dist)
+
+        error_in_percentage_of_dist = 100 * np.array(avg_errors) / np.array(avg_dists)
+
+        # Todo:
+        #   Save regression model and performance statistics
+
+        # get params
+        reg.get_params()
+        # save
+
+        # -------------------------------------------------------------------------------------------------------------
+
+        # # Plot real vs predicted points
+        # i=1
+        # p = pv.Plotter()
+        # p.add_points(real_points[i], color="red", label=f"Real points, {scores_df.loc[scores.index[i]].id}")
+        # p.add_points(predicted_points[i], color="blue", label=f"Predicted points, {data.loc[subject_data.index[i]].sid}")
+        # p.show()
+
+        # # Plot demographics vs scores
+        # for subject_col in subject_data:
+        #     s_data = subject_data[subject_col].values
+        #     side = np.ceil(np.sqrt(scores.shape[1]))
+        #     shape = (int(side), int(side))
+        #     fig, axs = plt.subplots(*shape, figsize=(9.6, 7.2))
+        #     for i, score_col in enumerate(scores):
+        #         a, b = np.unravel_index(i, shape)
+        #         axs[a, b].scatter(s_data, scores[score_col].values, s=10)
+        #         axs[a, b].set_title(f"{subject_col} vs {score_col}", fontsize=11)
+        #         axs[a, b].set_xlabel(subject_col)
+        #         axs[a, b].set_ylabel(score_col)
+        #     fig.tight_layout()
+        #
+        # plt.show()
 
         pass
 
+
+# Todo: - Generate new correspondence points on a fixed domain (for the remaining NeverSmokers)
+#       - Evaluate error between predicted and actual for these new points that were not part of the shape or regression
+#         model
+#       - Evaluate error between predicted warped mesh and original meshes
 
 class GenerateMeshesWithSubjectDataSW(AllItemsTask):
 
