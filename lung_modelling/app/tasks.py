@@ -439,7 +439,8 @@ class ParseCOPDGeneSubjectGroups(AllItemsTask):
         group_data_header = ["dir", *task_config.groups]
         group_values = []
         for dir, _, _ in dirs_list:
-            sid = dir.parts[dataset_config.subject_id_folder_depth-2]  # -1 because dirs start after primary/derivative, -1 again to zero index
+            sid = dir.parts[
+                dataset_config.subject_id_folder_depth - 2]  # -1 because dirs start after primary/derivative, -1 again to zero index
             subject_group_values = []
             subject_group_values.append(str(PurePosixPath(dir)))
             for group in task_config.groups:
@@ -519,8 +520,9 @@ class SelectCOPDGeneSubjectsByValue(AllItemsTask):
             match = match.loc[match[key] == value]
 
         dirpaths = [item[0] for item in dirs_list]
-        dirpaths = pd.DataFrame(data=np.array([[path.parts[dataset_config.subject_id_folder_depth-2] for path in dirpaths], dirpaths]).T,
-                                columns=["sid", "dirpath"])
+        dirpaths = pd.DataFrame(
+            data=np.array([[path.parts[dataset_config.subject_id_folder_depth - 2] for path in dirpaths], dirpaths]).T,
+            columns=["sid", "dirpath"])
 
         # Filter selected subjects checking that data exists and is labelled as good
         # -------------------------------------------------------------------------------------------------------------
@@ -721,6 +723,94 @@ class InspectMeshes(AllItemsTask):
         return [Path(inspected_dirs_filename)]
 
 
+class TetrahedralizeMeshes(EachItemTask):
+
+    @staticmethod
+    def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        pass
+
+    @staticmethod
+    def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
+             dataset_config: DictConfig, task_config: DictConfig, initialize_result=None) -> list[Path]:
+        """
+        Convert surface meshes to 3D finite element meshes suitable for EIT using tetrahedralizer.
+
+        Parameters
+        ----------
+        source_directory_primary
+            Absolute path of the source directory in the primary folder of the dataset
+        source_directory_derivative
+            Absolute path of the source directory in the derivative folder of the dataset
+        output_directory
+            Absolute path of the directory in which to save results of the work function
+        dataset_config
+            Config relating to the entire dataset
+        task_config
+            **source_directory**: subdirectory within derivative source folder to find source files
+
+            **results_directory**: Name of the results folder (Stem of output_directory)
+
+            **params**: (Dict): No params currently used for this task
+
+        initialize_result
+            Return dict from the initialize function
+
+        Returns
+        -------
+
+
+        """
+
+        # For each set of input folders (e.g., From CT with lobes, From PCA estimated)
+        # Outer and inner surfaces should be specified
+        # From CT with lobes is the reference for simulation
+        # From PCA, specify a set with and without lungs (for a priori forward, and reconstruction respectively
+        # Run tetrahedralizer on them.
+
+        pass
+
+
+class EITSimulation(AllItemsTask):
+
+    @staticmethod
+    def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
+             task_config: DictConfig) -> list[Path]:
+        """
+        Run an EIT simulation in pyEIT using meshes for each subject in the dirs_list
+
+
+        Parameters
+        ----------
+        dataloc
+            Dataset locator for the dataset
+        dirs_list
+            List of relative paths to the source directories
+        output_directory
+            Absolute path of the directory in which to save results of the work function
+        dataset_config
+            Config relating to the entire dataset
+        task_config
+            **source_directory**
+                subdirectory within derivative source folder to find source files
+            **results_directory**:
+                Name of the results folder (Stem of output_directory)
+            **params**: (Dict):
+                No params currently used for this task
+
+
+        Returns
+        -------
+
+        """
+
+        # Reference meshes are with lobes straight from CT
+        # A priori meshes are from PCA / Linear regression model
+
+
+        pass
+
+# Todo maybe one more AllItemsTask to generate summary report on EIT simulation results
+
 all_tasks = [ExtractLungLobes, CreateMeshes, ExtractWholeLungs, ReferenceSelectionMesh, ExtractTorso,
-             MeshLandmarksCoarse,
-             ParseCOPDGeneSubjectGroups, SelectCOPDGeneSubjectsByValue, FormatSubjects, InspectMeshes]
+             MeshLandmarksCoarse, ParseCOPDGeneSubjectGroups, SelectCOPDGeneSubjectsByValue, FormatSubjects,
+             InspectMeshes, TetrahedralizeMeshes, EITSimulation]

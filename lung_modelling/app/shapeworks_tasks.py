@@ -21,6 +21,8 @@ import re
 from sklearn import linear_model
 import matplotlib.pyplot as plt
 from scipy.spatial import cKDTree as KDTree
+from scipy import stats
+import pickle
 
 
 class ExtractLungLobesSW(EachItemTask):
@@ -729,8 +731,79 @@ class ComputePCASW(AllItemsTask):
         domain_names = [re.search(task_config.mesh_file_domain_name_regex, str(Path(f).stem)).group()
                         for f in subjects[0].get_local_particle_filenames()]
 
+        mean_mesh_filenames = []
+        for name, mean_mesh in zip(domain_names, mean_meshes):
+            mean_mesh_filename = output_directory / f"{name}_mean.vtk"
+            sw.sw2vtkMesh(mean_mesh).save(mean_mesh_filename)
+            mean_mesh_filenames.append(mean_mesh_filename) # For returning created filenames
+
         domain_df = pd.DataFrame(data=np.array([domain_names, domain_n_points]).T, columns=["domain_name", "n_points"])
         domain_df.to_csv(output_directory / "domains.csv", index=False)
+
+
+class SubjectDataPCAIndividualCorrelationsSW(AllItemsTask):
+
+    @staticmethod
+    def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
+             task_config: DictConfig) -> list[Path]:
+        """
+        Find individual correlations and strengths between subject data and PCA components
+
+        Parameters
+        ----------
+        dataloc
+            Dataset Locator
+        dirs_list
+            List of relative paths to the source directories
+        output_directory
+            Absolute path of the directory in which to save results of the work function
+        dataset_config
+            Dataset config
+        task_config
+            **source_directory_pca**
+                source directory of the PCA model
+            **results_directory**:
+                Name of the results folder (Stem of output_directory)
+            **params**
+                None implemented
+
+        """
+
+        pca_directory = dataloc.abs_pooled_derivative / task_config.source_directory_pca
+        embedder = PCA_Embbeder.from_directory(pca_directory)
+        scores_df = pd.read_csv(glob(str(pca_directory / "original_PCA_scores*"))[0])
+
+        # This should be incorporated into PCA_Embedder. i.e., we want to save all the scores, but later compute
+        # how many to use to preserve a given percent_variability. so a method for num_dim from percent_variability
+        # also maybe access cumDst so we can plot compactness
+        # task_config.params.percent_variability = 0.7
+        cumDst = np.cumsum(embedder.eigen_values) / np.sum(embedder.eigen_values)
+        num_dim = np.where(np.logical_or(cumDst > float(task_config.params.percent_variability),
+                                         np.isclose(cumDst, float(task_config.params.percent_variability))))[0][0] + 1
+
+        data_file = dataloc.abs_pooled_primary / task_config.source_directory_subject_data / task_config.subject_data_filename
+        data = pd.read_csv(data_file, sep="\t")
+
+        # task_config.subject_data_keys = ['gender', 'age_visit', 'Height_CM', 'Weight_KG']
+        subject_data = data.loc[data.sid.isin(scores_df.id)].loc[data.Phase_study == task_config.study_phase][
+            task_config.subject_data_keys]
+        scores = scores_df.filter(like="mode").iloc[:, :num_dim]
+
+        # Drop rows where we don't have all subject data
+        # (otherwise see https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-values)
+        subject_data = subject_data.dropna()
+        scores = scores.loc[scores_df.id.isin(data.loc[subject_data.index].sid)]
+
+        p_value_df = pd.DataFrame(index=scores.columns, columns=subject_data.columns)
+        for subject_col in subject_data:
+            for mode_col in scores:
+                slope, intercept, r_value, p_value, std_err = stats.linregress(subject_data[subject_col],
+                                                                               scores[mode_col])
+                p_value_df.at[mode_col, subject_col] = p_value
+
+        significant = p_value_df < 0.05
+        extra_significant = p_value_df < 0.01
+        print("hello")
 
 
 class SubjectDataPCACorrelationSW(AllItemsTask):
@@ -760,6 +833,8 @@ class SubjectDataPCACorrelationSW(AllItemsTask):
                 None implemented
 
         """
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
 
         pca_directory = dataloc.abs_pooled_derivative / task_config.source_directory_pca
         embedder = PCA_Embbeder.from_directory(pca_directory)
@@ -769,6 +844,7 @@ class SubjectDataPCACorrelationSW(AllItemsTask):
         # This should be incorporated into PCA_Embedder. i.e., we want to save all the scores, but later compute
         # how many to use to preserve a given percent_variability. so a method for num_dim from percent_variability
         # also maybe access cumDst so we can plot compactness
+        # task_config.params.percent_variability = 0.7
         cumDst = np.cumsum(embedder.eigen_values) / np.sum(embedder.eigen_values)
         num_dim = np.where(np.logical_or(cumDst > float(task_config.params.percent_variability),
                                          np.isclose(cumDst, float(task_config.params.percent_variability))))[0][0] + 1
@@ -779,6 +855,8 @@ class SubjectDataPCACorrelationSW(AllItemsTask):
         # # Just whack it all in a sklearn linearRegression model
         # --------------------------------------------------------------------------------------------------------
         # Get subject data at the right ids and cols
+
+        # task_config.subject_data_keys = ['gender', 'age_visit', 'Height_CM', 'Weight_KG']
         subject_data = data.loc[data.sid.isin(scores_df.id)].loc[data.Phase_study == task_config.study_phase][
             task_config.subject_data_keys]
         scores = scores_df.filter(like="mode").iloc[:, :num_dim]
@@ -788,8 +866,18 @@ class SubjectDataPCACorrelationSW(AllItemsTask):
         subject_data = subject_data.dropna()
         scores = scores.loc[scores_df.id.isin(data.loc[subject_data.index].sid)]
 
-        reg = linear_model.LinearRegression().fit(subject_data, scores)
-        reg_score = reg.score(subject_data, scores)
+        # sd_model = subject_data.iloc[20:]
+        # sd_test = subject_data.iloc[:20]  # Cross validate to check for overfitting
+        # sc_model = scores.iloc[20:]
+        # sc_test = scores.iloc[:20]
+
+        sd_model = subject_data
+        sd_test = subject_data
+        sc_model = scores
+        sc_test = scores
+
+        reg = linear_model.LinearRegression().fit(sd_model, sc_model)
+        reg_score = reg.score(sd_test, sc_test)
 
         # Compare
         # ------------------------------------------------------------------------------------------------------------
@@ -813,13 +901,18 @@ class SubjectDataPCACorrelationSW(AllItemsTask):
 
         error_in_percentage_of_dist = 100 * np.array(avg_errors) / np.array(avg_dists)
 
+        # Save
         # Todo:
-        #   Save regression model and performance statistics
+        #   Save performance statistics
+        # -------------------------------------------------------------------------------------------------------------
+        output_path_linear_model = output_directory / "linear_model.pickle"
+        with open(output_path_linear_model, "wb") as f:
+            pickle.dump(reg, f)
 
-        # get params
-        reg.get_params()
-        # save
+        output_path_mean_subject_data = output_directory / "mean_subject_data.csv"
+        sd_model.mean().to_csv(output_path_mean_subject_data, index_label="cols")
 
+        # Plotting
         # -------------------------------------------------------------------------------------------------------------
 
         # # Plot real vs predicted points
@@ -831,22 +924,127 @@ class SubjectDataPCACorrelationSW(AllItemsTask):
 
         # # Plot demographics vs scores
         # for subject_col in subject_data:
-        #     s_data = subject_data[subject_col].values
+        #     s_data_model = sd_model[subject_col].values
+        #     s_data_test = sd_test[subject_col].values
         #     side = np.ceil(np.sqrt(scores.shape[1]))
         #     shape = (int(side), int(side))
-        #     fig, axs = plt.subplots(*shape, figsize=(9.6, 7.2))
+        #     fig, axs = plt.subplots(*shape, figsize=(9.6, 8))
         #     for i, score_col in enumerate(scores):
         #         a, b = np.unravel_index(i, shape)
-        #         axs[a, b].scatter(s_data, scores[score_col].values, s=10)
+        #         axs[a, b].scatter(s_data_model, sc_model[score_col].values, s=10, color="red", label="model")
+        #         axs[a, b].scatter(s_data_test, sc_test[score_col].values, s=10, color="blue", label="cross_val")
         #         axs[a, b].set_title(f"{subject_col} vs {score_col}", fontsize=11)
         #         axs[a, b].set_xlabel(subject_col)
         #         axs[a, b].set_ylabel(score_col)
+        #     fig.suptitle(f"{subject_col} vs PCA modes, \nred: used in regression model, blue: cross validation")
         #     fig.tight_layout()
         #
         # plt.show()
 
-        pass
+        return [output_path_linear_model, output_path_mean_subject_data]
 
+
+class GenerateMeshesMatchingSubjectsSW(AllItemsTask):
+
+    @staticmethod
+    def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
+             task_config: DictConfig) -> list[Path]:
+
+        """
+        Use pre built PCA and Linear Regression models to generate meshes that estimate the current subjects in dirs_list
+        using the specified subject data.
+
+        Todo: this could be an each item task with an initialize if initialize got the dirs list
+
+        Parameters
+        ----------
+        dataloc
+            Dataset Locator
+        dirs_list
+            List of relative paths to the source directories
+        output_directory
+            Absolute path of the directory in which to save results of the work function
+        dataset_config
+            Dataset config
+        task_config
+            **source_directory_pca**
+                source directory of the PCA model
+            **results_directory**:
+                Name of the results folder (Stem of output_directory)
+            **params**
+                None implemented
+
+        """
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
+
+        pca_directory = dataloc.abs_pooled_derivative / task_config.source_directory_pca
+        embedder = PCA_Embbeder.from_directory(pca_directory)
+
+        data_file = dataloc.abs_pooled_primary / task_config.source_directory_subject_data / task_config.subject_data_filename
+        data = pd.read_csv(data_file, sep="\t")
+
+        domain_df = pd.read_csv(pca_directory / "domains.csv")
+
+
+        linear_model_file = dataloc.abs_pooled_derivative / task_config.source_directory_linear_model / "linear_model.pickle"
+        with open(linear_model_file, "rb") as f:
+            linear_model = pickle.load(f)
+
+        mean_subject_data_file = dataloc.abs_pooled_derivative / task_config.source_directory_linear_model / "mean_subject_data.csv"
+        mean_subject_data = pd.read_csv(mean_subject_data_file, index_col="cols")
+
+        sids = [Path(dirpath).parts[dataset_config.subject_id_folder_depth - 2] for dirpath,_,_ in dirs_list]
+
+
+        # Get subject data
+        subject_data = data.loc[data.sid.isin(sids)].loc[data.Phase_study == task_config.study_phase][
+            task_config.subject_data_keys]
+
+        # If we don't have all the predictors for the regression model, fill them in with the means
+        missing_cols = mean_subject_data.index[~mean_subject_data.index.isin(subject_data.columns)]
+        subject_data[missing_cols] = mean_subject_data.loc[missing_cols].iloc[0]
+
+
+        predicted_scores = linear_model.predict(subject_data)
+
+        projected_points = [embedder.project(scores) for scores in predicted_scores]
+
+        # Splits into 4 for some reason???
+        all_points_split = [np.split(points, np.cumsum(domain_df.n_points)) for points in projected_points]
+        # Todo need to get the mean points by projecting zeros, then split the mean points too (to put into the warper)
+
+        mean_meshes = []
+        for domain in domain_df.domain_name:
+            mean_mesh_filename = dataloc.abs_pooled_derivative / task_config.source_directory_pca / f"{domain}_mean.vtk"
+            mean_mesh = sw.Mesh(mean_mesh_filename)
+            mean_meshes.append(mean_mesh)
+
+
+        for points_split, (dirpath,_,_) in zip(all_points_split, dirs_list):
+            for points, mean_mesh in zip(points_split, mean_meshes):
+                warper = sw.MeshWarper()
+                warper.generateWarp(mean_mesh, points)
+                warped_mesh = warper.buildMesh(points)
+
+
+
+        # Separate points into domains
+        # Warp points to meshes with mean mesh for each domain
+
+        # # Break points back into domains
+        # mean_points_split = np.split(mean_points, np.cumsum(domain_n_points))
+        # ref_points_split = np.split(all_points_transformed[ref_subject_index], np.cumsum(domain_n_points))
+        #
+        # # Do warping
+        # mean_meshes = []
+        # for ref_mesh, ref_points, m_points in zip(ref_meshes_transformed, ref_points_split, mean_points_split):
+        #     warper = sw.MeshWarper()
+        #     warper.generateWarp(ref_mesh, ref_points)
+        #     warped_mesh = warper.buildMesh(m_points)
+        #     mean_meshes.append(warped_mesh)
+
+        # Save!
 
 # Todo: - Generate new correspondence points on a fixed domain (for the remaining NeverSmokers)
 #       - Evaluate error between predicted and actual for these new points that were not part of the shape or regression
@@ -888,4 +1086,5 @@ class GenerateMeshesWithSubjectDataSW(AllItemsTask):
 
 
 all_tasks = [ExtractLungLobesSW, CreateMeshesSW, ExtractWholeLungsSW, ReferenceSelectionMeshSW, MeshTransformSW,
-             OptimizeMeshesSW, ComputePCASW, SubjectDataPCACorrelationSW]
+             OptimizeMeshesSW, ComputePCASW, SubjectDataPCACorrelationSW, SubjectDataPCAIndividualCorrelationsSW,
+             GenerateMeshesMatchingSubjectsSW]
