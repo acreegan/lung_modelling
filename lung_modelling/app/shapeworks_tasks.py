@@ -735,7 +735,7 @@ class ComputePCASW(AllItemsTask):
         for name, mean_mesh in zip(domain_names, mean_meshes):
             mean_mesh_filename = output_directory / f"{name}_mean.vtk"
             sw.sw2vtkMesh(mean_mesh).save(mean_mesh_filename)
-            mean_mesh_filenames.append(mean_mesh_filename) # For returning created filenames
+            mean_mesh_filenames.append(mean_mesh_filename)  # For returning created filenames
 
         domain_df = pd.DataFrame(data=np.array([domain_names, domain_n_points]).T, columns=["domain_name", "n_points"])
         domain_df.to_csv(output_directory / "domains.csv", index=False)
@@ -879,7 +879,7 @@ class SubjectDataPCACorrelationSW(AllItemsTask):
         reg = linear_model.LinearRegression().fit(sd_model, sc_model)
         reg_score = reg.score(sd_test, sc_test)
 
-        # Compare
+        # Compare real points vs predicted (Todo: what metric to use)
         # ------------------------------------------------------------------------------------------------------------
         real_points = [embedder.project(scores.iloc[i].values) for i in range(scores.shape[0])]
         predicted_points = [embedder.project(reg.predict([subject_data.iloc[i]])[0]) for i in
@@ -954,7 +954,7 @@ class GenerateMeshesMatchingSubjectsSW(AllItemsTask):
         Use pre built PCA and Linear Regression models to generate meshes that estimate the current subjects in dirs_list
         using the specified subject data.
 
-        Todo: this could be an each item task with an initialize if initialize got the dirs list
+        Note: this could be an each item task with an initialize if initialize got the dirs list
 
         Parameters
         ----------
@@ -978,14 +978,14 @@ class GenerateMeshesMatchingSubjectsSW(AllItemsTask):
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
 
+        # Load PCA model and linear regression mode
+        # --------------------------------------------------------------------------------------------------------------
         pca_directory = dataloc.abs_pooled_derivative / task_config.source_directory_pca
         embedder = PCA_Embbeder.from_directory(pca_directory)
+        domain_df = pd.read_csv(pca_directory / "domains.csv")
 
         data_file = dataloc.abs_pooled_primary / task_config.source_directory_subject_data / task_config.subject_data_filename
         data = pd.read_csv(data_file, sep="\t")
-
-        domain_df = pd.read_csv(pca_directory / "domains.csv")
-
 
         linear_model_file = dataloc.abs_pooled_derivative / task_config.source_directory_linear_model / "linear_model.pickle"
         with open(linear_model_file, "rb") as f:
@@ -994,10 +994,10 @@ class GenerateMeshesMatchingSubjectsSW(AllItemsTask):
         mean_subject_data_file = dataloc.abs_pooled_derivative / task_config.source_directory_linear_model / "mean_subject_data.csv"
         mean_subject_data = pd.read_csv(mean_subject_data_file, index_col="cols")
 
-        sids = [Path(dirpath).parts[dataset_config.subject_id_folder_depth - 2] for dirpath,_,_ in dirs_list]
+        sids = [Path(dirpath).parts[dataset_config.subject_id_folder_depth - 2] for dirpath, _, _ in dirs_list]
 
-
-        # Get subject data
+        # Get subject data for new subjects to predict
+        # --------------------------------------------------------------------------------------------------------------
         subject_data = data.loc[data.sid.isin(sids)].loc[data.Phase_study == task_config.study_phase][
             task_config.subject_data_keys]
 
@@ -1005,51 +1005,48 @@ class GenerateMeshesMatchingSubjectsSW(AllItemsTask):
         missing_cols = mean_subject_data.index[~mean_subject_data.index.isin(subject_data.columns)]
         subject_data[missing_cols] = mean_subject_data.loc[missing_cols].iloc[0]
 
-
+        # Generate predicted points
+        # --------------------------------------------------------------------------------------------------------------
         predicted_scores = linear_model.predict(subject_data)
-
         projected_points = [embedder.project(scores) for scores in predicted_scores]
 
-        # Splits into 4 for some reason???
+        # Generate predicted meshes
+        # --------------------------------------------------------------------------------------------------------------
+        # Split predicted points back into domains
         all_points_split = [np.split(points, np.cumsum(domain_df.n_points)) for points in projected_points]
-        # Todo need to get the mean points by projecting zeros, then split the mean points too (to put into the warper)
 
+        mean_points = embedder.project(np.zeros(len(predicted_scores[0])))
+        mean_points_split = np.split(mean_points, np.cumsum(domain_df.n_points))
+
+        # Load the mean meshes to use as the base for warping
         mean_meshes = []
         for domain in domain_df.domain_name:
             mean_mesh_filename = dataloc.abs_pooled_derivative / task_config.source_directory_pca / f"{domain}_mean.vtk"
             mean_mesh = sw.Mesh(mean_mesh_filename)
             mean_meshes.append(mean_mesh)
 
-
-        for points_split, (dirpath,_,_) in zip(all_points_split, dirs_list):
-            for points, mean_mesh in zip(points_split, mean_meshes):
+        # Warp mean meshes to predicted points for all subjects, for all domains
+        all_subject_meshes = []
+        for points_split, (dirpath, _, _) in zip(all_points_split, dirs_list):
+            domain_meshes = []
+            for points, mean_points, mean_mesh in zip(points_split, mean_points_split, mean_meshes):
                 warper = sw.MeshWarper()
-                warper.generateWarp(mean_mesh, points)
+                warper.generateWarp(mean_mesh, mean_points)
                 warped_mesh = warper.buildMesh(points)
+                domain_meshes.append(warped_mesh)
 
+            all_subject_meshes.append(domain_meshes)
 
+        # Todo: Evaluate error between predicted warped mesh and original meshes (RMS error)
 
-        # Separate points into domains
-        # Warp points to meshes with mean mesh for each domain
+        # Save predicted meshes in subject folders
+        # --------------------------------------------------------------------------------------------------------------
+        for domain_meshes, (dirpath, _, _) in zip(all_subject_meshes, dirs_list):
+            for mesh, name in zip(domain_meshes, domain_df.domain_name):
+                domain_mesh_filename = dataloc.abs_derivative / dirpath / task_config.results_directory \
+                                       / f"{name}_predicted.vtk"
+                sw.sw2vtkMesh(mesh).save(domain_mesh_filename)
 
-        # # Break points back into domains
-        # mean_points_split = np.split(mean_points, np.cumsum(domain_n_points))
-        # ref_points_split = np.split(all_points_transformed[ref_subject_index], np.cumsum(domain_n_points))
-        #
-        # # Do warping
-        # mean_meshes = []
-        # for ref_mesh, ref_points, m_points in zip(ref_meshes_transformed, ref_points_split, mean_points_split):
-        #     warper = sw.MeshWarper()
-        #     warper.generateWarp(ref_mesh, ref_points)
-        #     warped_mesh = warper.buildMesh(m_points)
-        #     mean_meshes.append(warped_mesh)
-
-        # Save!
-
-# Todo: - Generate new correspondence points on a fixed domain (for the remaining NeverSmokers)
-#       - Evaluate error between predicted and actual for these new points that were not part of the shape or regression
-#         model
-#       - Evaluate error between predicted warped mesh and original meshes
 
 class GenerateMeshesWithSubjectDataSW(AllItemsTask):
 
