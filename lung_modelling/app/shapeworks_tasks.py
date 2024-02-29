@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 from scipy.spatial import cKDTree as KDTree
 from scipy import stats
 import pickle
-
+from sklearn.feature_selection import RFECV
 
 class ExtractLungLobesSW(EachItemTask):
 
@@ -607,7 +607,7 @@ class OptimizeMeshesSW(AllItemsTask):
 
         wd = os.getcwd()
         os.chdir(output_directory)
-        optimize_cmd = ("shapeworks optimize --progress --name " + str(spreadsheet_file)).split()
+        optimize_cmd = ["shapeworks", "optimize", "--progress", "--name", str(spreadsheet_file)]
         subprocess.check_call(optimize_cmd)
         os.chdir(wd)
 
@@ -795,11 +795,13 @@ class SubjectDataPCAIndividualCorrelationsSW(AllItemsTask):
         scores = scores.loc[scores_df.id.isin(data.loc[subject_data.index].sid)]
 
         p_value_df = pd.DataFrame(index=scores.columns, columns=subject_data.columns)
+        slope_df = pd.DataFrame(index=scores.columns, columns=subject_data.columns)
         for subject_col in subject_data:
             for mode_col in scores:
                 slope, intercept, r_value, p_value, std_err = stats.linregress(subject_data[subject_col],
                                                                                scores[mode_col])
                 p_value_df.at[mode_col, subject_col] = p_value
+                slope_df.at[mode_col, subject_col] = slope
 
         significant = p_value_df < 0.05
         extra_significant = p_value_df < 0.01
@@ -859,58 +861,71 @@ class SubjectDataPCACorrelationSW(AllItemsTask):
         # task_config.subject_data_keys = ['gender', 'age_visit', 'Height_CM', 'Weight_KG']
         subject_data = data.loc[data.sid.isin(scores_df.id)].loc[data.Phase_study == task_config.study_phase][
             task_config.subject_data_keys]
-        scores = scores_df.filter(like="mode").iloc[:, :num_dim]
+        pca_scores = scores_df.filter(like="mode").iloc[:, :num_dim]
 
         # Drop rows where we don't have all subject data
         # (otherwise see https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-values)
         subject_data = subject_data.dropna()
-        scores = scores.loc[scores_df.id.isin(data.loc[subject_data.index].sid)]
+        pca_scores = pca_scores.loc[scores_df.id.isin(data.loc[subject_data.index].sid)]
 
-        # sd_model = subject_data.iloc[20:]
-        # sd_test = subject_data.iloc[:20]  # Cross validate to check for overfitting
-        # sc_model = scores.iloc[20:]
-        # sc_test = scores.iloc[:20]
+        # Create a linear model for each mode, since we may need different predictors to predict each mode
+        estimator = linear_model.LinearRegression()
+        selector = RFECV(estimator)
 
-        sd_model = subject_data
-        sd_test = subject_data
-        sc_model = scores
-        sc_test = scores
+        models = []
+        reg_scores = []
+        all_feature_names = []
+        for mode in pca_scores:
+            selector = selector.fit(subject_data, pca_scores[mode])
+            feature_names = selector.get_feature_names_out()
+            model = linear_model.LinearRegression().fit(subject_data[feature_names], pca_scores[mode])
+            models.append(model)
+            reg_scores.append(model.score(subject_data[feature_names], pca_scores[mode]))
+            all_feature_names.append(list(feature_names))
 
-        reg = linear_model.LinearRegression().fit(sd_model, sc_model)
-        reg_score = reg.score(sd_test, sc_test)
+        all_feature_names_flat = list(set(list(itertools.chain.from_iterable(all_feature_names))))
+        mode_weighting = embedder.eigen_values / np.sum(embedder.eigen_values)
+        total_weighted_score = sum(reg_scores * mode_weighting[:num_dim])
 
-        # Compare
-        # ------------------------------------------------------------------------------------------------------------
-        real_points = [embedder.project(scores.iloc[i].values) for i in range(scores.shape[0])]
-        predicted_points = [embedder.project(reg.predict([subject_data.iloc[i]])[0]) for i in
-                            range(subject_data.shape[0])]
+        print("hello")
 
-        avg_errors = []
-        for r_points, p_points in zip(real_points, predicted_points):
-            errors = np.linalg.norm(r_points - p_points, axis=1)
-            avg_error = np.average(errors)
-            avg_errors.append(avg_error)
-
-        # KDTREE nearest neighbor
-        avg_dists = []
-        for r_points in real_points:
-            tree = KDTree(r_points)
-            dist, idx = tree.query(r_points[0], k=2)  # Get the second-nearest point for each (first will be itself)
-            avg_dist = np.average(dist)
-            avg_dists.append(avg_dist)
-
-        error_in_percentage_of_dist = 100 * np.array(avg_errors) / np.array(avg_dists)
-
-        # Save
-        # Todo:
-        #   Save performance statistics
-        # -------------------------------------------------------------------------------------------------------------
-        output_path_linear_model = output_directory / "linear_model.pickle"
-        with open(output_path_linear_model, "wb") as f:
-            pickle.dump(reg, f)
+        model_files = []
+        for model, mode in zip(models, pca_scores):
+            output_path_linear_model = output_directory / f"{mode}-linear_model.pickle"
+            with open(output_path_linear_model, "wb") as f:
+                pickle.dump(model, f)
+            model_files.append(output_path_linear_model)
 
         output_path_mean_subject_data = output_directory / "mean_subject_data.csv"
-        sd_model.mean().to_csv(output_path_mean_subject_data, index_label="cols")
+        subject_data.mean().to_csv(output_path_mean_subject_data, index_label="cols")
+
+
+        # # Compare
+        # # ------------------------------------------------------------------------------------------------------------
+        # real_points = [embedder.project(scores.iloc[i].values) for i in range(scores.shape[0])]
+        # predicted_points = [embedder.project(reg.predict([subject_data.iloc[i]])[0]) for i in
+        #                     range(subject_data.shape[0])]
+        #
+        # avg_errors = []
+        # for r_points, p_points in zip(real_points, predicted_points):
+        #     errors = np.linalg.norm(r_points - p_points, axis=1)
+        #     avg_error = np.average(errors)
+        #     avg_errors.append(avg_error)
+        #
+        # # KDTREE nearest neighbor
+        # avg_dists = []
+        # for r_points in real_points:
+        #     tree = KDTree(r_points)
+        #     dist, idx = tree.query(r_points[0], k=2)  # Get the second-nearest point for each (first will be itself)
+        #     avg_dist = np.average(dist)
+        #     avg_dists.append(avg_dist)
+        #
+        # error_in_percentage_of_dist = 100 * np.array(avg_errors) / np.array(avg_dists)
+        #
+        # # Save
+        # # Todo:
+        # #   Save performance statistics
+        # # -------------------------------------------------------------------------------------------------------------
 
         # Plotting
         # -------------------------------------------------------------------------------------------------------------
