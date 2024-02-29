@@ -17,6 +17,8 @@ import pandas as pd
 import csv
 from medpy.io import load
 import fnmatch
+from tetrahedralizer.mesh_lib import preprocess_and_tetrahedralize
+import re
 
 
 class ExtractLungLobes(EachItemTask):
@@ -513,36 +515,57 @@ class SelectCOPDGeneSubjectsByValue(AllItemsTask):
         data_file = dataloc.abs_pooled_primary / task_config.source_directory / task_config.subject_data_filename
         data = pd.read_csv(data_file, sep="\t")
 
-        # Match desired values in the subject data
-        # -------------------------------------------------------------------------------------------------------------
-        match = data.copy()
-        for key, value in dict(task_config.search_values).items():
-            match = match.loc[match[key] == value]
-
         dirpaths = [item[0] for item in dirs_list]
         dirpaths = pd.DataFrame(
             data=np.array([[path.parts[dataset_config.subject_id_folder_depth - 2] for path in dirpaths], dirpaths]).T,
             columns=["sid", "dirpath"])
 
+        # Filter for desired values in the subject data
+        # -------------------------------------------------------------------------------------------------------------
+        # Filter desired study phase
+        selected = data.copy()
+        selected = selected.loc[selected["Phase_study"] == task_config.study_phase]
+
+        # Filter desired column values
+        for data_column, value in dict(task_config.search_values).items():
+            selected = selected.loc[selected[data_column] == value]
+
+        # Filter for desired existing data
+        for column in task_config.data_columns_exist:
+            selected = selected.loc[selected[column].notna()]
+
         # Filter selected subjects checking that data exists and is labelled as good
         # -------------------------------------------------------------------------------------------------------------
         # Make sure we are only using subjects that are present in the filesystem
-        match = match.loc[match.sid.isin(dirpaths.sid)]
+        selected = selected.loc[selected.sid.isin(dirpaths.sid)]
         # Only use subjects that have good CT data
-        match = match[match.CTMissing_Reason == 0]
-        match["kernel_label"] = ["STD" if i == "STANDARD" else i for i in match.kernel]
-        match = match.set_index("sid")
-        dirpaths_match = dirpaths.loc[dirpaths.sid.isin(match.index)]
-        dirpaths_match = dirpaths_match[[len(fnmatch.filter([i], f"*_{match.loc[j].kernel_label}_*")) > 0
-                                         for i, j in zip(dirpaths_match.dirpath, dirpaths_match.sid)]]
+        selected = selected[selected.CTMissing_Reason == 0]
+
+        # Select directories based on selected subjects and filter selected directories by kernel as specified in
+        # subject data (This should be the one with pre-segmented lobes and airways
+        # --------------------------------------------------------------------------------------------------------------
+        # Map kernel column of subject data to the folder naming convention in the dataset
+        selected["kernel_label"] = ["STD" if l == "STANDARD" else l for l in selected.kernel]
+        selected = selected.set_index("sid")
+        dirpaths_selected = dirpaths.loc[dirpaths.sid.isin(selected.index)]
+        dirpaths_selected = dirpaths_selected[[len(fnmatch.filter([i], f"*_{selected.loc[j].kernel_label}_*")) > 0
+                                               for i, j in zip(dirpaths_selected.dirpath, dirpaths_selected.sid)]]
+
+        # Final check that desired data is present in the file system
+        # --------------------------------------------------------------------------------------------------------------
         # All directories that match the kernel label of a subject should have Lobes.mhd file
-        dirpaths_match = dirpaths_match[[len(glob(str(Path(dataloc.abs_primary / i) / "*Lobes.mhd"))) > 0
-                                         for i in dirpaths_match.dirpath]]
+        dirpaths_selected = dirpaths_selected[[len(glob(str(Path(dataloc.abs_primary / i) / "*Lobes.mhd"))) > 0
+                                               for i in dirpaths_selected.dirpath]]
 
         # Filter selected directories using desired ventilation state
         # --------------------------------------------------------------------------------------------------------------
-        dirpaths_match = dirpaths_match[
-            [len(fnmatch.filter([i], f"*_{task_config.insp_exp}_*")) > 0 for i in dirpaths_match.dirpath]]
+        dirpaths_selected = dirpaths_selected[
+            [len(fnmatch.filter([i], f"*_{task_config.insp_exp}_*")) > 0 for i in dirpaths_selected.dirpath]]
+
+        # Remove "LD" (Low dose?) folders
+        # --------------------------------------------------------------------------------------------------------------
+        dirpaths_selected = dirpaths_selected[
+            [len(fnmatch.filter([i], f"*_LD_*")) == 0 for i in dirpaths_selected.dirpath]]
 
         # Write Results
         # ---------------------------------------------------------------------------------------------------------------
@@ -551,8 +574,8 @@ class SelectCOPDGeneSubjectsByValue(AllItemsTask):
             writer = csv.writer(ref_dir_file)
             writer.writerow(["sid", "dirpath"])
 
-            for row in range(len(dirpaths_match)):
-                writer.writerow([dirpaths_match.iloc[row].sid, PurePosixPath(dirpaths_match.iloc[row].dirpath)])
+            for row in range(len(dirpaths_selected)):
+                writer.writerow([dirpaths_selected.iloc[row].sid, PurePosixPath(dirpaths_selected.iloc[row].dirpath)])
 
         return [Path(selected_subjects_filename)]
 
@@ -763,9 +786,31 @@ class TetrahedralizeMeshes(EachItemTask):
 
         # For each set of input folders (e.g., From CT with lobes, From PCA estimated)
         # Outer and inner surfaces should be specified
-        # From CT with lobes is the reference for simulation
+        # From CT  is the reference for simulation
         # From PCA, specify a set with and without lungs (for a priori forward, and reconstruction respectively
         # Run tetrahedralizer on them.
+
+        reference_mesh_files = []
+        for directory in task_config.source_directories_reference_mesh:
+            files = glob(str(source_directory_derivative / directory / "*"))
+            reference_mesh_files.extend(files)
+
+        reference_outer_mesh_file = [f for f in reference_mesh_files if
+                                     re.search(task_config.mesh_file_domain_name_regex, str(Path(f).stem)).group()
+                                     == task_config.outer_mesh_domain_name][0]
+
+        predicted_mesh_files = glob(str(source_directory_derivative / task_config.source_directory_predicted_mesh))
+
+        predicted_outer_mesh_file = [f for f in predicted_mesh_files if
+                                     re.search(task_config.mesh_file_domain_name_regex, str(Path(f).stem)).group()
+                                     == task_config.outer_mesh_domain_name][0]
+
+        reference_meshes = [pv.read(mesh_file) for mesh_file in reference_mesh_files]
+        predicted_meshes = [pv.read(mesh_file) for mesh_file in predicted_mesh_files]
+
+
+
+        t = preprocess_and_tetrahedralize()
 
         pass
 
@@ -803,11 +848,11 @@ class EITSimulation(AllItemsTask):
 
         """
 
-        # Reference meshes are with lobes straight from CT
+        # Reference meshes are  straight from CT
         # A priori meshes are from PCA / Linear regression model
 
-
         pass
+
 
 # Todo maybe one more AllItemsTask to generate summary report on EIT simulation results
 
