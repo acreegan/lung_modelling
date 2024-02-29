@@ -501,6 +501,8 @@ class OptimizeMeshesSW(AllItemsTask):
         """
         Run the shapeworks optimize command
 
+        NOTE! Path to project file cannot have spaces
+
         Todo: This should return the files it creates (at least the shapeworks project...)
 
         Parameters
