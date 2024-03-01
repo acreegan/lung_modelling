@@ -25,6 +25,7 @@ from scipy import stats
 import pickle
 from sklearn.feature_selection import RFECV
 
+
 class ExtractLungLobesSW(EachItemTask):
 
     @staticmethod
@@ -901,7 +902,6 @@ class SubjectDataPCACorrelationSW(AllItemsTask):
         output_path_mean_subject_data = output_directory / "mean_subject_data.csv"
         subject_data.mean().to_csv(output_path_mean_subject_data, index_label="cols")
 
-
         # # Compare
         # # ------------------------------------------------------------------------------------------------------------
         # real_points = [embedder.project(scores.iloc[i].values) for i in range(scores.shape[0])]
@@ -1004,9 +1004,15 @@ class GenerateMeshesMatchingSubjectsSW(AllItemsTask):
         data_file = dataloc.abs_pooled_primary / task_config.source_directory_subject_data / task_config.subject_data_filename
         data = pd.read_csv(data_file, sep="\t")
 
-        linear_model_file = dataloc.abs_pooled_derivative / task_config.source_directory_linear_model / "linear_model.pickle"
-        with open(linear_model_file, "rb") as f:
-            linear_model = pickle.load(f)
+        linear_model_files = glob(
+            str(dataloc.abs_pooled_derivative / task_config.source_directory_linear_model / "*linear_model.pickle"))
+        linear_model_files.sort(
+            key=lambda f: int(str(Path(f).stem).split("-")[0].split("mode ")[-1]))  # Sort numerically by name
+        linear_models = []
+        for file in linear_model_files:
+            with open(file, "rb") as f:
+                linear_model = pickle.load(f)
+                linear_models.append(linear_model)
 
         mean_subject_data_file = dataloc.abs_pooled_derivative / task_config.source_directory_linear_model / "mean_subject_data.csv"
         mean_subject_data = pd.read_csv(mean_subject_data_file, index_col="cols")
@@ -1020,11 +1026,12 @@ class GenerateMeshesMatchingSubjectsSW(AllItemsTask):
 
         # If we don't have all the predictors for the regression model, fill them in with the means
         missing_cols = mean_subject_data.index[~mean_subject_data.index.isin(subject_data.columns)]
-        subject_data[missing_cols] = mean_subject_data.loc[missing_cols].iloc[0]
+        if missing_cols.size > 0:
+            subject_data[missing_cols] = mean_subject_data.loc[missing_cols].iloc[0]
 
         # Generate predicted points
         # --------------------------------------------------------------------------------------------------------------
-        predicted_scores = linear_model.predict(subject_data)
+        predicted_scores = [model.predict(subject_data[model.feature_names_in_]) for model in linear_models]
         projected_points = [embedder.project(scores) for scores in predicted_scores]
 
         # Generate predicted meshes
@@ -1039,7 +1046,7 @@ class GenerateMeshesMatchingSubjectsSW(AllItemsTask):
         mean_meshes = []
         for domain in domain_df.domain_name:
             mean_mesh_filename = dataloc.abs_pooled_derivative / task_config.source_directory_pca / f"{domain}_mean.vtk"
-            mean_mesh = sw.Mesh(mean_mesh_filename)
+            mean_mesh = sw.Mesh(str(mean_mesh_filename))
             mean_meshes.append(mean_mesh)
 
         # Warp mean meshes to predicted points for all subjects, for all domains
@@ -1054,7 +1061,94 @@ class GenerateMeshesMatchingSubjectsSW(AllItemsTask):
 
             all_subject_meshes.append(domain_meshes)
 
+        # Load reference meshes
+        # --------------------------------------------------------------------------------------------------------------
+        # TODO apply transform to these
+        all_reference_mesh_files = []
+        for dir_path, _, _ in dirs_list:
+            reference_mesh_files = []
+            for directory in task_config.source_directories_reference_mesh:
+                files = glob(str(dataloc.abs_derivative / dir_path / directory / "*"))
+                reference_mesh_files.extend(files)
+            all_reference_mesh_files.append(reference_mesh_files)
+
+        all_reference_meshes = []
+        for mesh_files in all_reference_mesh_files:
+            reference_meshes = []
+            for domain in domain_df.domain_name:
+                file = [f for f in mesh_files if fnmatch(f, f"*{domain}*")][0]
+                reference_mesh = sw.Mesh(file)
+                reference_meshes.append(reference_mesh)
+            all_reference_meshes.append(reference_meshes)
+
+        # Rigid transform reference mesh to predicted mesh!
+        # Copy so we don't destroy meshes[0] for later!
+        subject_meshes = all_subject_meshes[0]
+        combined_subject_mesh = subject_meshes[0].copy()
+        for mesh in subject_meshes[1:]:
+            combined_subject_mesh += mesh
+
+        reference_meshes = all_reference_meshes[0]
+        combined_reference_mesh = reference_meshes[0].copy()
+        for mesh in reference_meshes[1:]:
+            combined_reference_mesh += mesh
+
+        combined_transform = combined_reference_mesh.createTransform(combined_subject_mesh, sw.Mesh.AlignmentType.Rigid,
+                                                                   task_config.params.alignment_iterations)
+
+        for mesh in reference_meshes:
+            mesh.applyTransform(combined_transform)
+
+        # p = pv.Plotter()
+        # p.add_mesh(sw.sw2vtkMesh(all_reference_meshes[0][1]).extract_all_edges(), color="red")
+        # p.add_mesh(sw.sw2vtkMesh(all_subject_meshes[0][1]).extract_all_edges(), color="blue")
+        # p.add_mesh(sw.sw2vtkMesh(mean_meshes[1]).extract_all_edges(), color="green")
+        # p.show()
+
+
+        h0 = sw.sw2vtkMesh(all_reference_meshes[0][1])
+        h1 = sw.sw2vtkMesh(all_subject_meshes[0][1])
+
+        h0n = h0.compute_normals(point_normals=True, cell_normals=False, auto_orient_normals=True)
+        h0n["distances"] = np.empty(h0.n_points)
+        for i in range(h0n.n_points):
+            p = h0n.points[i]
+            vec = h0n["Normals"][i] * h0n.length  # Length is length of the diagonal of the bounding box
+            p1 = p - vec
+            p2 = p + vec
+            # Need to search forwards and backwards, each time starting at p.
+            # If we just did it in one sweep, starting at p-length, we would often hit the other side of the mesh first
+            ip, ic = h1.ray_trace(p, p1, first_point=True)
+            dist1 = np.sqrt(np.sum((ip - p) ** 2)) if len(ip) > 0 else np.nan
+            ip, ic = h1.ray_trace(p, p2, first_point=True)
+            dist2 = np.sqrt(np.sum((ip - p) ** 2)) if len(ip) > 0 else np.nan
+            dist = dist1 if (dist1 < dist2 or np.isnan(dist2)) else dist2
+
+            h0n["distances"][i] = dist
+
+        mask = h0n["distances"] == 0
+        h0n["distances"][mask] = np.nan
+        rms = np.sqrt(np.nanmean(h0n["distances"] ** 2))
+
+        # Find distance between meshes
         # Todo: Evaluate error between predicted warped mesh and original meshes (RMS error)
+        print("hello")
+        # From :https://docs.pyvista.org/version/stable/examples/01-filter/distance-between-surfaces.html
+        # Hopefully this can get positive and negative distances..
+        # What is the h0n.length?
+
+        # h0n = h0.compute_normals(point_normals=True, cell_normals=False, auto_orient_normals=True)
+        # h0n["distances"] = np.empty(h0.n_points)
+        # for i in range(h0n.n_points):
+        #     p = h0n.points[i]
+        #     vec = h0n["Normals"][i] * h0n.length
+        #     p0 = p - vec
+        #     p1 = p + vec
+        #     ip, ic = h1.ray_trace(p0, p1, first_point=True)
+        #     dist = np.sqrt(np.sum((ip - p) ** 2))
+        #     h0n["distances"][i] = dist
+
+        # Then do RMS
 
         # Save predicted meshes in subject folders
         # --------------------------------------------------------------------------------------------------------------
