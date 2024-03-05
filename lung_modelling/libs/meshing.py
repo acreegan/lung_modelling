@@ -6,7 +6,7 @@ from pyvista_tools import pyvista_faces_to_1d, pyvista_faces_to_2d
 import skimage
 from omegaconf import DictConfig
 import pymeshfix
-
+from tqdm import tqdm
 
 def extract_section(image_data, section_value):
     """
@@ -309,3 +309,47 @@ def flatten(l: list) -> list:
 
     """
     return [item for sublist in l for item in sublist]
+
+
+def mesh_rms_error(a: pv.PolyData, b: pv.PolyData, return_distance_mesh: bool = False, show_progress=False) -> float | [
+    float, pv.PolyData]:
+    """
+    Compute the rms error between two meshes using ray tracing of normals from mesh a.
+    From https://docs.pyvista.org/version/stable/examples/01-filter/distance-between-surfaces.html with a few edits
+
+    Parameters
+    ----------
+    a
+    b
+    return_distance_mesh
+    show_progress
+
+    Returns
+    -------
+
+    """
+    h0n = a.compute_normals(point_normals=True, cell_normals=False, auto_orient_normals=True)
+    h0n["distances"] = np.empty(a.n_points)
+    for i in tqdm(range(h0n.n_points), disable=not show_progress):
+        p = h0n.points[i]
+        vec = h0n["Normals"][i] * h0n.length  # Length is length of the diagonal of the bounding box
+        p1 = p - vec
+        p2 = p + vec
+        # Need to search forwards and backwards, each time starting at p.
+        # If we just did it in one sweep, starting at p-length, we would often hit the other side of the mesh first
+        ip, ic = b.ray_trace(p, p1, first_point=True)
+        dist1 = np.sqrt(np.sum((ip - p) ** 2)) if len(ip) > 0 else np.nan
+        ip, ic = b.ray_trace(p, p2, first_point=True)
+        dist2 = np.sqrt(np.sum((ip - p) ** 2)) if len(ip) > 0 else np.nan
+        dist = dist1 if (dist1 < dist2 or np.isnan(dist2)) else dist2
+
+        h0n["distances"][i] = dist
+
+    mask = h0n["distances"] == 0
+    h0n["distances"][mask] = np.nan
+    rms = np.sqrt(np.nanmean(h0n["distances"] ** 2))
+
+    if return_distance_mesh:
+        return rms, h0n
+    else:
+        return rms

@@ -5,7 +5,7 @@ from pathlib import Path, PurePosixPath
 from omegaconf import DictConfig
 import os
 from glob import glob
-from lung_modelling import extract_section, voxel_to_mesh, refine_mesh, parse_discrete
+from lung_modelling import extract_section, voxel_to_mesh, refine_mesh, parse_discrete, load_with_category
 import medpy.io
 import SimpleITK as sitk
 import numpy as np
@@ -751,6 +751,13 @@ class TetrahedralizeMeshes(EachItemTask):
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
         pass
+        # mean_mesh_dict = load_with_category(search_dirs=[dataloc.abs_pooled_derivative /
+        #                                                  task_config.source_directory_mean_mesh],
+        #                                     category_regex=task_config.mesh_file_domain_name_regex,
+        #                                     load_glob="*.vtk",
+        #                                     loader=pv.read)
+
+        # return mean_mesh_dict
 
     @staticmethod
     def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
@@ -790,29 +797,55 @@ class TetrahedralizeMeshes(EachItemTask):
         # From PCA, specify a set with and without lungs (for a priori forward, and reconstruction respectively
         # Run tetrahedralizer on them.
 
-        reference_mesh_files = []
-        for directory in task_config.source_directories_reference_mesh:
-            files = glob(str(source_directory_derivative / directory / "*"))
-            reference_mesh_files.extend(files)
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
 
-        reference_outer_mesh_file = [f for f in reference_mesh_files if
-                                     re.search(task_config.mesh_file_domain_name_regex, str(Path(f).stem)).group()
-                                     == task_config.outer_mesh_domain_name][0]
+        reference_mesh_dict = load_with_category(search_dirs=[source_directory_derivative / d for d in
+                                                              task_config.source_directories_reference_mesh],
+                                                 category_regex=task_config.mesh_file_domain_name_regex,
+                                                 load_glob="*.vtk",
+                                                 loader=pv.read)
 
-        predicted_mesh_files = glob(str(source_directory_derivative / task_config.source_directory_predicted_mesh))
+        predicted_mesh_dict = load_with_category(search_dirs=[source_directory_derivative /
+                                                              task_config.source_directory_predicted_mesh],
+                                                 category_regex=task_config.mesh_file_domain_name_regex,
+                                                 load_glob="*.vtk",
+                                                 loader=pv.read)
 
-        predicted_outer_mesh_file = [f for f in predicted_mesh_files if
-                                     re.search(task_config.mesh_file_domain_name_regex, str(Path(f).stem)).group()
-                                     == task_config.outer_mesh_domain_name][0]
+        # mean_mesh_dict = initialize_result
 
-        reference_meshes = [pv.read(mesh_file) for mesh_file in reference_mesh_files]
-        predicted_meshes = [pv.read(mesh_file) for mesh_file in predicted_mesh_files]
+        outer_mesh_label = task_config.outer_mesh_domain_name
+        inner_mesh_labels = [name for name in reference_mesh_dict.keys() if name != task_config.outer_mesh_domain_name]
+        ref_tet = preprocess_and_tetrahedralize(outer_mesh=reference_mesh_dict[task_config.outer_mesh_domain_name],
+                                                inner_meshes=[reference_mesh_dict[key] for key in inner_mesh_labels],
+                                                mesh_repair_kwargs=task_config.params.mesh_repair_kwargs,
+                                                gmsh_options=task_config.params.gmsh_options,
+                                                outer_mesh_element_label=outer_mesh_label,
+                                                inner_mesh_element_labels=inner_mesh_labels)
 
+        pred_tet = preprocess_and_tetrahedralize(outer_mesh=predicted_mesh_dict[task_config.outer_mesh_domain_name],
+                                                 inner_meshes=[predicted_mesh_dict[key] for key in inner_mesh_labels],
+                                                 mesh_repair_kwargs=task_config.params.mesh_repair_kwargs,
+                                                 gmsh_options=task_config.params.gmsh_options,
+                                                 outer_mesh_element_label=outer_mesh_label,
+                                                 inner_mesh_element_labels=inner_mesh_labels)
 
+        # mean_tet = preprocess_and_tetrahedralize(outer_mesh=mean_mesh_dict[task_config.outer_mesh_domain_name],
+        #                                          inner_meshes=[mean_mesh_dict[key] for key in inner_mesh_labels],
+        #                                          mesh_repair_kwargs=task_config.params.mesh_repair_kwargs,
+        #                                          gmsh_options=task_config.params.gmsh_options,
+        #                                          outer_mesh_element_label=outer_mesh_label,
+        #                                          inner_mesh_element_labels=inner_mesh_labels)
 
-        t = preprocess_and_tetrahedralize()
+        ref_tet_file = output_directory / "reference_meshes_tetrahedralized.vtu"
+        pred_tet_file = output_directory / "predicted_meshes_tetrahedralized.vtu"
+        # mean_tet_file = output_directory / "mean_meshes_tetrahedralized.vtu"
 
-        pass
+        ref_tet.save(ref_tet_file)
+        pred_tet.save(pred_tet_file)
+
+# Todo
+# Tetrahedralize mean separately.. as it only needs doing once
 
 
 class EITSimulation(AllItemsTask):
