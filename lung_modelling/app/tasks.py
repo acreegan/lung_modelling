@@ -19,6 +19,7 @@ from medpy.io import load
 import fnmatch
 from tetrahedralizer.mesh_lib import preprocess_and_tetrahedralize
 import re
+from matplotlib import colormaps
 
 
 class ExtractLungLobes(EachItemTask):
@@ -750,14 +751,38 @@ class TetrahedralizeMeshes(EachItemTask):
 
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
-        pass
-        # mean_mesh_dict = load_with_category(search_dirs=[dataloc.abs_pooled_derivative /
-        #                                                  task_config.source_directory_mean_mesh],
-        #                                     category_regex=task_config.mesh_file_domain_name_regex,
-        #                                     load_glob="*.vtk",
-        #                                     loader=pv.read)
 
-        # return mean_mesh_dict
+        if not os.path.exists(dataloc.abs_pooled_derivative / task_config.results_directory):
+            os.makedirs(dataloc.abs_pooled_derivative / task_config.results_directory)
+
+        mean_mesh_dict = load_with_category(search_dirs=[dataloc.abs_pooled_derivative /
+                                                         task_config.source_directory_mean_mesh],
+                                            category_regex=task_config.mesh_file_domain_name_regex,
+                                            load_glob="*.vtk",
+                                            loader=pv.read)
+
+        # TODO: We should just change the params in create meshes, not do this here
+        if "remesh" in task_config.params:
+            for k, v in mean_mesh_dict.items():
+                clus = pyacvd.Clustering(v)
+                clus.cluster(task_config.params["remesh"])
+                remesh = clus.create_mesh()
+                mean_mesh_dict[k] = remesh
+
+        outer_mesh_label = task_config.outer_mesh_domain_name
+        inner_mesh_labels = [name for name in mean_mesh_dict.keys() if name != task_config.outer_mesh_domain_name]
+
+        mean_tet = preprocess_and_tetrahedralize(outer_mesh=mean_mesh_dict[task_config.outer_mesh_domain_name],
+                                                 inner_meshes=[mean_mesh_dict[key] for key in inner_mesh_labels],
+                                                 mesh_repair_kwargs=task_config.params.mesh_repair_kwargs,
+                                                 gmsh_options=task_config.params.gmsh_options,
+                                                 outer_mesh_element_label=outer_mesh_label,
+                                                 inner_mesh_element_labels=inner_mesh_labels)
+
+        mean_tet_file = dataloc.abs_pooled_derivative / task_config.results_directory / "mean_meshes_tetrahedralized.vtu"
+        mean_tet.save(mean_tet_file)
+
+        return mean_mesh_dict
 
     @staticmethod
     def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
@@ -812,7 +837,29 @@ class TetrahedralizeMeshes(EachItemTask):
                                                  load_glob="*.vtk",
                                                  loader=pv.read)
 
-        # mean_mesh_dict = initialize_result
+        mean_mesh_dict = initialize_result
+
+        # TODO: We should just change the params in create meshes, not do this here
+        if "remesh" in task_config.params:
+            for d in [reference_mesh_dict, predicted_mesh_dict]:
+                for k, v in d.items():
+                    clus = pyacvd.Clustering(v)
+                    clus.cluster(task_config.params["remesh"])
+                    remesh = clus.create_mesh()
+                    d[k] = remesh
+
+        # cmap = colormaps["Set1"]
+        # p = pv.Plotter(shape=(1, 3))
+        # titles = ["Reference Meshes", "Predicted Meshes", "Mean Meshes"]
+        # for i, d in enumerate([reference_mesh_dict, predicted_mesh_dict, mean_mesh_dict]):
+        #     p.subplot(0, i)
+        #     for j, k in enumerate(reference_mesh_dict.keys()):
+        #         p.add_mesh(d[k].extract_all_edges(), color=cmap(j), label=k)
+        #     p.add_legend()
+        #     p.add_text(titles[i])
+        #
+        # p.link_views()
+        # p.show()
 
         outer_mesh_label = task_config.outer_mesh_domain_name
         inner_mesh_labels = [name for name in reference_mesh_dict.keys() if name != task_config.outer_mesh_domain_name]
@@ -830,61 +877,65 @@ class TetrahedralizeMeshes(EachItemTask):
                                                  outer_mesh_element_label=outer_mesh_label,
                                                  inner_mesh_element_labels=inner_mesh_labels)
 
-        # mean_tet = preprocess_and_tetrahedralize(outer_mesh=mean_mesh_dict[task_config.outer_mesh_domain_name],
-        #                                          inner_meshes=[mean_mesh_dict[key] for key in inner_mesh_labels],
-        #                                          mesh_repair_kwargs=task_config.params.mesh_repair_kwargs,
-        #                                          gmsh_options=task_config.params.gmsh_options,
-        #                                          outer_mesh_element_label=outer_mesh_label,
-        #                                          inner_mesh_element_labels=inner_mesh_labels)
-
         ref_tet_file = output_directory / "reference_meshes_tetrahedralized.vtu"
         pred_tet_file = output_directory / "predicted_meshes_tetrahedralized.vtu"
-        # mean_tet_file = output_directory / "mean_meshes_tetrahedralized.vtu"
 
         ref_tet.save(ref_tet_file)
         pred_tet.save(pred_tet_file)
+
 
 # Todo
 # Tetrahedralize mean separately.. as it only needs doing once
 
 
-class EITSimulation(AllItemsTask):
+class EITSimulation(EachItemTask):
+    @staticmethod
+    def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        mean_mesh = pv.read(glob(str(dataloc.abs_pooled_derivative / task_config.source_directory / "*mean*.vtu"))[0])
+
+        return {"mean_mesh": mean_mesh}
 
     @staticmethod
-    def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
-             task_config: DictConfig) -> list[Path]:
+    def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
+             dataset_config: DictConfig, task_config: DictConfig, initialize_result=None) -> list[Path]:
         """
-        Run an EIT simulation in pyEIT using meshes for each subject in the dirs_list
-
+        Run an EIT simulation in pyEIT for meshes in each subject directory
 
         Parameters
         ----------
-        dataloc
-            Dataset locator for the dataset
-        dirs_list
-            List of relative paths to the source directories
+        source_directory_primary
+            Absolute path of the source directory in the primary folder of the dataset
+        source_directory_derivative
+            Absolute path of the source directory in the derivative folder of the dataset
         output_directory
             Absolute path of the directory in which to save results of the work function
         dataset_config
             Config relating to the entire dataset
         task_config
-            **source_directory**
-                subdirectory within derivative source folder to find source files
-            **results_directory**:
-                Name of the results folder (Stem of output_directory)
-            **params**: (Dict):
-                No params currently used for this task
+            **source_directory**: subdirectory within derivative source folder to find source files
 
+            **results_directory**: Name of the results folder (Stem of output_directory)
+
+            **params**: (Dict): No params currently used for this task
+
+        initialize_result
+            Return dict from the initialize function
 
         Returns
         -------
 
+
         """
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
 
-        # Reference meshes are  straight from CT
-        # A priori meshes are from PCA / Linear regression model
+        pv_reference_mesh = pv.read(
+            glob(str(source_directory_derivative / task_config.source_directory / "*reference*.vtu"))[0])
+        pv_predicted_mesh = pv.read(
+            glob(str(source_directory_derivative / task_config.source_directory / "*predicted*.vtu"))[0])
 
-        pass
+        reference_mesh = Py
+
 
 
 # Todo maybe one more AllItemsTask to generate summary report on EIT simulation results

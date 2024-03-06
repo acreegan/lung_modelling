@@ -693,8 +693,8 @@ class ComputePCASW(AllItemsTask):
 
         all_points_transformed = np.array(all_points_transformed)
 
-        # Todo: undo this!!!!!
-        ref_subject_index = 73
+        if "warp_mesh_subject_id" in task_config.params:
+            ref_subject_index = task_config.params["warp_mesh_subject_id"]
 
         # Load reference meshes and apply transform
         ref_meshes_transformed = []
@@ -724,67 +724,8 @@ class ComputePCASW(AllItemsTask):
             warper = sw.MeshWarper()
             warper.generateWarp(ref_mesh, ref_points)
             warped_mesh = warper.buildMesh(m_points)
-            # (This wasn't it...) Rebuild warped mesh without control points as these will ruin the ability to create a warper out of this
-            # warped_mesh, _ = sw.sw2vtkMesh(warped_mesh).remove_points(list(range(ref_mesh.numPoints(),warped_mesh.numPoints())))
-            # warped_mesh = pv.PolyData(warped_mesh.points, sw.sw2vtkMesh(ref_mesh).faces)
-
-            # # Just make sure we are removing the right points...
-            # tree = KDTree(warped_mesh.points())
-            # _, idx = tree.query(m_points)
-            # warped_mesh, _ = sw.sw2vtkMesh(warped_mesh).remove_points(idx)
-            # warped_mesh = pv.PolyData(warped_mesh.points, sw.sw2vtkMesh(ref_mesh).faces)
             warped_mesh = sw.sw2vtkMesh(warped_mesh)
-
             mean_meshes.append(warped_mesh)
-
-        # Test the mean torso warper
-        m = mean_meshes[2].compute_normals(auto_orient_normals=True)
-        mean_mesh_torso = sw.Mesh(m.points, pyvista_faces_to_2d(m.faces))
-        mean_points_torso = mean_points_split[2]
-        warper_mean = sw.MeshWarper()
-        warper_mean.generateWarp(mean_mesh_torso, mean_points_torso)
-
-        r = sw.sw2vtkMesh(ref_meshes_transformed[2]).compute_normals(auto_orient_normals=True)
-        ref_mesh_torso = sw.Mesh(r.points, pyvista_faces_to_2d(r.faces))
-        ref_points_torso = ref_points_split[2]
-        warper_ref = sw.MeshWarper()
-        warper_ref.generateWarp(ref_mesh_torso, ref_points_torso)
-
-        t1 = np.split(all_points_transformed[0], np.cumsum(domain_n_points))[2]
-
-        t1_ref_warped = warper_ref.buildMesh(t1)
-        t1_mean_warped = warper_mean.buildMesh(t1)
-
-        p = pv.Plotter(shape=(1, 2))
-        p.add_mesh(sw.sw2vtkMesh(t1_ref_warped))
-        p.add_text("Torso 1 warped with reference mesh")
-        p.subplot(0, 1)
-        p.add_mesh(sw.sw2vtkMesh(t1_mean_warped))
-        p.add_text("Torso 1 warped with mean")
-        p.link_views()
-        p.show()
-        #
-        # p = pv.Plotter(shape=(1, 2))
-        # p.add_mesh(sw.sw2vtkMesh(ref_mesh_torso).extract_all_edges())
-        # p.add_points(ref_points_torso, color="red")
-        # p.add_text("ref mesh")
-        # p.subplot(0, 1)
-        # p.add_mesh(sw.sw2vtkMesh(mean_mesh_torso).extract_all_edges())
-        # p.add_points(mean_points_torso, color="red")
-        # p.add_text("mean mesh")
-        # p.link_views()
-        # p.show()
-        #
-        # p = pv.Plotter(shape=(1, 2))
-        # p.add_points(ref_points_torso, color="red")
-        # p.add_points(t1, color="blue")
-        # p.add_text("ref points (red) with t1 (blue)")
-        # p.subplot(0, 1)
-        # p.add_points(mean_points_torso, color="red")
-        # p.add_points(t1, color="blue")
-        # p.add_text("mean points (red) with t1 (blue)")
-        # p.link_views()
-        # p.show()
 
         # Get path relative to derivative from path relative to shapeworks project. Then get sids
         mesh_dirpaths = [subject.get_groomed_filenames()[0].split(str(dataloc.rel_derivative))[-1] for subject in
@@ -1130,21 +1071,6 @@ class GenerateMeshesMatchingSubjectsSW(AllItemsTask):
 
             all_predicted_meshes.append(domain_meshes)
 
-        # Plot to check for correspondence
-        t_mean = mean_points_split["torso"]
-        t_1 = all_points_split[0]["torso"]
-        cmap = colormaps["Set1"]
-        p = pv.Plotter(shape=(1, 2))
-        p.add_points(t_mean, scalars=list(range(len(t_mean))), cmap=cmap, render_points_as_spheres=True, point_size=10)
-        p.add_mesh(sw.sw2vtkMesh(mean_meshes["torso"]))
-        p.add_text("Mean Torso")
-        p.subplot(0, 1)
-        p.add_points(t_1, scalars=list(range(len(t_1))), cmap=cmap, render_points_as_spheres=True, point_size=10)
-        p.add_mesh(sw.sw2vtkMesh(all_predicted_meshes[0]["torso"]))
-        p.add_text("Subject1 Torso")
-        p.link_views()
-        p.show()
-
         # Save predicted meshes in subject folders
         # --------------------------------------------------------------------------------------------------------------
         for domain_meshes, (dirpath, _, _) in zip(all_predicted_meshes, dirs_list):
@@ -1214,7 +1140,7 @@ class GenerateMeshesMatchingSubjectsSW(AllItemsTask):
         for ref_aligned_to_predicted, ref_aligned_to_mean, combined_predicted_mesh, combined_mean_mesh \
                 in zip(meshes_ref_aligned_to_predicted, meshes_ref_aligned_to_mean, combined_predicted_meshes,
                        combined_mean_meshes):
-            logger.debug(f"Finding rms error for subject {i + 1} of {len(all_predicted_meshes)}")
+            logger.debug(f"Finding rms error for subject {i + 1} of {len(all_predicted_meshes)}") # Todo fix this, the i shoudl be iterated in this loop.
             # Todo should we do the domains one by one, then average the result? (How to do a weighted average of RMS?)
             err_ref_to_predicted = mesh_rms_error(sw.sw2vtkMesh(ref_aligned_to_predicted),
                                                   sw.sw2vtkMesh(combined_predicted_mesh), show_progress=True)
