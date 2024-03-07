@@ -20,7 +20,14 @@ import fnmatch
 from tetrahedralizer.mesh_lib import preprocess_and_tetrahedralize
 import re
 from matplotlib import colormaps
-
+from pyeit.mesh.wrapper import PyEITMesh
+from pyeit.mesh.external import place_electrodes_3d
+import pyeit.eit.protocol as protocol
+from pyeit.eit.jac import JAC
+from pyeit.eit.fem import EITForward
+from pyeit.visual.plot import create_3d_plot_with_slice
+from vtkmodules.util.vtkConstants import VTK_TETRA
+import datetime
 
 class ExtractLungLobes(EachItemTask):
 
@@ -767,7 +774,13 @@ class TetrahedralizeMeshes(EachItemTask):
                 clus = pyacvd.Clustering(v)
                 clus.cluster(task_config.params["remesh"])
                 remesh = clus.create_mesh()
-                mean_mesh_dict[k] = remesh
+
+                clus2 = pyacvd.Clustering(remesh)
+                clus2.subdivide(3)
+                clus2.cluster(task_config.params["remesh"])
+                remesh2 = clus2.create_mesh()
+
+                mean_mesh_dict[k] = remesh2
 
         outer_mesh_label = task_config.outer_mesh_domain_name
         inner_mesh_labels = [name for name in mean_mesh_dict.keys() if name != task_config.outer_mesh_domain_name]
@@ -846,7 +859,13 @@ class TetrahedralizeMeshes(EachItemTask):
                     clus = pyacvd.Clustering(v)
                     clus.cluster(task_config.params["remesh"])
                     remesh = clus.create_mesh()
-                    d[k] = remesh
+
+                    clus2 = pyacvd.Clustering(remesh)
+                    clus2.subdivide(3)
+                    clus2.cluster(task_config.params["remesh"])
+                    remesh2 = clus2.create_mesh()
+
+                    d[k] = remesh2
 
         # cmap = colormaps["Set1"]
         # p = pv.Plotter(shape=(1, 3))
@@ -929,13 +948,83 @@ class EITSimulation(EachItemTask):
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
 
+        lung_deflated = task_config.params.r_lung_deflated
+        lung_inflated = task_config.params.r_lung_inflated
+        surrounding_tissue = task_config.params.r_surrounding_tissue
+        n_el = task_config.params.n_electrodes
+        lung_slice_ratio = task_config.params.lung_slice_ratio
+        lamb = task_config.params["lambda"]
+
         pv_reference_mesh = pv.read(
             glob(str(source_directory_derivative / task_config.source_directory / "*reference*.vtu"))[0])
         pv_predicted_mesh = pv.read(
             glob(str(source_directory_derivative / task_config.source_directory / "*predicted*.vtu"))[0])
+        pv_mean_mesh = initialize_result["mean_mesh"]
 
-        reference_mesh = Py
+        # Simulate
+        # --------------------------------------------------------------------------------------------------------------
+        reference_mesh = PyEITMesh(node=pv_reference_mesh.points, element=pv_reference_mesh.cells_dict[VTK_TETRA])
 
+        perm_deflated = np.array([lung_deflated if label in ["left_lung", "right_lung"] else surrounding_tissue for label in pv_reference_mesh["Element Label"]])
+        perm_inflated = np.array([lung_inflated if label in ["left_lung", "right_lung"] else surrounding_tissue for label in pv_reference_mesh["Element Label"]])
+
+        # Todo actually slice by lung height, not overall height
+        electrode_nodes_reference = place_electrodes_3d(pv_reference_mesh, n_el, "z", lung_slice_ratio)
+        reference_mesh.el_pos = np.array(electrode_nodes_reference)
+
+        protocol_obj = protocol.create(
+            n_el=n_el, dist_exc=3, step_meas=1, parser_meas="std"
+        )
+        fwd = EITForward(reference_mesh, protocol_obj)
+        v0 = fwd.solve_eit(perm=perm_deflated)
+        v1 = fwd.solve_eit(perm=perm_inflated)
+
+        # Reconstruct with predicted mesh
+        # --------------------------------------------------------------------------------------------------------------
+        predicted_mesh = PyEITMesh(node=pv_predicted_mesh.points, element=pv_predicted_mesh.cells_dict[VTK_TETRA],
+                                   perm=np.array([lung_deflated if label in ["left_lung", "right_lung"] else surrounding_tissue for label in pv_predicted_mesh["Element Label"]]))
+        electrode_nodes_predicted = place_electrodes_3d(pv_predicted_mesh, n_el, "z", lung_slice_ratio)
+        predicted_mesh.el_pos = np.array(electrode_nodes_predicted)
+
+        # Recon
+        # Set up eit object
+        pyeit_obj = JAC(predicted_mesh, protocol_obj)
+        pyeit_obj.setup(p=0.5, lamb=lamb, method="kotre", perm=predicted_mesh.perm)
+
+        # # Dynamic solve simulated data
+        ds_sim = pyeit_obj.solve(v1, v0, normalize=False)
+        solution = np.real(ds_sim)
+
+        pv_predicted_mesh["Reconstructed Impedance"] = solution
+
+        # Reconstruct with mean mesh
+        # --------------------------------------------------------------------------------------------------------------
+        mean_mesh = PyEITMesh(node=pv_mean_mesh.points, element=pv_mean_mesh.cells_dict[VTK_TETRA],
+                                   perm=np.array(
+                                       [lung_deflated if label in ["left_lung", "right_lung"] else surrounding_tissue
+                                        for label in pv_mean_mesh["Element Label"]]))
+        electrode_nodes_mean = place_electrodes_3d(pv_mean_mesh, n_el, "z", lung_slice_ratio)
+        mean_mesh.el_pos = np.array(electrode_nodes_mean)
+
+        # Recon
+        # Set up eit object
+        pyeit_obj = JAC(mean_mesh, protocol_obj)
+        pyeit_obj.setup(p=0.5, lamb=lamb, method="kotre", perm=mean_mesh.perm)
+
+        # # Dynamic solve simulated data
+        ds_sim = pyeit_obj.solve(v1, v0, normalize=False)
+        solution = np.real(ds_sim)
+
+        pv_mean_mesh["Reconstructed Impedance"] = solution
+
+        # Save
+        pv_predicted_mesh_output_file = output_directory / "predicted_mesh_solved.vtu"
+        pv_predicted_mesh.save(pv_predicted_mesh_output_file)
+
+        pv_mean_mesh_output_file = output_directory / "mean_mesh_solved.vtu"
+        pv_mean_mesh.save(pv_mean_mesh_output_file)
+
+        return [pv_predicted_mesh_output_file, pv_mean_mesh_output_file]
 
 
 # Todo maybe one more AllItemsTask to generate summary report on EIT simulation results
