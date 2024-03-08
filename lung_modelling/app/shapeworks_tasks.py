@@ -161,6 +161,11 @@ class CreateMeshesSW(EachItemTask):
                 image_data = np.pad(image_data, 5)
             mesh = voxel_to_mesh(image_data, spacing=header.spacing, direction=header.direction, offset=header.offset,
                                  step_size=params.step_size)
+
+            if params.fix_first:
+                mesh = mesh.clean()
+                mesh = fix_mesh(mesh)
+
             mesh = sw.Mesh(mesh.points, pyvista_faces_to_2d(mesh.faces))
 
             if params.decimate:
