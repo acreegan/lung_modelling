@@ -5,7 +5,7 @@ from pathlib import Path, PurePosixPath
 from omegaconf import DictConfig
 import os
 from glob import glob
-from lung_modelling import extract_section, voxel_to_mesh, refine_mesh, parse_discrete
+from lung_modelling import extract_section, voxel_to_mesh, refine_mesh, parse_discrete, load_with_category
 import medpy.io
 import SimpleITK as sitk
 import numpy as np
@@ -19,7 +19,15 @@ from medpy.io import load
 import fnmatch
 from tetrahedralizer.mesh_lib import preprocess_and_tetrahedralize
 import re
-
+from matplotlib import colormaps
+from pyeit.mesh.wrapper import PyEITMesh
+from pyeit.mesh.external import place_electrodes_3d
+import pyeit.eit.protocol as protocol
+from pyeit.eit.jac import JAC
+from pyeit.eit.fem import EITForward
+from pyeit.visual.plot import create_3d_plot_with_slice
+from vtkmodules.util.vtkConstants import VTK_TETRA
+import datetime
 
 class ExtractLungLobes(EachItemTask):
 
@@ -750,7 +758,44 @@ class TetrahedralizeMeshes(EachItemTask):
 
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
-        pass
+
+        if not os.path.exists(dataloc.abs_pooled_derivative / task_config.results_directory):
+            os.makedirs(dataloc.abs_pooled_derivative / task_config.results_directory)
+
+        mean_mesh_dict = load_with_category(search_dirs=[dataloc.abs_pooled_derivative /
+                                                         task_config.source_directory_mean_mesh],
+                                            category_regex=task_config.mesh_file_domain_name_regex,
+                                            load_glob="*.vtk",
+                                            loader=pv.read)
+
+        # TODO: We should just change the params in create meshes, not do this here
+        if "remesh" in task_config.params:
+            for k, v in mean_mesh_dict.items():
+                clus = pyacvd.Clustering(v)
+                clus.cluster(task_config.params["remesh"])
+                remesh = clus.create_mesh()
+
+                clus2 = pyacvd.Clustering(remesh)
+                clus2.subdivide(3)
+                clus2.cluster(task_config.params["remesh"])
+                remesh2 = clus2.create_mesh()
+
+                mean_mesh_dict[k] = remesh2
+
+        outer_mesh_label = task_config.outer_mesh_domain_name
+        inner_mesh_labels = [name for name in mean_mesh_dict.keys() if name != task_config.outer_mesh_domain_name]
+
+        mean_tet = preprocess_and_tetrahedralize(outer_mesh=mean_mesh_dict[task_config.outer_mesh_domain_name],
+                                                 inner_meshes=[mean_mesh_dict[key] for key in inner_mesh_labels],
+                                                 mesh_repair_kwargs=task_config.params.mesh_repair_kwargs,
+                                                 gmsh_options=task_config.params.gmsh_options,
+                                                 outer_mesh_element_label=outer_mesh_label,
+                                                 inner_mesh_element_labels=inner_mesh_labels)
+
+        mean_tet_file = dataloc.abs_pooled_derivative / task_config.results_directory / "mean_meshes_tetrahedralized.vtu"
+        mean_tet.save(mean_tet_file)
+
+        return mean_mesh_dict
 
     @staticmethod
     def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
@@ -790,68 +835,196 @@ class TetrahedralizeMeshes(EachItemTask):
         # From PCA, specify a set with and without lungs (for a priori forward, and reconstruction respectively
         # Run tetrahedralizer on them.
 
-        reference_mesh_files = []
-        for directory in task_config.source_directories_reference_mesh:
-            files = glob(str(source_directory_derivative / directory / "*"))
-            reference_mesh_files.extend(files)
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
 
-        reference_outer_mesh_file = [f for f in reference_mesh_files if
-                                     re.search(task_config.mesh_file_domain_name_regex, str(Path(f).stem)).group()
-                                     == task_config.outer_mesh_domain_name][0]
+        reference_mesh_dict = load_with_category(search_dirs=[source_directory_derivative / d for d in
+                                                              task_config.source_directories_reference_mesh],
+                                                 category_regex=task_config.mesh_file_domain_name_regex,
+                                                 load_glob="*.vtk",
+                                                 loader=pv.read)
 
-        predicted_mesh_files = glob(str(source_directory_derivative / task_config.source_directory_predicted_mesh))
+        predicted_mesh_dict = load_with_category(search_dirs=[source_directory_derivative /
+                                                              task_config.source_directory_predicted_mesh],
+                                                 category_regex=task_config.mesh_file_domain_name_regex,
+                                                 load_glob="*.vtk",
+                                                 loader=pv.read)
 
-        predicted_outer_mesh_file = [f for f in predicted_mesh_files if
-                                     re.search(task_config.mesh_file_domain_name_regex, str(Path(f).stem)).group()
-                                     == task_config.outer_mesh_domain_name][0]
+        mean_mesh_dict = initialize_result
 
-        reference_meshes = [pv.read(mesh_file) for mesh_file in reference_mesh_files]
-        predicted_meshes = [pv.read(mesh_file) for mesh_file in predicted_mesh_files]
+        # TODO: We should just change the params in create meshes, not do this here
+        if "remesh" in task_config.params:
+            for d in [reference_mesh_dict, predicted_mesh_dict]:
+                for k, v in d.items():
+                    clus = pyacvd.Clustering(v)
+                    clus.cluster(task_config.params["remesh"])
+                    remesh = clus.create_mesh()
+
+                    clus2 = pyacvd.Clustering(remesh)
+                    clus2.subdivide(3)
+                    clus2.cluster(task_config.params["remesh"])
+                    remesh2 = clus2.create_mesh()
+
+                    d[k] = remesh2
+
+        # cmap = colormaps["Set1"]
+        # p = pv.Plotter(shape=(1, 3))
+        # titles = ["Reference Meshes", "Predicted Meshes", "Mean Meshes"]
+        # for i, d in enumerate([reference_mesh_dict, predicted_mesh_dict, mean_mesh_dict]):
+        #     p.subplot(0, i)
+        #     for j, k in enumerate(reference_mesh_dict.keys()):
+        #         p.add_mesh(d[k].extract_all_edges(), color=cmap(j), label=k)
+        #     p.add_legend()
+        #     p.add_text(titles[i])
+        #
+        # p.link_views()
+        # p.show()
+
+        outer_mesh_label = task_config.outer_mesh_domain_name
+        inner_mesh_labels = [name for name in reference_mesh_dict.keys() if name != task_config.outer_mesh_domain_name]
+        ref_tet = preprocess_and_tetrahedralize(outer_mesh=reference_mesh_dict[task_config.outer_mesh_domain_name],
+                                                inner_meshes=[reference_mesh_dict[key] for key in inner_mesh_labels],
+                                                mesh_repair_kwargs=task_config.params.mesh_repair_kwargs,
+                                                gmsh_options=task_config.params.gmsh_options,
+                                                outer_mesh_element_label=outer_mesh_label,
+                                                inner_mesh_element_labels=inner_mesh_labels)
+
+        pred_tet = preprocess_and_tetrahedralize(outer_mesh=predicted_mesh_dict[task_config.outer_mesh_domain_name],
+                                                 inner_meshes=[predicted_mesh_dict[key] for key in inner_mesh_labels],
+                                                 mesh_repair_kwargs=task_config.params.mesh_repair_kwargs,
+                                                 gmsh_options=task_config.params.gmsh_options,
+                                                 outer_mesh_element_label=outer_mesh_label,
+                                                 inner_mesh_element_labels=inner_mesh_labels)
+
+        ref_tet_file = output_directory / "reference_meshes_tetrahedralized.vtu"
+        pred_tet_file = output_directory / "predicted_meshes_tetrahedralized.vtu"
+
+        ref_tet.save(ref_tet_file)
+        pred_tet.save(pred_tet_file)
 
 
-
-        t = preprocess_and_tetrahedralize()
-
-        pass
+# Todo
+# Tetrahedralize mean separately.. as it only needs doing once
 
 
-class EITSimulation(AllItemsTask):
+class EITSimulation(EachItemTask):
+    @staticmethod
+    def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        mean_mesh = pv.read(glob(str(dataloc.abs_pooled_derivative / task_config.source_directory / "*mean*.vtu"))[0])
+
+        return {"mean_mesh": mean_mesh}
 
     @staticmethod
-    def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
-             task_config: DictConfig) -> list[Path]:
+    def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
+             dataset_config: DictConfig, task_config: DictConfig, initialize_result=None) -> list[Path]:
         """
-        Run an EIT simulation in pyEIT using meshes for each subject in the dirs_list
-
+        Run an EIT simulation in pyEIT for meshes in each subject directory
 
         Parameters
         ----------
-        dataloc
-            Dataset locator for the dataset
-        dirs_list
-            List of relative paths to the source directories
+        source_directory_primary
+            Absolute path of the source directory in the primary folder of the dataset
+        source_directory_derivative
+            Absolute path of the source directory in the derivative folder of the dataset
         output_directory
             Absolute path of the directory in which to save results of the work function
         dataset_config
             Config relating to the entire dataset
         task_config
-            **source_directory**
-                subdirectory within derivative source folder to find source files
-            **results_directory**:
-                Name of the results folder (Stem of output_directory)
-            **params**: (Dict):
-                No params currently used for this task
+            **source_directory**: subdirectory within derivative source folder to find source files
 
+            **results_directory**: Name of the results folder (Stem of output_directory)
+
+            **params**: (Dict): No params currently used for this task
+
+        initialize_result
+            Return dict from the initialize function
 
         Returns
         -------
 
+
         """
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
 
-        # Reference meshes are  straight from CT
-        # A priori meshes are from PCA / Linear regression model
+        lung_deflated = task_config.params.r_lung_deflated
+        lung_inflated = task_config.params.r_lung_inflated
+        surrounding_tissue = task_config.params.r_surrounding_tissue
+        n_el = task_config.params.n_electrodes
+        lung_slice_ratio = task_config.params.lung_slice_ratio
+        lamb = task_config.params["lambda"]
 
-        pass
+        pv_reference_mesh = pv.read(
+            glob(str(source_directory_derivative / task_config.source_directory / "*reference*.vtu"))[0])
+        pv_predicted_mesh = pv.read(
+            glob(str(source_directory_derivative / task_config.source_directory / "*predicted*.vtu"))[0])
+        pv_mean_mesh = initialize_result["mean_mesh"]
+
+        # Simulate
+        # --------------------------------------------------------------------------------------------------------------
+        reference_mesh = PyEITMesh(node=pv_reference_mesh.points, element=pv_reference_mesh.cells_dict[VTK_TETRA])
+
+        perm_deflated = np.array([lung_deflated if label in ["left_lung", "right_lung"] else surrounding_tissue for label in pv_reference_mesh["Element Label"]])
+        perm_inflated = np.array([lung_inflated if label in ["left_lung", "right_lung"] else surrounding_tissue for label in pv_reference_mesh["Element Label"]])
+
+        # Todo actually slice by lung height, not overall height
+        electrode_nodes_reference = place_electrodes_3d(pv_reference_mesh, n_el, "z", lung_slice_ratio)
+        reference_mesh.el_pos = np.array(electrode_nodes_reference)
+
+        protocol_obj = protocol.create(
+            n_el=n_el, dist_exc=3, step_meas=1, parser_meas="std"
+        )
+        fwd = EITForward(reference_mesh, protocol_obj)
+        v0 = fwd.solve_eit(perm=perm_deflated)
+        v1 = fwd.solve_eit(perm=perm_inflated)
+
+        # Reconstruct with predicted mesh
+        # --------------------------------------------------------------------------------------------------------------
+        predicted_mesh = PyEITMesh(node=pv_predicted_mesh.points, element=pv_predicted_mesh.cells_dict[VTK_TETRA],
+                                   perm=np.array([lung_deflated if label in ["left_lung", "right_lung"] else surrounding_tissue for label in pv_predicted_mesh["Element Label"]]))
+        electrode_nodes_predicted = place_electrodes_3d(pv_predicted_mesh, n_el, "z", lung_slice_ratio)
+        predicted_mesh.el_pos = np.array(electrode_nodes_predicted)
+
+        # Recon
+        # Set up eit object
+        pyeit_obj = JAC(predicted_mesh, protocol_obj)
+        pyeit_obj.setup(p=0.5, lamb=lamb, method="kotre", perm=predicted_mesh.perm)
+
+        # # Dynamic solve simulated data
+        ds_sim = pyeit_obj.solve(v1, v0, normalize=False)
+        solution = np.real(ds_sim)
+
+        pv_predicted_mesh["Reconstructed Impedance"] = solution
+
+        # Reconstruct with mean mesh
+        # --------------------------------------------------------------------------------------------------------------
+        mean_mesh = PyEITMesh(node=pv_mean_mesh.points, element=pv_mean_mesh.cells_dict[VTK_TETRA],
+                                   perm=np.array(
+                                       [lung_deflated if label in ["left_lung", "right_lung"] else surrounding_tissue
+                                        for label in pv_mean_mesh["Element Label"]]))
+        electrode_nodes_mean = place_electrodes_3d(pv_mean_mesh, n_el, "z", lung_slice_ratio)
+        mean_mesh.el_pos = np.array(electrode_nodes_mean)
+
+        # Recon
+        # Set up eit object
+        pyeit_obj = JAC(mean_mesh, protocol_obj)
+        pyeit_obj.setup(p=0.5, lamb=lamb, method="kotre", perm=mean_mesh.perm)
+
+        # # Dynamic solve simulated data
+        ds_sim = pyeit_obj.solve(v1, v0, normalize=False)
+        solution = np.real(ds_sim)
+
+        pv_mean_mesh["Reconstructed Impedance"] = solution
+
+        # Save
+        pv_predicted_mesh_output_file = output_directory / "predicted_mesh_solved.vtu"
+        pv_predicted_mesh.save(pv_predicted_mesh_output_file)
+
+        pv_mean_mesh_output_file = output_directory / "mean_mesh_solved.vtu"
+        pv_mean_mesh.save(pv_mean_mesh_output_file)
+
+        return [pv_predicted_mesh_output_file, pv_mean_mesh_output_file]
 
 
 # Todo maybe one more AllItemsTask to generate summary report on EIT simulation results

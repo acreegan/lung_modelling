@@ -11,7 +11,7 @@ import numpy as np
 import subprocess
 from pyvista_tools import pyvista_faces_to_2d, remove_shared_faces_with_merge
 import csv
-from lung_modelling import find_connected_faces, flatten, voxel_to_mesh, fix_mesh
+from lung_modelling import find_connected_faces, flatten, voxel_to_mesh, fix_mesh, mesh_rms_error, load_with_category
 from lung_modelling.shapeworks_libs import PCA_Embbeder
 import medpy.io
 import pandas as pd
@@ -24,6 +24,9 @@ from scipy.spatial import cKDTree as KDTree
 from scipy import stats
 import pickle
 from sklearn.feature_selection import RFECV
+from loguru import logger
+from matplotlib import colormaps
+
 
 class ExtractLungLobesSW(EachItemTask):
 
@@ -158,6 +161,11 @@ class CreateMeshesSW(EachItemTask):
                 image_data = np.pad(image_data, 5)
             mesh = voxel_to_mesh(image_data, spacing=header.spacing, direction=header.direction, offset=header.offset,
                                  step_size=params.step_size)
+
+            if params.fix_first:
+                mesh = mesh.clean()
+                mesh = fix_mesh(mesh)
+
             mesh = sw.Mesh(mesh.points, pyvista_faces_to_2d(mesh.faces))
 
             if params.decimate:
@@ -351,11 +359,11 @@ class ReferenceSelectionMeshSW(AllItemsTask):
                 domain_reference_name = str(
                     Path(np.array(all_mesh_files).ravel()[ref_index * domains_per_shape + i]).stem).split("-")[0]
 
-                domain_reference_filename = output_directory / f"{domain_reference_name}_reference_mesh.vtk"
+                domain_reference_filename = output_directory / f"{domain_reference_name}-reference_mesh.vtk"
                 domain_reference_mesh.write(str(domain_reference_filename))
                 domain_reference_filenames.append(domain_reference_filename)
 
-        ref_mesh_combined_filename = output_directory / f"combined_reference_mesh.vtk"
+        ref_mesh_combined_filename = output_directory / f"combined-reference_mesh.vtk"
         ref_mesh_combined.write(str(ref_mesh_combined_filename))
 
         ref_dir_filename = output_directory / "ref_dir.txt"
@@ -453,8 +461,8 @@ class MeshTransformSW(EachItemTask):
         for mesh in meshes[1:]:
             combined_mesh += mesh
 
-        combined_reference_mesh = sw.Mesh(initialize_result["reference_meshes"]["combined_reference_mesh"]["points"],
-                                          initialize_result["reference_meshes"]["combined_reference_mesh"]["faces"])
+        combined_reference_mesh = sw.Mesh(initialize_result["reference_meshes"]["combined-reference_mesh"]["points"],
+                                          initialize_result["reference_meshes"]["combined-reference_mesh"]["faces"])
         combined_transform = combined_mesh.createTransform(combined_reference_mesh, sw.Mesh.AlignmentType.Rigid,
                                                            task_config.params.iterations)
 
@@ -474,9 +482,9 @@ class MeshTransformSW(EachItemTask):
         if len(meshes) > 1:
             for mesh, file in zip(meshes, mesh_files):
                 domain_reference_mesh = sw.Mesh(
-                    initialize_result["reference_meshes"][f"{str(Path(file).stem).split('-')[0]}_reference_mesh"][
+                    initialize_result["reference_meshes"][f"{str(Path(file).stem).split('-')[0]}-reference_mesh"][
                         "points"],
-                    initialize_result["reference_meshes"][f"{str(Path(file).stem).split('-')[0]}_reference_mesh"][
+                    initialize_result["reference_meshes"][f"{str(Path(file).stem).split('-')[0]}-reference_mesh"][
                         "faces"])
                 domain_transform = mesh.createTransform(domain_reference_mesh, sw.Mesh.AlignmentType.Rigid,
                                                         task_config.params.iterations)
@@ -690,6 +698,9 @@ class ComputePCASW(AllItemsTask):
 
         all_points_transformed = np.array(all_points_transformed)
 
+        if "warp_mesh_subject_id" in task_config.params:
+            ref_subject_index = task_config.params["warp_mesh_subject_id"]
+
         # Load reference meshes and apply transform
         ref_meshes_transformed = []
         for relative_filename in subjects[ref_subject_index].get_groomed_filenames():
@@ -718,6 +729,7 @@ class ComputePCASW(AllItemsTask):
             warper = sw.MeshWarper()
             warper.generateWarp(ref_mesh, ref_points)
             warped_mesh = warper.buildMesh(m_points)
+            warped_mesh = sw.sw2vtkMesh(warped_mesh)
             mean_meshes.append(warped_mesh)
 
         # Get path relative to derivative from path relative to shapeworks project. Then get sids
@@ -735,8 +747,8 @@ class ComputePCASW(AllItemsTask):
 
         mean_mesh_filenames = []
         for name, mean_mesh in zip(domain_names, mean_meshes):
-            mean_mesh_filename = output_directory / f"{name}_mean.vtk"
-            sw.sw2vtkMesh(mean_mesh).save(mean_mesh_filename)
+            mean_mesh_filename = output_directory / f"{name}-mean.vtk"
+            mean_mesh.save(str(mean_mesh_filename))
             mean_mesh_filenames.append(mean_mesh_filename)  # For returning created filenames
 
         domain_df = pd.DataFrame(data=np.array([domain_names, domain_n_points]).T, columns=["domain_name", "n_points"])
@@ -904,7 +916,6 @@ class SubjectDataPCACorrelationSW(AllItemsTask):
         output_path_mean_subject_data = output_directory / "mean_subject_data.csv"
         subject_data.mean().to_csv(output_path_mean_subject_data, index_label="cols")
 
-
         # # Compare
         # # ------------------------------------------------------------------------------------------------------------
         # real_points = [embedder.project(scores.iloc[i].values) for i in range(scores.shape[0])]
@@ -1005,11 +1016,18 @@ class GenerateMeshesMatchingSubjectsSW(AllItemsTask):
         domain_df = pd.read_csv(pca_directory / "domains.csv")
 
         data_file = dataloc.abs_pooled_primary / task_config.source_directory_subject_data / task_config.subject_data_filename
-        data = pd.read_csv(data_file, sep="\t")
+        data = pd.read_csv(data_file, sep="\t", low_memory=False)
 
-        linear_model_file = dataloc.abs_pooled_derivative / task_config.source_directory_linear_model / "linear_model.pickle"
-        with open(linear_model_file, "rb") as f:
-            linear_model = pickle.load(f)
+        def load_pickle(file):
+            with open(file, "rb") as f:
+                return pickle.load(f)
+
+        linear_models = load_with_category(
+            search_dirs=[dataloc.abs_pooled_derivative / task_config.source_directory_linear_model],
+            category_regex=task_config.mesh_file_domain_name_regex,
+            load_glob="*.pickle",
+            loader=load_pickle)
+        linear_models = dict(sorted(linear_models.items(), key=lambda item: int(item[0].split()[-1])))
 
         mean_subject_data_file = dataloc.abs_pooled_derivative / task_config.source_directory_linear_model / "mean_subject_data.csv"
         mean_subject_data = pd.read_csv(mean_subject_data_file, index_col="cols")
@@ -1023,49 +1041,131 @@ class GenerateMeshesMatchingSubjectsSW(AllItemsTask):
 
         # If we don't have all the predictors for the regression model, fill them in with the means
         missing_cols = mean_subject_data.index[~mean_subject_data.index.isin(subject_data.columns)]
-        subject_data[missing_cols] = mean_subject_data.loc[missing_cols].iloc[0]
+        if missing_cols.size > 0:
+            subject_data[missing_cols] = mean_subject_data.loc[missing_cols].iloc[0]
 
         # Generate predicted points
         # --------------------------------------------------------------------------------------------------------------
-        predicted_scores = linear_model.predict(subject_data)
-        projected_points = [embedder.project(scores) for scores in predicted_scores]
+        all_predicted_scores = [model.predict(subject_data[model.feature_names_in_]) for model in
+                                linear_models.values()]
+        all_projected_points = [embedder.project(scores) for scores in np.array(all_predicted_scores).T]
 
         # Generate predicted meshes
         # --------------------------------------------------------------------------------------------------------------
         # Split predicted points back into domains
-        all_points_split = [np.split(points, np.cumsum(domain_df.n_points)) for points in projected_points]
+        all_points_split = []
+        for projected_points in all_projected_points:
+            points_split = dict(zip(domain_df.domain_name, np.split(projected_points, np.cumsum(domain_df.n_points))))
+            all_points_split.append(points_split)
 
-        mean_points = embedder.project(np.zeros(len(predicted_scores[0])))
-        mean_points_split = np.split(mean_points, np.cumsum(domain_df.n_points))
+        mean_points = embedder.project(np.zeros(len(all_predicted_scores[0])))
+        mean_points_split = dict(zip(domain_df.domain_name, np.split(mean_points, np.cumsum(domain_df.n_points))))
 
         # Load the mean meshes to use as the base for warping
-        mean_meshes = []
-        for domain in domain_df.domain_name:
-            mean_mesh_filename = dataloc.abs_pooled_derivative / task_config.source_directory_pca / f"{domain}_mean.vtk"
-            mean_mesh = sw.Mesh(mean_mesh_filename)
-            mean_meshes.append(mean_mesh)
+        mean_meshes = load_with_category(search_dirs=[dataloc.abs_pooled_derivative / task_config.source_directory_pca],
+                                         category_regex=task_config.mesh_file_domain_name_regex,
+                                         load_glob="*.vtk",
+                                         loader=sw.Mesh)
 
         # Warp mean meshes to predicted points for all subjects, for all domains
-        all_subject_meshes = []
+        all_predicted_meshes = []
         for points_split, (dirpath, _, _) in zip(all_points_split, dirs_list):
-            domain_meshes = []
-            for points, mean_points, mean_mesh in zip(points_split, mean_points_split, mean_meshes):
+            domain_meshes = {}
+            for domain in points_split.keys():
                 warper = sw.MeshWarper()
-                warper.generateWarp(mean_mesh, mean_points)
-                warped_mesh = warper.buildMesh(points)
-                domain_meshes.append(warped_mesh)
+                warper.generateWarp(mean_meshes[domain], mean_points_split[domain])
+                warped_mesh = warper.buildMesh(points_split[domain])
+                domain_meshes[domain] = warped_mesh
 
-            all_subject_meshes.append(domain_meshes)
-
-        # Todo: Evaluate error between predicted warped mesh and original meshes (RMS error)
+            all_predicted_meshes.append(domain_meshes)
 
         # Save predicted meshes in subject folders
         # --------------------------------------------------------------------------------------------------------------
-        for domain_meshes, (dirpath, _, _) in zip(all_subject_meshes, dirs_list):
-            for mesh, name in zip(domain_meshes, domain_df.domain_name):
+        for domain_meshes, (dirpath, _, _) in zip(all_predicted_meshes, dirs_list):
+            if not os.path.exists(dataloc.abs_derivative / dirpath / task_config.results_directory):
+                os.makedirs(dataloc.abs_derivative / dirpath / task_config.results_directory)
+
+            for name, mesh in domain_meshes.items():
                 domain_mesh_filename = dataloc.abs_derivative / dirpath / task_config.results_directory \
-                                       / f"{name}_predicted.vtk"
+                                       / f"{name}-predicted.vtk"
                 sw.sw2vtkMesh(mesh).save(domain_mesh_filename)
+
+        # Load reference meshes
+        # --------------------------------------------------------------------------------------------------------------
+        all_reference_meshes = []
+        for dir_path, _, _ in dirs_list:
+            reference_meshes = load_with_category(search_dirs=[dataloc.abs_derivative / dir_path / d for d in
+                                                               task_config.source_directories_reference_mesh],
+                                                  category_regex=task_config.mesh_file_domain_name_regex,
+                                                  load_glob="*.vtk",
+                                                  loader=sw.Mesh)
+            all_reference_meshes.append(reference_meshes)
+
+        # Compute RMS error for predicted to reference and mean to reference
+        # --------------------------------------------------------------------------------------------------------------
+        meshes_ref_aligned_to_predicted = []
+        meshes_ref_aligned_to_mean = []
+        combined_predicted_meshes = []
+        combined_mean_meshes = []
+        # Combine all sets of meshes..
+        for i, (predicted_meshes, reference_meshes) in enumerate(zip(all_predicted_meshes, all_reference_meshes)):
+            # Copy so we don't destroy meshes[0] for later!
+            combined_predicted_mesh = list(predicted_meshes.values())[0].copy()
+            for mesh in list(predicted_meshes.values())[1:]:
+                combined_predicted_mesh += mesh
+
+            combined_reference_mesh = list(reference_meshes.values())[0].copy()
+            for mesh in list(reference_meshes.values())[1:]:
+                combined_reference_mesh += mesh
+
+            combined_mean_mesh = list(mean_meshes.values())[0].copy()
+            for mesh in list(mean_meshes.values())[1:]:
+                combined_mean_mesh += mesh
+
+            # Find rigid transform for reference to predicted
+            ref_to_predicted = combined_reference_mesh.createTransform(combined_predicted_mesh,
+                                                                       sw.Mesh.AlignmentType.Rigid,
+                                                                       task_config.params.alignment_iterations)
+
+            # Find rigid transform for reference to mean
+            ref_to_mean = combined_reference_mesh.createTransform(combined_mean_mesh, sw.Mesh.AlignmentType.Rigid,
+                                                                  task_config.params.alignment_iterations)
+
+            ref_aligned_to_predicted = combined_reference_mesh.copy()
+            ref_aligned_to_predicted = ref_aligned_to_predicted.applyTransform(ref_to_predicted)
+
+            ref_aligned_to_mean = combined_reference_mesh.copy()
+            ref_aligned_to_mean = ref_aligned_to_mean.applyTransform(ref_to_mean)
+
+            meshes_ref_aligned_to_predicted.append(ref_aligned_to_predicted)
+            meshes_ref_aligned_to_mean.append(ref_aligned_to_mean)
+            combined_predicted_meshes.append(combined_predicted_mesh)
+            combined_mean_meshes.append(combined_mean_mesh)
+
+        errors_ref_to_predicted = []
+        errors_ref_to_mean = []
+        # Compute RMS error
+        for ref_aligned_to_predicted, ref_aligned_to_mean, combined_predicted_mesh, combined_mean_mesh \
+                in zip(meshes_ref_aligned_to_predicted, meshes_ref_aligned_to_mean, combined_predicted_meshes,
+                       combined_mean_meshes):
+            logger.debug(f"Finding rms error for subject {i + 1} of {len(all_predicted_meshes)}") # Todo fix this, the i shoudl be iterated in this loop.
+            # Todo should we do the domains one by one, then average the result? (How to do a weighted average of RMS?)
+            err_ref_to_predicted = mesh_rms_error(sw.sw2vtkMesh(ref_aligned_to_predicted),
+                                                  sw.sw2vtkMesh(combined_predicted_mesh), show_progress=True)
+
+            err_ref_to_mean = mesh_rms_error(sw.sw2vtkMesh(ref_aligned_to_mean),
+                                             sw.sw2vtkMesh(combined_mean_mesh), show_progress=True)
+
+            errors_ref_to_predicted.append(err_ref_to_predicted)
+            errors_ref_to_mean.append(err_ref_to_mean)
+
+        # Save rms error results
+        # --------------------------------------------------------------------------------------------------------------
+        error_output_file = output_directory / "rms_errors.csv"
+        error_df = pd.DataFrame(columns=["sid", "rms_error_reference_to_predicted", "rms_error_reference_to_mean"],
+                                data=np.array([sids, errors_ref_to_predicted, errors_ref_to_mean]).T)
+
+        error_df.to_csv(error_output_file)
 
 
 class GenerateMeshesWithSubjectDataSW(AllItemsTask):
