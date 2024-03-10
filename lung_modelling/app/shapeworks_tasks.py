@@ -876,9 +876,13 @@ class SubjectDataPCACorrelationSW(AllItemsTask):
 
         models = []
         reg_scores = []
+        cv_mean_scores = []
         all_feature_names = []
         for mode in pca_scores:
             selector = selector.fit(subject_data, pca_scores[mode])
+            # Todo only use ones that have positive mean cv scores (obviously).
+            #   But how to further check for significance? Maybe use sm.OLS
+            cv_mean_scores.append(max(selector.cv_results_["mean_test_score"]))
             feature_names = selector.get_feature_names_out()
             model = linear_model.LinearRegression().fit(subject_data[feature_names], pca_scores[mode])
             models.append(model)
@@ -889,7 +893,6 @@ class SubjectDataPCACorrelationSW(AllItemsTask):
         mode_weighting = embedder.eigen_values / np.sum(embedder.eigen_values)
         total_weighted_score = sum(reg_scores * mode_weighting[:num_dim])
 
-        print("hello")
 
         model_files = []
         for model, mode in zip(models, pca_scores):
