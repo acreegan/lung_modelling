@@ -1,6 +1,6 @@
 import numpy as np
 import medpy.io
-from lung_modelling import voxel_to_mesh, find_connected_faces
+from lung_modelling import voxel_to_mesh, find_connected_faces, mesh_rms_error
 import numpy.testing
 from pathlib import Path
 import matplotlib
@@ -221,3 +221,29 @@ def test_find_connected_faces_lung():
 
     assert np.array_equal(island_1_points, connected_points_sorted[1])
     assert np.array_equal(island_2_points, connected_points_sorted[2])
+
+def test_rmse():
+    mesh_a = pv.Sphere(theta_resolution=20, phi_resolution=20, radius=1.5).scale([1, 1, 1], inplace=False).translate([0, 10, 0], inplace=False)
+    mesh_b = pv.Sphere(theta_resolution=20, phi_resolution=20, radius=1.5).scale([1.2, 1.2, 1.01], inplace=False).translate([0, 10, 0], inplace=False)
+    mesh_c = pv.Sphere(theta_resolution=16, phi_resolution=16, radius=1.5).scale([1.01, 1.01, 1.01], inplace=False).translate([10, 0, 0], inplace=False)
+    mesh_d = pv.Sphere(theta_resolution=16, phi_resolution=16, radius=1.5).scale([1.1, 1.1, 1], inplace=False).translate([10, 0, 0], inplace=False)
+
+    err_ab = mesh_rms_error(mesh_a, mesh_b)
+    err_cd = mesh_rms_error(mesh_c, mesh_d)
+
+    comb_ac = mesh_a + mesh_c
+    comb_bd = mesh_b + mesh_d
+
+    # p = pv.Plotter()
+    # p.add_mesh(comb_ac.extract_all_edges(), color="red")
+    # p.add_mesh(comb_bd.extract_all_edges(), color="blue")
+    # p.show()
+
+    err_comb_ac_comb_bd = mesh_rms_error(comb_ac, comb_bd)
+
+    p_a, p_c = mesh_a.n_points, mesh_c.n_points
+
+    err_comb_calc = np.sqrt((((err_ab**2)*p_a)+((err_cd**2)*p_c))/(p_a+p_c))
+
+
+    pass

@@ -29,6 +29,7 @@ from pyeit.visual.plot import create_3d_plot_with_slice
 from vtkmodules.util.vtkConstants import VTK_TETRA
 import datetime
 
+
 class ExtractLungLobes(EachItemTask):
 
     @staticmethod
@@ -768,7 +769,6 @@ class TetrahedralizeMeshes(EachItemTask):
                                             load_glob="*.vtk",
                                             loader=pv.read)
 
-        # TODO: We should just change the params in create meshes, not do this here
         if "remesh" in task_config.params:
             for k, v in mean_mesh_dict.items():
                 clus = pyacvd.Clustering(v)
@@ -838,21 +838,21 @@ class TetrahedralizeMeshes(EachItemTask):
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
 
+        # Load reference meshes that have been aligned to mean. The alignment is only for plotting purposes
         reference_mesh_dict = load_with_category(search_dirs=[source_directory_derivative / d for d in
                                                               task_config.source_directories_reference_mesh],
                                                  category_regex=task_config.mesh_file_domain_name_regex,
-                                                 load_glob="*.vtk",
+                                                 load_glob="*reference_aligned_to_mean*.vtk",
                                                  loader=pv.read)
 
         predicted_mesh_dict = load_with_category(search_dirs=[source_directory_derivative /
                                                               task_config.source_directory_predicted_mesh],
                                                  category_regex=task_config.mesh_file_domain_name_regex,
-                                                 load_glob="*.vtk",
+                                                 load_glob="*predicted*.vtk",
                                                  loader=pv.read)
 
         mean_mesh_dict = initialize_result
 
-        # TODO: We should just change the params in create meshes, not do this here
         if "remesh" in task_config.params:
             for d in [reference_mesh_dict, predicted_mesh_dict]:
                 for k, v in d.items():
@@ -880,6 +880,20 @@ class TetrahedralizeMeshes(EachItemTask):
         # p.link_views()
         # p.show()
 
+        # cmap = colormaps["Set1"]
+        # p = pv.Plotter(shape=(1, 3))
+        # titles = ["Reference", "Predicted", "Mean"]
+        #
+        # for i, k in enumerate(reference_mesh_dict.keys()):
+        #     p.subplot(0, i)
+        #     for j, d in enumerate([reference_mesh_dict, predicted_mesh_dict, mean_mesh_dict]):
+        #         p.add_mesh(d[k].extract_all_edges(), color=cmap(j), label=titles[j])
+        #     p.add_legend()
+        #     p.add_text(k)
+        #
+        # p.link_views()
+        # p.show()
+
         outer_mesh_label = task_config.outer_mesh_domain_name
         inner_mesh_labels = [name for name in reference_mesh_dict.keys() if name != task_config.outer_mesh_domain_name]
         ref_tet = preprocess_and_tetrahedralize(outer_mesh=reference_mesh_dict[task_config.outer_mesh_domain_name],
@@ -901,10 +915,6 @@ class TetrahedralizeMeshes(EachItemTask):
 
         ref_tet.save(ref_tet_file)
         pred_tet.save(pred_tet_file)
-
-
-# Todo
-# Tetrahedralize mean separately.. as it only needs doing once
 
 
 class EITSimulation(EachItemTask):
@@ -965,8 +975,12 @@ class EITSimulation(EachItemTask):
         # --------------------------------------------------------------------------------------------------------------
         reference_mesh = PyEITMesh(node=pv_reference_mesh.points, element=pv_reference_mesh.cells_dict[VTK_TETRA])
 
-        perm_deflated = np.array([lung_deflated if label in ["left_lung", "right_lung"] else surrounding_tissue for label in pv_reference_mesh["Element Label"]])
-        perm_inflated = np.array([lung_inflated if label in ["left_lung", "right_lung"] else surrounding_tissue for label in pv_reference_mesh["Element Label"]])
+        perm_deflated = np.array(
+            [lung_deflated if label in ["left_lung", "right_lung"] else surrounding_tissue for label in
+             pv_reference_mesh["Element Label"]])
+        perm_inflated = np.array(
+            [lung_inflated if label in ["left_lung", "right_lung"] else surrounding_tissue for label in
+             pv_reference_mesh["Element Label"]])
 
         # Todo actually slice by lung height, not overall height
         electrode_nodes_reference = place_electrodes_3d(pv_reference_mesh, n_el, "z", lung_slice_ratio)
@@ -982,7 +996,9 @@ class EITSimulation(EachItemTask):
         # Reconstruct with predicted mesh
         # --------------------------------------------------------------------------------------------------------------
         predicted_mesh = PyEITMesh(node=pv_predicted_mesh.points, element=pv_predicted_mesh.cells_dict[VTK_TETRA],
-                                   perm=np.array([lung_deflated if label in ["left_lung", "right_lung"] else surrounding_tissue for label in pv_predicted_mesh["Element Label"]]))
+                                   perm=np.array(
+                                       [lung_deflated if label in ["left_lung", "right_lung"] else surrounding_tissue
+                                        for label in pv_predicted_mesh["Element Label"]]))
         electrode_nodes_predicted = place_electrodes_3d(pv_predicted_mesh, n_el, "z", lung_slice_ratio)
         predicted_mesh.el_pos = np.array(electrode_nodes_predicted)
 
@@ -1000,9 +1016,9 @@ class EITSimulation(EachItemTask):
         # Reconstruct with mean mesh
         # --------------------------------------------------------------------------------------------------------------
         mean_mesh = PyEITMesh(node=pv_mean_mesh.points, element=pv_mean_mesh.cells_dict[VTK_TETRA],
-                                   perm=np.array(
-                                       [lung_deflated if label in ["left_lung", "right_lung"] else surrounding_tissue
-                                        for label in pv_mean_mesh["Element Label"]]))
+                              perm=np.array(
+                                  [lung_deflated if label in ["left_lung", "right_lung"] else surrounding_tissue
+                                   for label in pv_mean_mesh["Element Label"]]))
         electrode_nodes_mean = place_electrodes_3d(pv_mean_mesh, n_el, "z", lung_slice_ratio)
         mean_mesh.el_pos = np.array(electrode_nodes_mean)
 

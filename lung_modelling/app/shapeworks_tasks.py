@@ -26,6 +26,7 @@ import pickle
 from sklearn.feature_selection import RFECV
 from loguru import logger
 from matplotlib import colormaps
+import statsmodels.api as sm
 
 
 class ExtractLungLobesSW(EachItemTask):
@@ -866,7 +867,7 @@ class SubjectDataPCACorrelationSW(AllItemsTask):
                                          np.isclose(cumDst, float(task_config.params.percent_variability))))[0][0] + 1
 
         data_file = dataloc.abs_pooled_primary / task_config.source_directory_subject_data / task_config.subject_data_filename
-        data = pd.read_csv(data_file, sep="\t")
+        data = pd.read_csv(data_file, sep="\t", low_memory=False)
 
         # # Just whack it all in a sklearn linearRegression model
         # --------------------------------------------------------------------------------------------------------
@@ -890,10 +891,9 @@ class SubjectDataPCACorrelationSW(AllItemsTask):
         reg_scores = []
         cv_mean_scores = []
         all_feature_names = []
+        f_pvalues = []
         for mode in pca_scores:
             selector = selector.fit(subject_data, pca_scores[mode])
-            # Todo only use ones that have positive mean cv scores (obviously).
-            #   But how to further check for significance? Maybe use sm.OLS
             cv_mean_scores.append(max(selector.cv_results_["mean_test_score"]))
             feature_names = selector.get_feature_names_out()
             model = linear_model.LinearRegression().fit(subject_data[feature_names], pca_scores[mode])
@@ -901,13 +901,36 @@ class SubjectDataPCACorrelationSW(AllItemsTask):
             reg_scores.append(model.score(subject_data[feature_names], pca_scores[mode]))
             all_feature_names.append(list(feature_names))
 
+            X = sm.add_constant(subject_data[feature_names].values)
+            sm_model = sm.OLS(pca_scores[mode].values, X)
+            sm_results = sm_model.fit()
+            f_pvalue = sm_results.f_pvalue
+            f_pvalues.append(f_pvalue)
+
+        significant_models = {mode: model for mode, model, f_pvalue in zip(pca_scores, models, f_pvalues)
+                              if f_pvalue < task_config.params.ftest_significance}
+
         all_feature_names_flat = list(set(list(itertools.chain.from_iterable(all_feature_names))))
         mode_weighting = embedder.eigen_values / np.sum(embedder.eigen_values)
-        total_weighted_score = sum(reg_scores * mode_weighting[:num_dim])
+        total_weighted_score = sum([reg_scores[i] * mode_weighting[i] for i in range(len(f_pvalues)) if f_pvalues[i] < task_config.params.ftest_significance])
 
+        all_feature_names_str = [", ".join(feature_names) for feature_names in all_feature_names]
+
+        model_statistics = pd.DataFrame(data=np.array([pca_scores.columns.values,
+                                                       mode_weighting[:len(pca_scores.columns)], reg_scores,
+                                                       cv_mean_scores, f_pvalues, all_feature_names_str]).T,
+                                        columns=["mode", "mode_weighting", "regression_scores",
+                                                 "cross_validation_mean_scores", "f-test_p-values", "feature_names"])
+        model_statistics_file = output_directory / "model_statistics.csv"
+        model_statistics.to_csv(model_statistics_file, index=False)
+
+        # Make sure to delete old files since these modes may now be excluded
+        old_models = glob(str(output_directory / "*linear_model.pickle"))
+        for model in old_models:
+            Path(model).unlink()
 
         model_files = []
-        for model, mode in zip(models, pca_scores):
+        for mode, model in significant_models.items():
             output_path_linear_model = output_directory / f"{mode}-linear_model.pickle"
             with open(output_path_linear_model, "wb") as f:
                 pickle.dump(model, f)
@@ -916,63 +939,7 @@ class SubjectDataPCACorrelationSW(AllItemsTask):
         output_path_mean_subject_data = output_directory / "mean_subject_data.csv"
         subject_data.mean().to_csv(output_path_mean_subject_data, index_label="cols")
 
-        # # Compare
-        # # ------------------------------------------------------------------------------------------------------------
-        # real_points = [embedder.project(scores.iloc[i].values) for i in range(scores.shape[0])]
-        # predicted_points = [embedder.project(reg.predict([subject_data.iloc[i]])[0]) for i in
-        #                     range(subject_data.shape[0])]
-        #
-        # avg_errors = []
-        # for r_points, p_points in zip(real_points, predicted_points):
-        #     errors = np.linalg.norm(r_points - p_points, axis=1)
-        #     avg_error = np.average(errors)
-        #     avg_errors.append(avg_error)
-        #
-        # # KDTREE nearest neighbor
-        # avg_dists = []
-        # for r_points in real_points:
-        #     tree = KDTree(r_points)
-        #     dist, idx = tree.query(r_points[0], k=2)  # Get the second-nearest point for each (first will be itself)
-        #     avg_dist = np.average(dist)
-        #     avg_dists.append(avg_dist)
-        #
-        # error_in_percentage_of_dist = 100 * np.array(avg_errors) / np.array(avg_dists)
-        #
-        # # Save
-        # # Todo:
-        # #   Save performance statistics
-        # # -------------------------------------------------------------------------------------------------------------
-
-        # Plotting
-        # -------------------------------------------------------------------------------------------------------------
-
-        # # Plot real vs predicted points
-        # i=1
-        # p = pv.Plotter()
-        # p.add_points(real_points[i], color="red", label=f"Real points, {scores_df.loc[scores.index[i]].id}")
-        # p.add_points(predicted_points[i], color="blue", label=f"Predicted points, {data.loc[subject_data.index[i]].sid}")
-        # p.show()
-
-        # # Plot demographics vs scores
-        # for subject_col in subject_data:
-        #     s_data_model = sd_model[subject_col].values
-        #     s_data_test = sd_test[subject_col].values
-        #     side = np.ceil(np.sqrt(scores.shape[1]))
-        #     shape = (int(side), int(side))
-        #     fig, axs = plt.subplots(*shape, figsize=(9.6, 8))
-        #     for i, score_col in enumerate(scores):
-        #         a, b = np.unravel_index(i, shape)
-        #         axs[a, b].scatter(s_data_model, sc_model[score_col].values, s=10, color="red", label="model")
-        #         axs[a, b].scatter(s_data_test, sc_test[score_col].values, s=10, color="blue", label="cross_val")
-        #         axs[a, b].set_title(f"{subject_col} vs {score_col}", fontsize=11)
-        #         axs[a, b].set_xlabel(subject_col)
-        #         axs[a, b].set_ylabel(score_col)
-        #     fig.suptitle(f"{subject_col} vs PCA modes, \nred: used in regression model, blue: cross validation")
-        #     fig.tight_layout()
-        #
-        # plt.show()
-
-        return [output_path_linear_model, output_path_mean_subject_data]
+        return [model_statistics_file, output_path_linear_model, output_path_mean_subject_data]
 
 
 class GenerateMeshesMatchingSubjectsSW(AllItemsTask):
@@ -1009,7 +976,7 @@ class GenerateMeshesMatchingSubjectsSW(AllItemsTask):
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
 
-        # Load PCA model and linear regression mode
+        # Load PCA model and linear regression models
         # --------------------------------------------------------------------------------------------------------------
         pca_directory = dataloc.abs_pooled_derivative / task_config.source_directory_pca
         embedder = PCA_Embbeder.from_directory(pca_directory)
@@ -1042,13 +1009,28 @@ class GenerateMeshesMatchingSubjectsSW(AllItemsTask):
         # If we don't have all the predictors for the regression model, fill them in with the means
         missing_cols = mean_subject_data.index[~mean_subject_data.index.isin(subject_data.columns)]
         if missing_cols.size > 0:
-            subject_data[missing_cols] = mean_subject_data.loc[missing_cols].iloc[0]
+            for col in missing_cols:
+                subject_data[col] = mean_subject_data.loc[col].values[0]
 
         # Generate predicted points
         # --------------------------------------------------------------------------------------------------------------
-        all_predicted_scores = [model.predict(subject_data[model.feature_names_in_]) for model in
-                                linear_models.values()]
-        all_projected_points = [embedder.project(scores) for scores in np.array(all_predicted_scores).T]
+
+        all_predicted_scores = {key: model.predict(subject_data[model.feature_names_in_]) for key, model in
+                                linear_models.items()}
+
+        # Fill in missing modes with zeros
+        mode_indices = {int(k.split()[-1]) - 1: k for k in linear_models.keys()}  # Embedder names modes starting at 1
+        last_mode_index = max(mode_indices.keys())
+
+        all_predicted_scores_filled = []
+        for i in range(last_mode_index+1):
+            if i in mode_indices.keys():
+                all_predicted_scores_filled.append(all_predicted_scores[mode_indices[i]])
+
+            else:
+                all_predicted_scores_filled.append(np.zeros(len(all_predicted_scores[mode_indices[last_mode_index]])))
+
+        all_projected_points = [embedder.project(scores) for scores in np.array(all_predicted_scores_filled).T]
 
         # Generate predicted meshes
         # --------------------------------------------------------------------------------------------------------------
@@ -1058,7 +1040,7 @@ class GenerateMeshesMatchingSubjectsSW(AllItemsTask):
             points_split = dict(zip(domain_df.domain_name, np.split(projected_points, np.cumsum(domain_df.n_points))))
             all_points_split.append(points_split)
 
-        mean_points = embedder.project(np.zeros(len(all_predicted_scores[0])))
+        mean_points = embedder.project(np.zeros(len(all_predicted_scores_filled[0])))
         mean_points_split = dict(zip(domain_df.domain_name, np.split(mean_points, np.cumsum(domain_df.n_points))))
 
         # Load the mean meshes to use as the base for warping
@@ -1079,16 +1061,7 @@ class GenerateMeshesMatchingSubjectsSW(AllItemsTask):
 
             all_predicted_meshes.append(domain_meshes)
 
-        # Save predicted meshes in subject folders
-        # --------------------------------------------------------------------------------------------------------------
-        for domain_meshes, (dirpath, _, _) in zip(all_predicted_meshes, dirs_list):
-            if not os.path.exists(dataloc.abs_derivative / dirpath / task_config.results_directory):
-                os.makedirs(dataloc.abs_derivative / dirpath / task_config.results_directory)
-
-            for name, mesh in domain_meshes.items():
-                domain_mesh_filename = dataloc.abs_derivative / dirpath / task_config.results_directory \
-                                       / f"{name}-predicted.vtk"
-                sw.sw2vtkMesh(mesh).save(domain_mesh_filename)
+        # sw.sw2vtkMesh(all_predicted_meshes[0]["left_lung"]).plot(show_edges=True)
 
         # Load reference meshes
         # --------------------------------------------------------------------------------------------------------------
@@ -1103,12 +1076,15 @@ class GenerateMeshesMatchingSubjectsSW(AllItemsTask):
 
         # Compute RMS error for predicted to reference and mean to reference
         # --------------------------------------------------------------------------------------------------------------
-        meshes_ref_aligned_to_predicted = []
         meshes_ref_aligned_to_mean = []
-        combined_predicted_meshes = []
-        combined_mean_meshes = []
+        ref_to_predicted_transforms = []
+        ref_to_mean_transforms = []
         # Combine all sets of meshes..
-        for i, (predicted_meshes, reference_meshes) in enumerate(zip(all_predicted_meshes, all_reference_meshes)):
+        combined_mean_mesh = list(mean_meshes.values())[0].copy()
+        for mesh in list(mean_meshes.values())[1:]:
+            combined_mean_mesh += mesh
+
+        for predicted_meshes, reference_meshes in zip(all_predicted_meshes, all_reference_meshes):
             # Copy so we don't destroy meshes[0] for later!
             combined_predicted_mesh = list(predicted_meshes.values())[0].copy()
             for mesh in list(predicted_meshes.values())[1:]:
@@ -1118,54 +1094,119 @@ class GenerateMeshesMatchingSubjectsSW(AllItemsTask):
             for mesh in list(reference_meshes.values())[1:]:
                 combined_reference_mesh += mesh
 
-            combined_mean_mesh = list(mean_meshes.values())[0].copy()
-            for mesh in list(mean_meshes.values())[1:]:
-                combined_mean_mesh += mesh
-
             # Find rigid transform for reference to predicted
             ref_to_predicted = combined_reference_mesh.createTransform(combined_predicted_mesh,
                                                                        sw.Mesh.AlignmentType.Rigid,
                                                                        task_config.params.alignment_iterations)
+            ref_to_predicted_transforms.append(ref_to_predicted)
+
+            # a = combined_reference_mesh.copy()
+            # a = a.applyTransform(ref_to_predicted)
+            # p = pv.Plotter()
+            # p.add_mesh(sw.sw2vtkMesh(a).extract_all_edges(), color="red")
+            # p.add_mesh(sw.sw2vtkMesh(combined_predicted_mesh).extract_all_edges(), color="blue")
+            # p.show()
 
             # Find rigid transform for reference to mean
             ref_to_mean = combined_reference_mesh.createTransform(combined_mean_mesh, sw.Mesh.AlignmentType.Rigid,
                                                                   task_config.params.alignment_iterations)
-
-            ref_aligned_to_predicted = combined_reference_mesh.copy()
-            ref_aligned_to_predicted = ref_aligned_to_predicted.applyTransform(ref_to_predicted)
+            ref_to_mean_transforms.append(ref_to_mean)
 
             ref_aligned_to_mean = combined_reference_mesh.copy()
             ref_aligned_to_mean = ref_aligned_to_mean.applyTransform(ref_to_mean)
-
-            meshes_ref_aligned_to_predicted.append(ref_aligned_to_predicted)
             meshes_ref_aligned_to_mean.append(ref_aligned_to_mean)
-            combined_predicted_meshes.append(combined_predicted_mesh)
-            combined_mean_meshes.append(combined_mean_mesh)
 
-        errors_ref_to_predicted = []
-        errors_ref_to_mean = []
-        # Compute RMS error
-        for ref_aligned_to_predicted, ref_aligned_to_mean, combined_predicted_mesh, combined_mean_mesh \
-                in zip(meshes_ref_aligned_to_predicted, meshes_ref_aligned_to_mean, combined_predicted_meshes,
-                       combined_mean_meshes):
-            logger.debug(f"Finding rms error for subject {i + 1} of {len(all_predicted_meshes)}") # Todo fix this, the i shoudl be iterated in this loop.
-            # Todo should we do the domains one by one, then average the result? (How to do a weighted average of RMS?)
-            err_ref_to_predicted = mesh_rms_error(sw.sw2vtkMesh(ref_aligned_to_predicted),
-                                                  sw.sw2vtkMesh(combined_predicted_mesh), show_progress=True)
+        # Calculate errors per domain
+        all_domain_ref_to_pred_errors = []
+        all_domain_ref_to_mean_errors = []
+        combined_ref_to_pred_errors = []
+        combined_ref_to_mean_errors = []
+        for i, (domain_reference_meshes, domain_predicted_meshes, ref_to_predicted, ref_to_mean) in \
+                enumerate(zip(all_reference_meshes, all_predicted_meshes, ref_to_predicted_transforms,
+                              ref_to_mean_transforms)):
 
-            err_ref_to_mean = mesh_rms_error(sw.sw2vtkMesh(ref_aligned_to_mean),
-                                             sw.sw2vtkMesh(combined_mean_mesh), show_progress=True)
+            logger.debug(f"Finding rms error for subject {i + 1} of {len(all_predicted_meshes)}")
 
-            errors_ref_to_predicted.append(err_ref_to_predicted)
-            errors_ref_to_mean.append(err_ref_to_mean)
+            ref_to_pred_errors = {}
+            ref_to_mean_errors = {}
 
-        # Save rms error results
+            weighted_squares_pred = []
+            weighted_squares_mean = []
+            total_points = 0
+            for k in domain_predicted_meshes.keys():
+                logger.debug(f"{k}")
+                pred_mesh = domain_predicted_meshes[k]
+                mean_mesh = mean_meshes[k]
+
+                ref_mesh = domain_reference_meshes[k].copy()
+                mesh_ref_to_pred = ref_mesh.applyTransform(ref_to_predicted)
+
+                # p = pv.Plotter()
+                # p.add_mesh(sw.sw2vtkMesh(mesh_ref_to_pred).extract_all_edges(), color="red")
+                # p.add_mesh(sw.sw2vtkMesh(pred_mesh).extract_all_edges(), color="blue")
+                # p.show()
+
+                err_ref_to_pred = mesh_rms_error(sw.sw2vtkMesh(mesh_ref_to_pred), sw.sw2vtkMesh(pred_mesh),
+                                                 show_progress=True)
+
+                ref_mesh = domain_reference_meshes[k].copy()
+                mesh_ref_to_mean = ref_mesh.applyTransform(ref_to_mean)
+                err_ref_to_mean = mesh_rms_error(sw.sw2vtkMesh(mesh_ref_to_mean), sw.sw2vtkMesh(mean_mesh),
+                                                 show_progress=True)
+
+                ref_to_pred_errors[k] = err_ref_to_pred
+                ref_to_mean_errors[k] = err_ref_to_mean
+
+                total_points += ref_mesh.numPoints()
+                weighted_squares_pred.append(err_ref_to_pred ** 2 * ref_mesh.numPoints())
+                weighted_squares_mean.append(err_ref_to_mean ** 2 * ref_mesh.numPoints())
+
+            all_domain_ref_to_pred_errors.append(ref_to_pred_errors)
+            all_domain_ref_to_mean_errors.append(ref_to_mean_errors)
+            combined_ref_to_pred_errors.append(np.sqrt(np.sum(weighted_squares_pred) / total_points))
+            combined_ref_to_mean_errors.append(np.sqrt(np.sum(weighted_squares_mean) / total_points))
+
+        # Save predicted meshes in subject folders
         # --------------------------------------------------------------------------------------------------------------
-        error_output_file = output_directory / "rms_errors.csv"
-        error_df = pd.DataFrame(columns=["sid", "rms_error_reference_to_predicted", "rms_error_reference_to_mean"],
-                                data=np.array([sids, errors_ref_to_predicted, errors_ref_to_mean]).T)
+        for domain_meshes, (dirpath, _, _) in zip(all_predicted_meshes, dirs_list):
+            if not os.path.exists(dataloc.abs_derivative / dirpath / task_config.results_directory):
+                os.makedirs(dataloc.abs_derivative / dirpath / task_config.results_directory)
 
-        error_df.to_csv(error_output_file)
+            for name, mesh in domain_meshes.items():
+                domain_mesh_filename = dataloc.abs_derivative / dirpath / task_config.results_directory \
+                                       / f"{name}-predicted.vtk"
+                sw.sw2vtkMesh(mesh).save(domain_mesh_filename)
+
+        # Save results per domain
+        rms_errors_by_domain_file = output_directory / "rms_errors_by_domain.csv"
+
+        error_by_domain_df = pd.DataFrame(
+            columns=[f"{k} error_reference_to_predicted" for k in all_predicted_meshes[0].keys()] + [
+                "combined error_reference_to_predicted"] +
+                    [f"{k} error_reference_to_mean" for k in all_predicted_meshes[0].keys()] + [
+                        "combined error_reference_to_mean"],
+            data=np.hstack((np.array([list(d.values()) for d in all_domain_ref_to_pred_errors]),
+                            np.array([combined_ref_to_pred_errors]).T,
+                            np.array([list(d.values()) for d in all_domain_ref_to_mean_errors]),
+                            np.array([combined_ref_to_mean_errors]).T)))
+
+        error_by_domain_df.to_csv(rms_errors_by_domain_file)
+
+        # Save ref_aligned_to_mean meshes in subject folders
+        # --------------------------------------------------------------------------------------------------------------
+        for domain_meshes, mesh_transform, (dirpath, _, _) in zip(all_reference_meshes, ref_to_mean_transforms,
+                                                                  dirs_list):
+            if not os.path.exists(dataloc.abs_derivative / dirpath / task_config.results_directory):
+                os.makedirs(dataloc.abs_derivative / dirpath / task_config.results_directory)
+
+            for name, mesh in domain_meshes.items():
+                mesh_aligned_to_mean = mesh.applyTransform(mesh_transform)
+
+                domain_mesh_filename = dataloc.abs_derivative / dirpath / task_config.results_directory \
+                                       / f"{name}-reference_aligned_to_mean.vtk"
+                sw.sw2vtkMesh(mesh_aligned_to_mean).save(domain_mesh_filename)
+
+        return []
 
 
 class GenerateMeshesWithSubjectDataSW(AllItemsTask):
