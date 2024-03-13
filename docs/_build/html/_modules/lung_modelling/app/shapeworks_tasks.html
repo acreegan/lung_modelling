@@ -5,8 +5,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>lung_modelling.app.shapeworks_tasks &#8212; Lung Modelling  documentation</title>
-    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b3523f8e" />
-    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=039e1c02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=61cd365c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=12dfc556" />
     <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
     <script src="../../../_static/doctools.js?v=888ff710"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
@@ -15,8 +15,9 @@
    
   <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
   
+
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+  
 
   </head><body>
   
@@ -42,12 +43,22 @@
 <span class="kn">import</span> <span class="nn">subprocess</span>
 <span class="kn">from</span> <span class="nn">pyvista_tools</span> <span class="kn">import</span> <span class="n">pyvista_faces_to_2d</span><span class="p">,</span> <span class="n">remove_shared_faces_with_merge</span>
 <span class="kn">import</span> <span class="nn">csv</span>
-<span class="kn">from</span> <span class="nn">lung_modelling</span> <span class="kn">import</span> <span class="n">find_connected_faces</span><span class="p">,</span> <span class="n">flatten</span><span class="p">,</span> <span class="n">voxel_to_mesh</span><span class="p">,</span> <span class="n">fix_mesh</span>
+<span class="kn">from</span> <span class="nn">lung_modelling</span> <span class="kn">import</span> <span class="n">find_connected_faces</span><span class="p">,</span> <span class="n">flatten</span><span class="p">,</span> <span class="n">voxel_to_mesh</span><span class="p">,</span> <span class="n">fix_mesh</span><span class="p">,</span> <span class="n">mesh_rms_error</span><span class="p">,</span> <span class="n">load_with_category</span>
 <span class="kn">from</span> <span class="nn">lung_modelling.shapeworks_libs</span> <span class="kn">import</span> <span class="n">PCA_Embbeder</span>
 <span class="kn">import</span> <span class="nn">medpy.io</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 <span class="kn">from</span> <span class="nn">DataAugmentationUtils</span> <span class="kn">import</span> <span class="n">Utils</span><span class="p">,</span> <span class="n">Embedder</span>
 <span class="kn">from</span> <span class="nn">fnmatch</span> <span class="kn">import</span> <span class="n">fnmatch</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">from</span> <span class="nn">sklearn</span> <span class="kn">import</span> <span class="n">linear_model</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">scipy.spatial</span> <span class="kn">import</span> <span class="n">cKDTree</span> <span class="k">as</span> <span class="n">KDTree</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">stats</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">from</span> <span class="nn">sklearn.feature_selection</span> <span class="kn">import</span> <span class="n">RFECV</span>
+<span class="kn">from</span> <span class="nn">loguru</span> <span class="kn">import</span> <span class="n">logger</span>
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">colormaps</span>
+<span class="kn">import</span> <span class="nn">statsmodels.api</span> <span class="k">as</span> <span class="nn">sm</span>
 
 
 <div class="viewcode-block" id="ExtractLungLobesSW">
@@ -58,6 +69,18 @@
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.ExtractLungLobesSW.initialize">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataloc</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">        task_config</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">pass</span></div>
 
 
@@ -127,6 +150,18 @@
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.CreateMeshesSW.initialize">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataloc</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">        task_config</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">pass</span></div>
 
 
@@ -199,6 +234,11 @@
                 <span class="n">image_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">image_data</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
             <span class="n">mesh</span> <span class="o">=</span> <span class="n">voxel_to_mesh</span><span class="p">(</span><span class="n">image_data</span><span class="p">,</span> <span class="n">spacing</span><span class="o">=</span><span class="n">header</span><span class="o">.</span><span class="n">spacing</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="n">header</span><span class="o">.</span><span class="n">direction</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="n">header</span><span class="o">.</span><span class="n">offset</span><span class="p">,</span>
                                  <span class="n">step_size</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">step_size</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">fix_first</span><span class="p">:</span>
+                <span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span>
+                <span class="n">mesh</span> <span class="o">=</span> <span class="n">fix_mesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span>
+
             <span class="n">mesh</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">points</span><span class="p">,</span> <span class="n">pyvista_faces_to_2d</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">faces</span><span class="p">))</span>
 
             <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">decimate</span><span class="p">:</span>
@@ -206,7 +246,7 @@
                 <span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span>
 
                 <span class="n">t_faces</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">decimate_target_faces</span> <span class="o">/</span> <span class="p">(</span><span class="mi">4</span> <span class="o">**</span> <span class="n">params</span><span class="o">.</span><span class="n">subdivide_passes</span><span class="p">)</span>
-                <span class="n">target_reduction</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="n">t_faces</span> <span class="o">/</span> <span class="n">mesh</span><span class="o">.</span><span class="n">n_faces</span><span class="p">)</span>
+                <span class="n">target_reduction</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="n">t_faces</span> <span class="o">/</span> <span class="n">mesh</span><span class="o">.</span><span class="n">n_faces_strict</span><span class="p">)</span>
                 <span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">decimate</span><span class="p">(</span><span class="n">target_reduction</span><span class="o">=</span><span class="n">target_reduction</span><span class="p">,</span>
                                      <span class="n">volume_preservation</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">volume_preservation</span><span class="p">)</span>
 
@@ -233,7 +273,7 @@
             <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">remove_shared_faces</span><span class="p">:</span>
                 <span class="n">pv_mesh</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">sw2vtkMesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="p">)</span> <span class="k">else</span> <span class="n">mesh</span>
                 <span class="n">pv_mesh</span> <span class="o">=</span> <span class="n">remove_shared_faces_with_merge</span><span class="p">([</span><span class="n">pv_mesh</span><span class="p">])</span>
-                <span class="k">if</span> <span class="n">pv_mesh</span><span class="o">.</span><span class="n">n_faces</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">pv_mesh</span><span class="o">.</span><span class="n">n_faces_strict</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Generated mesh is empty&quot;</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">pv_mesh</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">sw2vtkMesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="p">)</span> <span class="k">else</span> <span class="n">mesh</span>
@@ -265,6 +305,18 @@
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.ExtractWholeLungsSW.initialize">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataloc</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">        task_config</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">pass</span></div>
 
 
@@ -407,11 +459,11 @@
                 <span class="n">domain_reference_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span>
                     <span class="n">Path</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">all_mesh_files</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()[</span><span class="n">ref_index</span> <span class="o">*</span> <span class="n">domains_per_shape</span> <span class="o">+</span> <span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">stem</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
 
-                <span class="n">domain_reference_filename</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">domain_reference_name</span><span class="si">}</span><span class="s2">_reference_mesh.vtk&quot;</span>
+                <span class="n">domain_reference_filename</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">domain_reference_name</span><span class="si">}</span><span class="s2">-reference_mesh.vtk&quot;</span>
                 <span class="n">domain_reference_mesh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">domain_reference_filename</span><span class="p">))</span>
                 <span class="n">domain_reference_filenames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">domain_reference_filename</span><span class="p">)</span>
 
-        <span class="n">ref_mesh_combined_filename</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;combined_reference_mesh.vtk&quot;</span>
+        <span class="n">ref_mesh_combined_filename</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;combined-reference_mesh.vtk&quot;</span>
         <span class="n">ref_mesh_combined</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">ref_mesh_combined_filename</span><span class="p">))</span>
 
         <span class="n">ref_dir_filename</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="s2">&quot;ref_dir.txt&quot;</span>
@@ -518,8 +570,8 @@
         <span class="k">for</span> <span class="n">mesh</span> <span class="ow">in</span> <span class="n">meshes</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
             <span class="n">combined_mesh</span> <span class="o">+=</span> <span class="n">mesh</span>
 
-        <span class="n">combined_reference_mesh</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">initialize_result</span><span class="p">[</span><span class="s2">&quot;reference_meshes&quot;</span><span class="p">][</span><span class="s2">&quot;combined_reference_mesh&quot;</span><span class="p">][</span><span class="s2">&quot;points&quot;</span><span class="p">],</span>
-                                          <span class="n">initialize_result</span><span class="p">[</span><span class="s2">&quot;reference_meshes&quot;</span><span class="p">][</span><span class="s2">&quot;combined_reference_mesh&quot;</span><span class="p">][</span><span class="s2">&quot;faces&quot;</span><span class="p">])</span>
+        <span class="n">combined_reference_mesh</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">initialize_result</span><span class="p">[</span><span class="s2">&quot;reference_meshes&quot;</span><span class="p">][</span><span class="s2">&quot;combined-reference_mesh&quot;</span><span class="p">][</span><span class="s2">&quot;points&quot;</span><span class="p">],</span>
+                                          <span class="n">initialize_result</span><span class="p">[</span><span class="s2">&quot;reference_meshes&quot;</span><span class="p">][</span><span class="s2">&quot;combined-reference_mesh&quot;</span><span class="p">][</span><span class="s2">&quot;faces&quot;</span><span class="p">])</span>
         <span class="n">combined_transform</span> <span class="o">=</span> <span class="n">combined_mesh</span><span class="o">.</span><span class="n">createTransform</span><span class="p">(</span><span class="n">combined_reference_mesh</span><span class="p">,</span> <span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="o">.</span><span class="n">AlignmentType</span><span class="o">.</span><span class="n">Rigid</span><span class="p">,</span>
                                                            <span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">iterations</span><span class="p">)</span>
 
@@ -539,9 +591,9 @@
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">meshes</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">file</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">meshes</span><span class="p">,</span> <span class="n">mesh_files</span><span class="p">):</span>
                 <span class="n">domain_reference_mesh</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span>
-                    <span class="n">initialize_result</span><span class="p">[</span><span class="s2">&quot;reference_meshes&quot;</span><span class="p">][</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">file</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">_reference_mesh&quot;</span><span class="p">][</span>
+                    <span class="n">initialize_result</span><span class="p">[</span><span class="s2">&quot;reference_meshes&quot;</span><span class="p">][</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">file</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">-reference_mesh&quot;</span><span class="p">][</span>
                         <span class="s2">&quot;points&quot;</span><span class="p">],</span>
-                    <span class="n">initialize_result</span><span class="p">[</span><span class="s2">&quot;reference_meshes&quot;</span><span class="p">][</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">file</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">_reference_mesh&quot;</span><span class="p">][</span>
+                    <span class="n">initialize_result</span><span class="p">[</span><span class="s2">&quot;reference_meshes&quot;</span><span class="p">][</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">file</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">-reference_mesh&quot;</span><span class="p">][</span>
                         <span class="s2">&quot;faces&quot;</span><span class="p">])</span>
                 <span class="n">domain_transform</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">createTransform</span><span class="p">(</span><span class="n">domain_reference_mesh</span><span class="p">,</span> <span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="o">.</span><span class="n">AlignmentType</span><span class="o">.</span><span class="n">Rigid</span><span class="p">,</span>
                                                         <span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">iterations</span><span class="p">)</span>
@@ -571,6 +623,8 @@
              <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Run the shapeworks optimize command</span>
+
+<span class="sd">        NOTE! Path to project file cannot have spaces</span>
 
 <span class="sd">        Todo: This should return the files it creates (at least the shapeworks project...)</span>
 
@@ -678,7 +732,7 @@
 
         <span class="n">wd</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
         <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">output_directory</span><span class="p">)</span>
-        <span class="n">optimize_cmd</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;shapeworks optimize --progress --name &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">spreadsheet_file</span><span class="p">))</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="n">optimize_cmd</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;shapeworks&quot;</span><span class="p">,</span> <span class="s2">&quot;optimize&quot;</span><span class="p">,</span> <span class="s2">&quot;--progress&quot;</span><span class="p">,</span> <span class="s2">&quot;--name&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">spreadsheet_file</span><span class="p">)]</span>
         <span class="n">subprocess</span><span class="o">.</span><span class="n">check_call</span><span class="p">(</span><span class="n">optimize_cmd</span><span class="p">)</span>
         <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">wd</span><span class="p">)</span></div>
 </div>
@@ -695,7 +749,9 @@
     <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dirs_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span>
              <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Generate PCA model from the optimized shapeworks particle system</span>
+<span class="sd">        Generate PCA model from the optimized shapeworks particle system. The complete PCA model is written to the</span>
+<span class="sd">        results directory (Eigenvalues, eigenvectors, mean coordinates, and subject scores). The mean mesh is also</span>
+<span class="sd">        computed by warping a subject mesh to the PCA mean points.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -714,8 +770,11 @@
 <span class="sd">                source directory for the reference shape</span>
 <span class="sd">            **results_directory**:</span>
 <span class="sd">                Name of the results folder (Stem of output_directory)</span>
+<span class="sd">            **mesh_file_domain_name_regex**:</span>
+<span class="sd">                Regex pattern to match domain name within mesh file name</span>
 <span class="sd">            **params**</span>
-<span class="sd">                None implemented</span>
+<span class="sd">                **warp_mesh_subject_id**</span>
+<span class="sd">                    Index of subject mesh to use as the warp mesh</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_directory</span><span class="p">):</span>
@@ -730,6 +789,8 @@
         <span class="n">project</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">shapeworks_project_file</span><span class="p">)</span>
         <span class="n">subjects</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">get_subjects</span><span class="p">()</span>
 
+        <span class="c1"># Apply transform to points and reference mesh</span>
+        <span class="c1"># --------------------------------------------------------------------------------------------------------------</span>
         <span class="c1"># Get the local points and global transforms</span>
         <span class="n">all_points</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">subject_transforms</span> <span class="o">=</span> <span class="p">[]</span>
@@ -763,6 +824,9 @@
 
         <span class="n">all_points_transformed</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">all_points_transformed</span><span class="p">)</span>
 
+        <span class="k">if</span> <span class="s2">&quot;warp_mesh_subject_id&quot;</span> <span class="ow">in</span> <span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="p">:</span>
+            <span class="n">ref_subject_index</span> <span class="o">=</span> <span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;warp_mesh_subject_id&quot;</span><span class="p">]</span>
+
         <span class="c1"># Load reference meshes and apply transform</span>
         <span class="n">ref_meshes_transformed</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">relative_filename</span> <span class="ow">in</span> <span class="n">subjects</span><span class="p">[</span><span class="n">ref_subject_index</span><span class="p">]</span><span class="o">.</span><span class="n">get_groomed_filenames</span><span class="p">():</span>
@@ -773,11 +837,13 @@
             <span class="n">ref_meshes_transformed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ref_mesh_transformed</span><span class="p">)</span>
 
         <span class="c1"># Do PCA</span>
-        <span class="c1"># point_embedder = PCA_Embbeder(all_points_transformed, num_dim=len(subjects)-1)</span>
+        <span class="c1"># --------------------------------------------------------------------------------------------------------------</span>
         <span class="n">point_embedder</span> <span class="o">=</span> <span class="n">PCA_Embbeder</span><span class="p">(</span><span class="n">all_points_transformed</span><span class="p">,</span> <span class="n">percent_variability</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
+        <span class="c1"># Generate mean mesh for saving / subsequent warping</span>
+        <span class="c1"># --------------------------------------------------------------------------------------------------------------</span>
         <span class="c1"># Project mean points</span>
-        <span class="n">mean_points</span> <span class="o">=</span> <span class="n">point_embedder</span><span class="o">.</span><span class="n">project</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">subjects</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">mean_points</span> <span class="o">=</span> <span class="n">point_embedder</span><span class="o">.</span><span class="n">project</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">subjects</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
 
         <span class="c1"># Break points back into domains</span>
         <span class="n">mean_points_split</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">mean_points</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">domain_n_points</span><span class="p">))</span>
@@ -789,19 +855,30 @@
             <span class="n">warper</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">MeshWarper</span><span class="p">()</span>
             <span class="n">warper</span><span class="o">.</span><span class="n">generateWarp</span><span class="p">(</span><span class="n">ref_mesh</span><span class="p">,</span> <span class="n">ref_points</span><span class="p">)</span>
             <span class="n">warped_mesh</span> <span class="o">=</span> <span class="n">warper</span><span class="o">.</span><span class="n">buildMesh</span><span class="p">(</span><span class="n">m_points</span><span class="p">)</span>
+            <span class="n">warped_mesh</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">sw2vtkMesh</span><span class="p">(</span><span class="n">warped_mesh</span><span class="p">)</span>
             <span class="n">mean_meshes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">warped_mesh</span><span class="p">)</span>
 
-        <span class="n">point_embedder</span><span class="o">.</span><span class="n">write_PCA</span><span class="p">(</span><span class="n">output_directory</span><span class="p">,</span> <span class="n">score_option</span><span class="o">=</span><span class="s2">&quot;stdev&quot;</span><span class="p">)</span>
+        <span class="c1"># Get path relative to derivative from path relative to shapeworks project. Then get sids</span>
+        <span class="n">mesh_dirpaths</span> <span class="o">=</span> <span class="p">[</span><span class="n">subject</span><span class="o">.</span><span class="n">get_groomed_filenames</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">rel_derivative</span><span class="p">))[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">subject</span> <span class="ow">in</span>
+                         <span class="n">subjects</span><span class="p">]</span>
+        <span class="n">sids</span> <span class="o">=</span> <span class="p">[</span><span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">parts</span><span class="p">[</span><span class="n">dataset_config</span><span class="o">.</span><span class="n">subject_id_folder_depth</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span>
+                <span class="n">mesh_dirpaths</span><span class="p">]</span>  <span class="c1"># -1 this time because it starts with a slash</span>
 
+        <span class="n">point_embedder</span><span class="o">.</span><span class="n">write_PCA</span><span class="p">(</span><span class="n">output_directory</span><span class="p">,</span> <span class="n">pca_score_ids</span><span class="o">=</span><span class="n">sids</span><span class="p">)</span>
 
-        <span class="c1"># Write meshes with domain name and PCA domain index</span>
-        <span class="c1"># In CreateMeshesSW, the convention is to place the domain name before a dash (&quot;-&quot;). We follow this convention</span>
-        <span class="c1"># to find the domain names again.</span>
-        <span class="n">domain_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">Path</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">subjects</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_local_particle_filenames</span><span class="p">()]</span>
+        <span class="c1"># Write domain names and domain n_points. These are in the order used in the pca embedder, so we can use these</span>
+        <span class="c1"># to split back into domains</span>
+        <span class="n">domain_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">task_config</span><span class="o">.</span><span class="n">mesh_file_domain_name_regex</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="p">))</span><span class="o">.</span><span class="n">group</span><span class="p">()</span>
+                        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">subjects</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_local_particle_filenames</span><span class="p">()]</span>
 
+        <span class="n">mean_mesh_filenames</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">mean_mesh</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">domain_names</span><span class="p">,</span> <span class="n">mean_meshes</span><span class="p">):</span>
+            <span class="n">mean_mesh_filename</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">-mean.vtk&quot;</span>
+            <span class="n">mean_mesh</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">mean_mesh_filename</span><span class="p">))</span>
+            <span class="n">mean_mesh_filenames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mean_mesh_filename</span><span class="p">)</span>  <span class="c1"># For returning created filenames</span>
 
-
-        <span class="k">pass</span></div>
+        <span class="n">domain_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">domain_names</span><span class="p">,</span> <span class="n">domain_n_points</span><span class="p">])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;domain_name&quot;</span><span class="p">,</span> <span class="s2">&quot;n_points&quot;</span><span class="p">])</span>
+        <span class="n">domain_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">output_directory</span> <span class="o">/</span> <span class="s2">&quot;domains.csv&quot;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
 </div>
 
 
@@ -816,7 +893,439 @@
     <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dirs_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span>
              <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Find correlations between subject data and PCA components</span>
+<span class="sd">        Find correlations between subject data and PCA components. Each mode analysed separately. First, RFECV is used</span>
+<span class="sd">        to find the highest scoring set of subject data parameters for each mode. Then the f test is run to determine</span>
+<span class="sd">        statistical significance of the model. Significant models are written as pickles, along with the regression</span>
+<span class="sd">        analysis statistics.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataloc</span>
+<span class="sd">            Dataset Locator</span>
+<span class="sd">        dirs_list</span>
+<span class="sd">            List of relative paths to the source directories</span>
+<span class="sd">        output_directory</span>
+<span class="sd">            Absolute path of the directory in which to save results of the work function</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">            Dataset config</span>
+<span class="sd">        task_config</span>
+<span class="sd">            **source_directory_pca**</span>
+<span class="sd">                source directory of the PCA model</span>
+<span class="sd">            **source_directory_subject_data**</span>
+<span class="sd">                source directory in which to find subject data</span>
+<span class="sd">            **results_directory**:</span>
+<span class="sd">                Name of the results folder (Stem of output_directory)</span>
+<span class="sd">            **subject_data_filename**</span>
+<span class="sd">                Filename of the subject data file</span>
+<span class="sd">            **subject_data_keys**</span>
+<span class="sd">                List of keys in the subject data to test for correlation with PCA modes</span>
+<span class="sd">            **study_phase**</span>
+<span class="sd">                Phase of the COPDGene study to draw subject data from</span>
+<span class="sd">            **params**</span>
+<span class="sd">                **percent_variability**</span>
+<span class="sd">                    Threshold for cumulative proportion of variability. The lowest N modes that meet this threshold are</span>
+<span class="sd">                    selected for inclusion</span>
+<span class="sd">                **ftest_significance**</span>
+<span class="sd">                    Significance threshold for f test. (Test of statistical significance for each linear regression model)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_directory</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_directory</span><span class="p">)</span>
+
+        <span class="n">pca_directory</span> <span class="o">=</span> <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_pooled_derivative</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory_pca</span>
+        <span class="n">embedder</span> <span class="o">=</span> <span class="n">PCA_Embbeder</span><span class="o">.</span><span class="n">from_directory</span><span class="p">(</span><span class="n">pca_directory</span><span class="p">)</span>
+        <span class="n">scores_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">pca_directory</span> <span class="o">/</span> <span class="s2">&quot;original_PCA_scores*&quot;</span><span class="p">))[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="c1"># domain_df = pd.read_csv(pca_directory / &quot;domains.csv&quot;)</span>
+
+        <span class="c1"># This should be incorporated into PCA_Embedder. i.e., we want to save all the scores, but later compute</span>
+        <span class="c1"># how many to use to preserve a given percent_variability. so a method for num_dim from percent_variability</span>
+        <span class="c1"># also maybe access cumDst so we can plot compactness</span>
+        <span class="c1"># task_config.params.percent_variability = 0.7</span>
+        <span class="n">cumDst</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">embedder</span><span class="o">.</span><span class="n">eigen_values</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">embedder</span><span class="o">.</span><span class="n">eigen_values</span><span class="p">)</span>
+        <span class="n">num_dim</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">logical_or</span><span class="p">(</span><span class="n">cumDst</span> <span class="o">&gt;</span> <span class="nb">float</span><span class="p">(</span><span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">percent_variability</span><span class="p">),</span>
+                                         <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">cumDst</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">percent_variability</span><span class="p">))))[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="n">data_file</span> <span class="o">=</span> <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_pooled_primary</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory_subject_data</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">subject_data_filename</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data_file</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">low_memory</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="c1"># # Just whack it all in a sklearn linearRegression model</span>
+        <span class="c1"># --------------------------------------------------------------------------------------------------------</span>
+        <span class="c1"># Get subject data at the right ids and cols</span>
+
+        <span class="c1"># task_config.subject_data_keys = [&#39;gender&#39;, &#39;age_visit&#39;, &#39;Height_CM&#39;, &#39;Weight_KG&#39;]</span>
+        <span class="n">subject_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">data</span><span class="o">.</span><span class="n">sid</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">scores_df</span><span class="o">.</span><span class="n">id</span><span class="p">)]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">data</span><span class="o">.</span><span class="n">Phase_study</span> <span class="o">==</span> <span class="n">task_config</span><span class="o">.</span><span class="n">study_phase</span><span class="p">][</span>
+            <span class="n">task_config</span><span class="o">.</span><span class="n">subject_data_keys</span><span class="p">]</span>
+        <span class="n">pca_scores</span> <span class="o">=</span> <span class="n">scores_df</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">like</span><span class="o">=</span><span class="s2">&quot;mode&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="p">:</span><span class="n">num_dim</span><span class="p">]</span>
+
+        <span class="c1"># Drop rows where we don&#39;t have all subject data</span>
+        <span class="c1"># (otherwise see https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-values)</span>
+        <span class="n">subject_data</span> <span class="o">=</span> <span class="n">subject_data</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+        <span class="n">pca_scores</span> <span class="o">=</span> <span class="n">pca_scores</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">scores_df</span><span class="o">.</span><span class="n">id</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">subject_data</span><span class="o">.</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">sid</span><span class="p">)]</span>
+
+        <span class="c1"># Create a linear model for each mode, since we may need different predictors to predict each mode</span>
+        <span class="n">estimator</span> <span class="o">=</span> <span class="n">linear_model</span><span class="o">.</span><span class="n">LinearRegression</span><span class="p">()</span>
+        <span class="n">selector</span> <span class="o">=</span> <span class="n">RFECV</span><span class="p">(</span><span class="n">estimator</span><span class="p">)</span>
+
+        <span class="n">models</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">reg_scores</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">cv_mean_scores</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">all_feature_names</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">f_pvalues</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">mode</span> <span class="ow">in</span> <span class="n">pca_scores</span><span class="p">:</span>
+            <span class="n">selector</span> <span class="o">=</span> <span class="n">selector</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">subject_data</span><span class="p">,</span> <span class="n">pca_scores</span><span class="p">[</span><span class="n">mode</span><span class="p">])</span>
+            <span class="n">cv_mean_scores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">selector</span><span class="o">.</span><span class="n">cv_results_</span><span class="p">[</span><span class="s2">&quot;mean_test_score&quot;</span><span class="p">]))</span>
+            <span class="n">feature_names</span> <span class="o">=</span> <span class="n">selector</span><span class="o">.</span><span class="n">get_feature_names_out</span><span class="p">()</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">linear_model</span><span class="o">.</span><span class="n">LinearRegression</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">subject_data</span><span class="p">[</span><span class="n">feature_names</span><span class="p">],</span> <span class="n">pca_scores</span><span class="p">[</span><span class="n">mode</span><span class="p">])</span>
+            <span class="n">models</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+            <span class="n">reg_scores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">subject_data</span><span class="p">[</span><span class="n">feature_names</span><span class="p">],</span> <span class="n">pca_scores</span><span class="p">[</span><span class="n">mode</span><span class="p">]))</span>
+            <span class="n">all_feature_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">feature_names</span><span class="p">))</span>
+
+            <span class="n">X</span> <span class="o">=</span> <span class="n">sm</span><span class="o">.</span><span class="n">add_constant</span><span class="p">(</span><span class="n">subject_data</span><span class="p">[</span><span class="n">feature_names</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+            <span class="n">sm_model</span> <span class="o">=</span> <span class="n">sm</span><span class="o">.</span><span class="n">OLS</span><span class="p">(</span><span class="n">pca_scores</span><span class="p">[</span><span class="n">mode</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
+            <span class="n">sm_results</span> <span class="o">=</span> <span class="n">sm_model</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+            <span class="n">f_pvalue</span> <span class="o">=</span> <span class="n">sm_results</span><span class="o">.</span><span class="n">f_pvalue</span>
+            <span class="n">f_pvalues</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">f_pvalue</span><span class="p">)</span>
+
+        <span class="n">significant_models</span> <span class="o">=</span> <span class="p">{</span><span class="n">mode</span><span class="p">:</span> <span class="n">model</span> <span class="k">for</span> <span class="n">mode</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">f_pvalue</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">pca_scores</span><span class="p">,</span> <span class="n">models</span><span class="p">,</span> <span class="n">f_pvalues</span><span class="p">)</span>
+                              <span class="k">if</span> <span class="n">f_pvalue</span> <span class="o">&lt;</span> <span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">ftest_significance</span><span class="p">}</span>
+
+        <span class="n">all_feature_names_flat</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="o">.</span><span class="n">from_iterable</span><span class="p">(</span><span class="n">all_feature_names</span><span class="p">))))</span>
+        <span class="n">mode_weighting</span> <span class="o">=</span> <span class="n">embedder</span><span class="o">.</span><span class="n">eigen_values</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">embedder</span><span class="o">.</span><span class="n">eigen_values</span><span class="p">)</span>
+        <span class="n">total_weighted_score</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">reg_scores</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">mode_weighting</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">f_pvalues</span><span class="p">))</span> <span class="k">if</span>
+                                    <span class="n">f_pvalues</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">ftest_significance</span><span class="p">])</span>
+
+        <span class="n">all_feature_names_str</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">feature_names</span><span class="p">)</span> <span class="k">for</span> <span class="n">feature_names</span> <span class="ow">in</span> <span class="n">all_feature_names</span><span class="p">]</span>
+
+        <span class="n">model_statistics</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">pca_scores</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                                                       <span class="n">mode_weighting</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="n">pca_scores</span><span class="o">.</span><span class="n">columns</span><span class="p">)],</span> <span class="n">reg_scores</span><span class="p">,</span>
+                                                       <span class="n">cv_mean_scores</span><span class="p">,</span> <span class="n">f_pvalues</span><span class="p">,</span> <span class="n">all_feature_names_str</span><span class="p">])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+                                        <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;mode&quot;</span><span class="p">,</span> <span class="s2">&quot;mode_weighting&quot;</span><span class="p">,</span> <span class="s2">&quot;regression_scores&quot;</span><span class="p">,</span>
+                                                 <span class="s2">&quot;cross_validation_mean_scores&quot;</span><span class="p">,</span> <span class="s2">&quot;f-test_p-values&quot;</span><span class="p">,</span> <span class="s2">&quot;feature_names&quot;</span><span class="p">])</span>
+        <span class="n">model_statistics_file</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="s2">&quot;model_statistics.csv&quot;</span>
+        <span class="n">model_statistics</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">model_statistics_file</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="c1"># Make sure to delete old files since these modes may now be excluded</span>
+        <span class="n">old_models</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">output_directory</span> <span class="o">/</span> <span class="s2">&quot;*linear_model.pickle&quot;</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="n">old_models</span><span class="p">:</span>
+            <span class="n">Path</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
+
+        <span class="n">model_files</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">mode</span><span class="p">,</span> <span class="n">model</span> <span class="ow">in</span> <span class="n">significant_models</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">output_path_linear_model</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">mode</span><span class="si">}</span><span class="s2">-linear_model.pickle&quot;</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_path_linear_model</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+            <span class="n">model_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">output_path_linear_model</span><span class="p">)</span>
+
+        <span class="n">output_path_mean_subject_data</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="s2">&quot;mean_subject_data.csv&quot;</span>
+        <span class="n">subject_data</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">output_path_mean_subject_data</span><span class="p">,</span> <span class="n">index_label</span><span class="o">=</span><span class="s2">&quot;cols&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="n">model_statistics_file</span><span class="p">,</span> <span class="n">output_path_linear_model</span><span class="p">,</span> <span class="n">output_path_mean_subject_data</span><span class="p">]</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="GenerateMeshesMatchingSubjectsSW">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.GenerateMeshesMatchingSubjectsSW">[docs]</a>
+<span class="k">class</span> <span class="nc">GenerateMeshesMatchingSubjectsSW</span><span class="p">(</span><span class="n">AllItemsTask</span><span class="p">):</span>
+
+<div class="viewcode-block" id="GenerateMeshesMatchingSubjectsSW.work">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.GenerateMeshesMatchingSubjectsSW.work">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dirs_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span>
+             <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Use pre built PCA and Linear Regression models to generate meshes that estimate the current subjects in dirs_list</span>
+<span class="sd">        using the specified subject data. Then calculate the RMS error between reference and predicted meshes, and</span>
+<span class="sd">        between reference and mean meshes, for each domain.</span>
+
+<span class="sd">        Note: this could be an each item task with an initialize if initialize got the dirs list</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataloc</span>
+<span class="sd">            Dataset Locator</span>
+<span class="sd">        dirs_list</span>
+<span class="sd">            List of relative paths to the source directories</span>
+<span class="sd">        output_directory</span>
+<span class="sd">            Absolute path of the directory in which to save results of the work function</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">            Dataset config</span>
+<span class="sd">        task_config</span>
+<span class="sd">            **source_directory_pca**</span>
+<span class="sd">                source directory of the PCA model</span>
+<span class="sd">            **source_directory_subject_data**</span>
+<span class="sd">                Source directory in which to find subject data</span>
+<span class="sd">            **source_directory_linear_model**</span>
+<span class="sd">                Source directory in which to find linear regression model pickles</span>
+<span class="sd">            **source_directories_reference_mesh**</span>
+<span class="sd">                List of directory names in which to search for reference meshes</span>
+<span class="sd">            **mesh_file_domain_name_regex**:</span>
+<span class="sd">                Regex pattern to match domain name within mesh file name</span>
+<span class="sd">            **results_directory**:</span>
+<span class="sd">                Name of the results folder (Stem of output_directory)</span>
+<span class="sd">            **subject_data_filename**</span>
+<span class="sd">                Filename of the subject data file</span>
+<span class="sd">            **subject_data_keys**</span>
+<span class="sd">                List of keys in the subject data to test for correlation with PCA modes</span>
+<span class="sd">            **study_phase**</span>
+<span class="sd">                Phase of the COPDGene study to draw subject data from</span>
+<span class="sd">            **params**</span>
+<span class="sd">                **alignment_iterations**</span>
+<span class="sd">                    Iterations for rigid alignment between reference meshes and predicted and mean meshes</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_directory</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_directory</span><span class="p">)</span>
+
+        <span class="c1"># Load PCA model and linear regression models</span>
+        <span class="c1"># --------------------------------------------------------------------------------------------------------------</span>
+        <span class="n">pca_directory</span> <span class="o">=</span> <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_pooled_derivative</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory_pca</span>
+        <span class="n">embedder</span> <span class="o">=</span> <span class="n">PCA_Embbeder</span><span class="o">.</span><span class="n">from_directory</span><span class="p">(</span><span class="n">pca_directory</span><span class="p">)</span>
+        <span class="n">domain_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">pca_directory</span> <span class="o">/</span> <span class="s2">&quot;domains.csv&quot;</span><span class="p">)</span>
+
+        <span class="n">data_file</span> <span class="o">=</span> <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_pooled_primary</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory_subject_data</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">subject_data_filename</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data_file</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">low_memory</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">load_pickle</span><span class="p">(</span><span class="n">file</span><span class="p">):</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+        <span class="n">linear_models</span> <span class="o">=</span> <span class="n">load_with_category</span><span class="p">(</span>
+            <span class="n">search_dirs</span><span class="o">=</span><span class="p">[</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_pooled_derivative</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory_linear_model</span><span class="p">],</span>
+            <span class="n">category_regex</span><span class="o">=</span><span class="n">task_config</span><span class="o">.</span><span class="n">mesh_file_domain_name_regex</span><span class="p">,</span>
+            <span class="n">load_glob</span><span class="o">=</span><span class="s2">&quot;*.pickle&quot;</span><span class="p">,</span>
+            <span class="n">loader</span><span class="o">=</span><span class="n">load_pickle</span><span class="p">)</span>
+        <span class="n">linear_models</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">linear_models</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">item</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">])))</span>
+
+        <span class="n">mean_subject_data_file</span> <span class="o">=</span> <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_pooled_derivative</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory_linear_model</span> <span class="o">/</span> <span class="s2">&quot;mean_subject_data.csv&quot;</span>
+        <span class="n">mean_subject_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">mean_subject_data_file</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="s2">&quot;cols&quot;</span><span class="p">)</span>
+
+        <span class="n">sids</span> <span class="o">=</span> <span class="p">[</span><span class="n">Path</span><span class="p">(</span><span class="n">dirpath</span><span class="p">)</span><span class="o">.</span><span class="n">parts</span><span class="p">[</span><span class="n">dataset_config</span><span class="o">.</span><span class="n">subject_id_folder_depth</span> <span class="o">-</span> <span class="mi">2</span><span class="p">]</span> <span class="k">for</span> <span class="n">dirpath</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">dirs_list</span><span class="p">]</span>
+
+        <span class="c1"># Get subject data for new subjects to predict</span>
+        <span class="c1"># --------------------------------------------------------------------------------------------------------------</span>
+        <span class="n">subject_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">data</span><span class="o">.</span><span class="n">sid</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">sids</span><span class="p">)]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">data</span><span class="o">.</span><span class="n">Phase_study</span> <span class="o">==</span> <span class="n">task_config</span><span class="o">.</span><span class="n">study_phase</span><span class="p">][</span>
+            <span class="n">task_config</span><span class="o">.</span><span class="n">subject_data_keys</span><span class="p">]</span>
+
+        <span class="c1"># If we don&#39;t have all the predictors for the regression model, fill them in with the means</span>
+        <span class="n">missing_cols</span> <span class="o">=</span> <span class="n">mean_subject_data</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="o">~</span><span class="n">mean_subject_data</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">subject_data</span><span class="o">.</span><span class="n">columns</span><span class="p">)]</span>
+        <span class="k">if</span> <span class="n">missing_cols</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">missing_cols</span><span class="p">:</span>
+                <span class="n">subject_data</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">mean_subject_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Generate predicted points</span>
+        <span class="c1"># --------------------------------------------------------------------------------------------------------------</span>
+
+        <span class="n">all_predicted_scores</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">subject_data</span><span class="p">[</span><span class="n">model</span><span class="o">.</span><span class="n">feature_names_in_</span><span class="p">])</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">model</span> <span class="ow">in</span>
+                                <span class="n">linear_models</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+        <span class="c1"># Fill in missing modes with zeros</span>
+        <span class="n">mode_indices</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">k</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span> <span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">linear_models</span><span class="o">.</span><span class="n">keys</span><span class="p">()}</span>  <span class="c1"># Embedder names modes starting at 1</span>
+        <span class="n">last_mode_index</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">mode_indices</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+        <span class="n">all_predicted_scores_filled</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">last_mode_index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">mode_indices</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">all_predicted_scores_filled</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">all_predicted_scores</span><span class="p">[</span><span class="n">mode_indices</span><span class="p">[</span><span class="n">i</span><span class="p">]])</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">all_predicted_scores_filled</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">all_predicted_scores</span><span class="p">[</span><span class="n">mode_indices</span><span class="p">[</span><span class="n">last_mode_index</span><span class="p">]])))</span>
+
+        <span class="n">all_projected_points</span> <span class="o">=</span> <span class="p">[</span><span class="n">embedder</span><span class="o">.</span><span class="n">project</span><span class="p">(</span><span class="n">scores</span><span class="p">)</span> <span class="k">for</span> <span class="n">scores</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">all_predicted_scores_filled</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">]</span>
+
+        <span class="c1"># Generate predicted meshes</span>
+        <span class="c1"># --------------------------------------------------------------------------------------------------------------</span>
+        <span class="c1"># Split predicted points back into domains</span>
+        <span class="n">all_points_split</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">projected_points</span> <span class="ow">in</span> <span class="n">all_projected_points</span><span class="p">:</span>
+            <span class="n">points_split</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">domain_df</span><span class="o">.</span><span class="n">domain_name</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">projected_points</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">domain_df</span><span class="o">.</span><span class="n">n_points</span><span class="p">))))</span>
+            <span class="n">all_points_split</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">points_split</span><span class="p">)</span>
+
+        <span class="n">mean_points</span> <span class="o">=</span> <span class="n">embedder</span><span class="o">.</span><span class="n">project</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">all_predicted_scores_filled</span><span class="p">[</span><span class="mi">0</span><span class="p">])))</span>
+        <span class="n">mean_points_split</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">domain_df</span><span class="o">.</span><span class="n">domain_name</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">mean_points</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">domain_df</span><span class="o">.</span><span class="n">n_points</span><span class="p">))))</span>
+
+        <span class="c1"># Load the mean meshes to use as the base for warping</span>
+        <span class="n">mean_meshes</span> <span class="o">=</span> <span class="n">load_with_category</span><span class="p">(</span><span class="n">search_dirs</span><span class="o">=</span><span class="p">[</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_pooled_derivative</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory_pca</span><span class="p">],</span>
+                                         <span class="n">category_regex</span><span class="o">=</span><span class="n">task_config</span><span class="o">.</span><span class="n">mesh_file_domain_name_regex</span><span class="p">,</span>
+                                         <span class="n">load_glob</span><span class="o">=</span><span class="s2">&quot;*.vtk&quot;</span><span class="p">,</span>
+                                         <span class="n">loader</span><span class="o">=</span><span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="p">)</span>
+
+        <span class="c1"># Warp mean meshes to predicted points for all subjects, for all domains</span>
+        <span class="n">all_predicted_meshes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">points_split</span><span class="p">,</span> <span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">all_points_split</span><span class="p">,</span> <span class="n">dirs_list</span><span class="p">):</span>
+            <span class="n">domain_meshes</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">domain</span> <span class="ow">in</span> <span class="n">points_split</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">warper</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">MeshWarper</span><span class="p">()</span>
+                <span class="n">warper</span><span class="o">.</span><span class="n">generateWarp</span><span class="p">(</span><span class="n">mean_meshes</span><span class="p">[</span><span class="n">domain</span><span class="p">],</span> <span class="n">mean_points_split</span><span class="p">[</span><span class="n">domain</span><span class="p">])</span>
+                <span class="n">warped_mesh</span> <span class="o">=</span> <span class="n">warper</span><span class="o">.</span><span class="n">buildMesh</span><span class="p">(</span><span class="n">points_split</span><span class="p">[</span><span class="n">domain</span><span class="p">])</span>
+                <span class="n">domain_meshes</span><span class="p">[</span><span class="n">domain</span><span class="p">]</span> <span class="o">=</span> <span class="n">warped_mesh</span>
+
+            <span class="n">all_predicted_meshes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">domain_meshes</span><span class="p">)</span>
+
+        <span class="c1"># sw.sw2vtkMesh(all_predicted_meshes[0][&quot;left_lung&quot;]).plot(show_edges=True)</span>
+
+        <span class="c1"># Load reference meshes</span>
+        <span class="c1"># --------------------------------------------------------------------------------------------------------------</span>
+        <span class="n">all_reference_meshes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">dir_path</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">dirs_list</span><span class="p">:</span>
+            <span class="n">reference_meshes</span> <span class="o">=</span> <span class="n">load_with_category</span><span class="p">(</span><span class="n">search_dirs</span><span class="o">=</span><span class="p">[</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="n">dir_path</span> <span class="o">/</span> <span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span>
+                                                               <span class="n">task_config</span><span class="o">.</span><span class="n">source_directories_reference_mesh</span><span class="p">],</span>
+                                                  <span class="n">category_regex</span><span class="o">=</span><span class="n">task_config</span><span class="o">.</span><span class="n">mesh_file_domain_name_regex</span><span class="p">,</span>
+                                                  <span class="n">load_glob</span><span class="o">=</span><span class="s2">&quot;*.vtk&quot;</span><span class="p">,</span>
+                                                  <span class="n">loader</span><span class="o">=</span><span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="p">)</span>
+            <span class="n">all_reference_meshes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reference_meshes</span><span class="p">)</span>
+
+        <span class="c1"># Compute RMS error for predicted to reference and mean to reference</span>
+        <span class="c1"># --------------------------------------------------------------------------------------------------------------</span>
+        <span class="n">meshes_ref_aligned_to_mean</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">ref_to_predicted_transforms</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">ref_to_mean_transforms</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># Combine all sets of meshes..</span>
+        <span class="n">combined_mean_mesh</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">mean_meshes</span><span class="o">.</span><span class="n">values</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">mesh</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">mean_meshes</span><span class="o">.</span><span class="n">values</span><span class="p">())[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="n">combined_mean_mesh</span> <span class="o">+=</span> <span class="n">mesh</span>
+
+        <span class="k">for</span> <span class="n">predicted_meshes</span><span class="p">,</span> <span class="n">reference_meshes</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">all_predicted_meshes</span><span class="p">,</span> <span class="n">all_reference_meshes</span><span class="p">):</span>
+            <span class="c1"># Copy so we don&#39;t destroy meshes[0] for later!</span>
+            <span class="n">combined_predicted_mesh</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">predicted_meshes</span><span class="o">.</span><span class="n">values</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">mesh</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">predicted_meshes</span><span class="o">.</span><span class="n">values</span><span class="p">())[</span><span class="mi">1</span><span class="p">:]:</span>
+                <span class="n">combined_predicted_mesh</span> <span class="o">+=</span> <span class="n">mesh</span>
+
+            <span class="n">combined_reference_mesh</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">reference_meshes</span><span class="o">.</span><span class="n">values</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">mesh</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">reference_meshes</span><span class="o">.</span><span class="n">values</span><span class="p">())[</span><span class="mi">1</span><span class="p">:]:</span>
+                <span class="n">combined_reference_mesh</span> <span class="o">+=</span> <span class="n">mesh</span>
+
+            <span class="c1"># Find rigid transform for reference to predicted</span>
+            <span class="n">ref_to_predicted</span> <span class="o">=</span> <span class="n">combined_reference_mesh</span><span class="o">.</span><span class="n">createTransform</span><span class="p">(</span><span class="n">combined_predicted_mesh</span><span class="p">,</span>
+                                                                       <span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="o">.</span><span class="n">AlignmentType</span><span class="o">.</span><span class="n">Rigid</span><span class="p">,</span>
+                                                                       <span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">alignment_iterations</span><span class="p">)</span>
+            <span class="n">ref_to_predicted_transforms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ref_to_predicted</span><span class="p">)</span>
+
+            <span class="c1"># a = combined_reference_mesh.copy()</span>
+            <span class="c1"># a = a.applyTransform(ref_to_predicted)</span>
+            <span class="c1"># p = pv.Plotter()</span>
+            <span class="c1"># p.add_mesh(sw.sw2vtkMesh(a).extract_all_edges(), color=&quot;red&quot;)</span>
+            <span class="c1"># p.add_mesh(sw.sw2vtkMesh(combined_predicted_mesh).extract_all_edges(), color=&quot;blue&quot;)</span>
+            <span class="c1"># p.show()</span>
+
+            <span class="c1"># Find rigid transform for reference to mean</span>
+            <span class="n">ref_to_mean</span> <span class="o">=</span> <span class="n">combined_reference_mesh</span><span class="o">.</span><span class="n">createTransform</span><span class="p">(</span><span class="n">combined_mean_mesh</span><span class="p">,</span> <span class="n">sw</span><span class="o">.</span><span class="n">Mesh</span><span class="o">.</span><span class="n">AlignmentType</span><span class="o">.</span><span class="n">Rigid</span><span class="p">,</span>
+                                                                  <span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">alignment_iterations</span><span class="p">)</span>
+            <span class="n">ref_to_mean_transforms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ref_to_mean</span><span class="p">)</span>
+
+            <span class="n">ref_aligned_to_mean</span> <span class="o">=</span> <span class="n">combined_reference_mesh</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">ref_aligned_to_mean</span> <span class="o">=</span> <span class="n">ref_aligned_to_mean</span><span class="o">.</span><span class="n">applyTransform</span><span class="p">(</span><span class="n">ref_to_mean</span><span class="p">)</span>
+            <span class="n">meshes_ref_aligned_to_mean</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ref_aligned_to_mean</span><span class="p">)</span>
+
+        <span class="c1"># Calculate errors per domain</span>
+        <span class="n">all_domain_ref_to_pred_errors</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">all_domain_ref_to_mean_errors</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">combined_ref_to_pred_errors</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">combined_ref_to_mean_errors</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">domain_reference_meshes</span><span class="p">,</span> <span class="n">domain_predicted_meshes</span><span class="p">,</span> <span class="n">ref_to_predicted</span><span class="p">,</span> <span class="n">ref_to_mean</span><span class="p">)</span> <span class="ow">in</span> \
+                <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">all_reference_meshes</span><span class="p">,</span> <span class="n">all_predicted_meshes</span><span class="p">,</span> <span class="n">ref_to_predicted_transforms</span><span class="p">,</span>
+                              <span class="n">ref_to_mean_transforms</span><span class="p">)):</span>
+
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Finding rms error for subject </span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2"> of </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">all_predicted_meshes</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="n">ref_to_pred_errors</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">ref_to_mean_errors</span> <span class="o">=</span> <span class="p">{}</span>
+
+            <span class="n">weighted_squares_pred</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">weighted_squares_mean</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">total_points</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">domain_predicted_meshes</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">pred_mesh</span> <span class="o">=</span> <span class="n">domain_predicted_meshes</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+                <span class="n">mean_mesh</span> <span class="o">=</span> <span class="n">mean_meshes</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+
+                <span class="n">ref_mesh</span> <span class="o">=</span> <span class="n">domain_reference_meshes</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                <span class="n">mesh_ref_to_pred</span> <span class="o">=</span> <span class="n">ref_mesh</span><span class="o">.</span><span class="n">applyTransform</span><span class="p">(</span><span class="n">ref_to_predicted</span><span class="p">)</span>
+
+                <span class="c1"># p = pv.Plotter()</span>
+                <span class="c1"># p.add_mesh(sw.sw2vtkMesh(mesh_ref_to_pred).extract_all_edges(), color=&quot;red&quot;)</span>
+                <span class="c1"># p.add_mesh(sw.sw2vtkMesh(pred_mesh).extract_all_edges(), color=&quot;blue&quot;)</span>
+                <span class="c1"># p.show()</span>
+
+                <span class="n">err_ref_to_pred</span> <span class="o">=</span> <span class="n">mesh_rms_error</span><span class="p">(</span><span class="n">sw</span><span class="o">.</span><span class="n">sw2vtkMesh</span><span class="p">(</span><span class="n">mesh_ref_to_pred</span><span class="p">),</span> <span class="n">sw</span><span class="o">.</span><span class="n">sw2vtkMesh</span><span class="p">(</span><span class="n">pred_mesh</span><span class="p">),</span>
+                                                 <span class="n">show_progress</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                <span class="n">ref_mesh</span> <span class="o">=</span> <span class="n">domain_reference_meshes</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                <span class="n">mesh_ref_to_mean</span> <span class="o">=</span> <span class="n">ref_mesh</span><span class="o">.</span><span class="n">applyTransform</span><span class="p">(</span><span class="n">ref_to_mean</span><span class="p">)</span>
+                <span class="n">err_ref_to_mean</span> <span class="o">=</span> <span class="n">mesh_rms_error</span><span class="p">(</span><span class="n">sw</span><span class="o">.</span><span class="n">sw2vtkMesh</span><span class="p">(</span><span class="n">mesh_ref_to_mean</span><span class="p">),</span> <span class="n">sw</span><span class="o">.</span><span class="n">sw2vtkMesh</span><span class="p">(</span><span class="n">mean_mesh</span><span class="p">),</span>
+                                                 <span class="n">show_progress</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                <span class="n">ref_to_pred_errors</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">err_ref_to_pred</span>
+                <span class="n">ref_to_mean_errors</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">err_ref_to_mean</span>
+
+                <span class="n">total_points</span> <span class="o">+=</span> <span class="n">ref_mesh</span><span class="o">.</span><span class="n">numPoints</span><span class="p">()</span>
+                <span class="n">weighted_squares_pred</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">err_ref_to_pred</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">ref_mesh</span><span class="o">.</span><span class="n">numPoints</span><span class="p">())</span>
+                <span class="n">weighted_squares_mean</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">err_ref_to_mean</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">ref_mesh</span><span class="o">.</span><span class="n">numPoints</span><span class="p">())</span>
+
+            <span class="n">all_domain_ref_to_pred_errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ref_to_pred_errors</span><span class="p">)</span>
+            <span class="n">all_domain_ref_to_mean_errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ref_to_mean_errors</span><span class="p">)</span>
+            <span class="n">combined_ref_to_pred_errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weighted_squares_pred</span><span class="p">)</span> <span class="o">/</span> <span class="n">total_points</span><span class="p">))</span>
+            <span class="n">combined_ref_to_mean_errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weighted_squares_mean</span><span class="p">)</span> <span class="o">/</span> <span class="n">total_points</span><span class="p">))</span>
+
+        <span class="c1"># Save predicted meshes in subject folders</span>
+        <span class="c1"># --------------------------------------------------------------------------------------------------------------</span>
+        <span class="k">for</span> <span class="n">domain_meshes</span><span class="p">,</span> <span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">all_predicted_meshes</span><span class="p">,</span> <span class="n">dirs_list</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="n">dirpath</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">results_directory</span><span class="p">):</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="n">dirpath</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">results_directory</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">mesh</span> <span class="ow">in</span> <span class="n">domain_meshes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">domain_mesh_filename</span> <span class="o">=</span> <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="n">dirpath</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">results_directory</span> \
+                                       <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">-predicted.vtk&quot;</span>
+                <span class="n">sw</span><span class="o">.</span><span class="n">sw2vtkMesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">domain_mesh_filename</span><span class="p">)</span>
+
+        <span class="c1"># Save results per domain</span>
+        <span class="n">rms_errors_by_domain_file</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="s2">&quot;rms_errors_by_domain.csv&quot;</span>
+
+        <span class="n">error_by_domain_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2"> error_reference_to_predicted&quot;</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">all_predicted_meshes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span> <span class="o">+</span> <span class="p">[</span>
+                <span class="s2">&quot;combined error_reference_to_predicted&quot;</span><span class="p">]</span> <span class="o">+</span>
+                    <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2"> error_reference_to_mean&quot;</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">all_predicted_meshes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span> <span class="o">+</span> <span class="p">[</span>
+                        <span class="s2">&quot;combined error_reference_to_mean&quot;</span><span class="p">],</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">list</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">values</span><span class="p">())</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">all_domain_ref_to_pred_errors</span><span class="p">]),</span>
+                            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">combined_ref_to_pred_errors</span><span class="p">])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+                            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">list</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">values</span><span class="p">())</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">all_domain_ref_to_mean_errors</span><span class="p">]),</span>
+                            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">combined_ref_to_mean_errors</span><span class="p">])</span><span class="o">.</span><span class="n">T</span><span class="p">)))</span>
+
+        <span class="n">error_by_domain_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">rms_errors_by_domain_file</span><span class="p">)</span>
+
+        <span class="c1"># Save ref_aligned_to_mean meshes in subject folders</span>
+        <span class="c1"># --------------------------------------------------------------------------------------------------------------</span>
+        <span class="k">for</span> <span class="n">domain_meshes</span><span class="p">,</span> <span class="n">mesh_transform</span><span class="p">,</span> <span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">all_reference_meshes</span><span class="p">,</span> <span class="n">ref_to_mean_transforms</span><span class="p">,</span>
+                                                                  <span class="n">dirs_list</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="n">dirpath</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">results_directory</span><span class="p">):</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="n">dirpath</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">results_directory</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">mesh</span> <span class="ow">in</span> <span class="n">domain_meshes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">mesh_aligned_to_mean</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">applyTransform</span><span class="p">(</span><span class="n">mesh_transform</span><span class="p">)</span>
+
+                <span class="n">domain_mesh_filename</span> <span class="o">=</span> <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_derivative</span> <span class="o">/</span> <span class="n">dirpath</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">results_directory</span> \
+                                       <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">-reference_aligned_to_mean.vtk&quot;</span>
+                <span class="n">sw</span><span class="o">.</span><span class="n">sw2vtkMesh</span><span class="p">(</span><span class="n">mesh_aligned_to_mean</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">domain_mesh_filename</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">[]</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="GenerateMeshesWithSubjectDataSW">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.GenerateMeshesWithSubjectDataSW">[docs]</a>
+<span class="k">class</span> <span class="nc">GenerateMeshesWithSubjectDataSW</span><span class="p">(</span><span class="n">AllItemsTask</span><span class="p">):</span>
+
+<div class="viewcode-block" id="GenerateMeshesWithSubjectDataSW.work">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.shapeworks_tasks.GenerateMeshesWithSubjectDataSW.work">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dirs_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span>
+             <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Use subject data regression model and PCA model to generate meshes based on subject data.</span>
+
+<span class="sd">        # TODO: finish</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -830,7 +1339,7 @@
 <span class="sd">            Dataset config</span>
 <span class="sd">        task_config</span>
 <span class="sd">            **source_directory**</span>
-<span class="sd">                source directory of the PCA model</span>
+<span class="sd">                source directory of Todo:finish this</span>
 <span class="sd">            **results_directory**:</span>
 <span class="sd">                Name of the results folder (Stem of output_directory)</span>
 <span class="sd">            **params**</span>
@@ -838,16 +1347,16 @@
 
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="c1"># Load PCA from directory</span>
-        <span class="n">embedder</span> <span class="o">=</span> <span class="n">PCA_Embbeder</span><span class="o">.</span><span class="n">from_directory</span><span class="p">(</span><span class="n">task_config</span><span class="o">.</span><span class="n">source_directory</span><span class="p">)</span>
-
-        <span class="k">pass</span> </div>
+        <span class="k">if</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory_parent</span> <span class="o">==</span> <span class="s2">&quot;primary&quot;</span><span class="p">:</span>
+            <span class="n">pca_directory</span> <span class="o">=</span> <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_pooled_primary</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">pca_directory</span> <span class="o">=</span> <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_pooled_derivative</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory</span></div>
 </div>
 
 
 
 <span class="n">all_tasks</span> <span class="o">=</span> <span class="p">[</span><span class="n">ExtractLungLobesSW</span><span class="p">,</span> <span class="n">CreateMeshesSW</span><span class="p">,</span> <span class="n">ExtractWholeLungsSW</span><span class="p">,</span> <span class="n">ReferenceSelectionMeshSW</span><span class="p">,</span> <span class="n">MeshTransformSW</span><span class="p">,</span>
-             <span class="n">OptimizeMeshesSW</span><span class="p">,</span> <span class="n">ComputePCASW</span><span class="p">,</span> <span class="n">SubjectDataPCACorrelationSW</span><span class="p">]</span>
+             <span class="n">OptimizeMeshesSW</span><span class="p">,</span> <span class="n">ComputePCASW</span><span class="p">,</span> <span class="n">SubjectDataPCACorrelationSW</span><span class="p">,</span> <span class="n">GenerateMeshesMatchingSubjectsSW</span><span class="p">]</span>
 </pre></div>
 
           </div>
@@ -890,11 +1399,11 @@
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2023, Andrew Creegan.
+      &#169;2023, Andrew Creegan.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.2.6</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.2.6</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
       
     </div>
 

@@ -91,7 +91,7 @@ class EachItemTask(Task):
         A method to be called before multiprocessing to load data required by all items. This should only be used to
         load data to avoid multiple simultaneous file access by the work function. It should not create or modify any files.
         TODO: this should get the dirs_list too, just so we know which dirs are in use, (e.g., if we need to look up
-                data for all the subjects)
+        data for all the subjects)
         """
         pass
 

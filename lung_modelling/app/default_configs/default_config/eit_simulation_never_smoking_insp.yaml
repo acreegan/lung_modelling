@@ -1,0 +1,136 @@
+# Study to test the usefulness of the statistical shape model
+# 10 subjects meshed and tetrahedralized are the reference
+# Compare EIT performance when using 3 different a priori meshes - cylindrical, ssm mean, and subject specific
+#   EIT experiments - recreate from the literature on boundary shape, and internal impedance distribution.
+#                   - Also one similar to mitch and hari. Add an inclusion, measure accuracy of location and size
+dataset_root: null
+log_level: "DEBUG"
+use_multiprocessing: False
+
+tasks:
+  initialize:
+    dataset_config_filename: "dataset_config.json"
+    use_directory_index: True
+    skip_dirs: [ ]
+    select_dirs: [
+                  '30342U/COPD2/30342U_INSP_B31f_340_COPD2', # 10 selected subjects not used in the PCA model
+                  '30343W/COPD2/30343W_INSP_B31f_280_COPD2',
+                  '30348G/COPD2/30348G_INSP_B31f_320_COPD2',
+                  '30350T/COPD2/30350T_INSP_B31f_330_COPD2',
+                  '30352X/COPD2/30352X_INSP_B31f_270_COPD2',
+                  '30357H/COPD2/30357H_INSP_B31f_350_COPD2',
+                  '30358J/COPD2/30358J_INSP_B31f_360_COPD2',
+                  '30360W/COPD2/30360W_INSP_B31f_320_COPD2',
+                  '30363C/COPD2/30363C_INSP_B31f_280_COPD2',
+                  '30367K/COPD2/30367K_INSP_B31f_344_COPD2',
+    ]
+
+  extract_torso:
+    task: "ExtractTorso"
+    source_directory: "dicom"
+    results_directory: "extract_torso"
+    output_filename: "torso"
+    params: { threshold: -320 }
+
+  extract_whole_lungs_sw:
+    task: "ExtractWholeLungsSW"
+    results_directory: "extract_whole_lungs_sw"
+    output_filenames: { left_lung: [ "lul", "lll" ], right_lung: [ "rul", "rml", "rll" ] }
+    params: { maximumRMSError: 0.009999999776482582, numberOfIterations: 30 }
+
+  create_meshes_sw:
+    task: "CreateMeshesSW"
+    source_directory: "extract_whole_lungs_sw"
+    results_directory: "create_meshes_whole_lungs_sw"
+    image_glob: "*.mhd"
+    params: {
+      pad: True,
+      step_size: 1,
+      fix_first: False,
+      decimate: False,
+      decimate_target_faces: 100000,
+      subdivide_passes: 0,
+      volume_preservation: True,
+      remesh: True,
+      remesh_target_points: 40000,
+      adaptivity: 0,
+      smooth: True,
+      smooth_iterations: 5,
+      relaxation: 1,
+      fill_holes: True,
+      hole_size: 100,
+      remove_shared_faces: True,
+      isolate_mesh: True }
+
+  create_meshes_torso_sw:
+    task: "CreateMeshesSW"
+    source_directory: "extract_torso"
+    results_directory: "create_meshes_torso_sw"
+    image_glob: "*.nii"
+    params: {
+      pad: True,
+      step_size: 3,
+      fix_first: True,
+      decimate: False,
+      decimate_target_faces: 100000,
+      subdivide_passes: 0,
+      volume_preservation: True,
+      remesh: True,
+      remesh_target_points: 40000,
+      adaptivity: 0,
+      smooth: True,
+      smooth_iterations: 5,
+      relaxation: 1,
+      fill_holes: True,
+      hole_size: 100,
+      remove_shared_faces: True,
+      isolate_mesh: True }
+
+  generate_meshes_matching_subjects_sw:
+    task: "GenerateMeshesMatchingSubjectsSW"
+    source_directory_pca: "pca_sw_NS_INSP"
+    source_directory_subject_data: "subject_data"
+    source_directory_linear_model: "subject_data_pca_correlation_sw_NS_INSP"
+    source_directories_reference_mesh: ["create_meshes_torso_sw","create_meshes_whole_lungs_sw"]
+    mesh_file_domain_name_regex: ".+?(?=-)" # First one or more characters until dash. (Dash being the delimiter of CreateMeshesSW)
+    results_directory: "mesh_estimated_with_subject_data_NS_INSP"
+    subject_data_filename: "COPDGene_P1P2_SM_NS_25OCT21.txt"
+    subject_data_keys: [ "gender", "age_visit", "Height_CM", "Weight_KG", "BMI", "Waist_CM","Arm_Span_CM", "FEV1_pre", "FEV1_FVC_pre", "sysBP", "diasBP"]
+    study_phase: 2
+    params: {alignment_iterations: 100}
+
+  tetrahedralize_meshes:
+    task: "TetrahedralizeMeshes"
+    source_directories_reference_mesh: ["mesh_estimated_with_subject_data_NS_INSP"]
+    source_directory_predicted_mesh: "mesh_estimated_with_subject_data_NS_INSP"
+    source_directory_mean_mesh: "pca_sw_NS_INSP"
+    mesh_file_domain_name_regex: ".+?(?=-)" # First one or more characters until dash. (Dash being the delimiter of CreateMeshesSW)
+    outer_mesh_domain_name: "torso"
+    results_directory: "tetrahedralize_meshes_NS_INSP_Coarse"
+    params: {
+#         remesh: 10000,
+        remesh: 1000,
+        mesh_repair_kwargs: {},
+        gmsh_options: {
+          "Mesh.MeshSizeMax": 100,
+          "Mesh.MeshSizeMin": 10,}
+    }
+
+  eit_simulation:
+    task: "EITSimulation"
+    source_directory: "tetrahedralize_meshes_NS_INSP_Coarse"
+    results_directory: "eit_simulation_NS_INSP_Coarse"
+    params: {
+        n_electrodes: 8,
+        lambda: 0.001,
+        r_lung_deflated: 7.3,
+        r_lung_inflated: 24,
+        r_surrounding_tissue: 2,
+        lung_slice_ratio: 0.5,
+    }
+
+  logging:
+
+run_tasks: [ "extract_whole_lungs_sw", "extract_torso", "create_meshes_sw", "create_meshes_torso_sw",
+             "generate_meshes_matching_subjects_sw", "tetrahedralize_meshes", "eit_simulation" ]
+

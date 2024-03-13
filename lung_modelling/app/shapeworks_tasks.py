@@ -33,6 +33,18 @@ class ExtractLungLobesSW(EachItemTask):
 
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        """
+
+        Parameters
+        ----------
+        dataloc
+        dataset_config
+        task_config
+
+        Returns
+        -------
+
+        """
         pass
 
     @staticmethod
@@ -93,6 +105,18 @@ class CreateMeshesSW(EachItemTask):
 
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        """
+
+        Parameters
+        ----------
+        dataloc
+        dataset_config
+        task_config
+
+        Returns
+        -------
+
+        """
         pass
 
     @staticmethod
@@ -227,6 +251,18 @@ class ExtractWholeLungsSW(EachItemTask):
 
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        """
+
+        Parameters
+        ----------
+        dataloc
+        dataset_config
+        task_config
+
+        Returns
+        -------
+
+        """
         pass
 
     @staticmethod
@@ -629,7 +665,9 @@ class ComputePCASW(AllItemsTask):
     def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
              task_config: DictConfig) -> list[Path]:
         """
-        Generate PCA model from the optimized shapeworks particle system
+        Generate PCA model from the optimized shapeworks particle system. The complete PCA model is written to the
+        results directory (Eigenvalues, eigenvectors, mean coordinates, and subject scores). The mean mesh is also
+        computed by warping a subject mesh to the PCA mean points.
 
         Parameters
         ----------
@@ -648,8 +686,11 @@ class ComputePCASW(AllItemsTask):
                 source directory for the reference shape
             **results_directory**:
                 Name of the results folder (Stem of output_directory)
+            **mesh_file_domain_name_regex**:
+                Regex pattern to match domain name within mesh file name
             **params**
-                None implemented
+                **warp_mesh_subject_id**
+                    Index of subject mesh to use as the warp mesh
 
         """
         if not os.path.exists(output_directory):
@@ -756,80 +797,16 @@ class ComputePCASW(AllItemsTask):
         domain_df.to_csv(output_directory / "domains.csv", index=False)
 
 
-class SubjectDataPCAIndividualCorrelationsSW(AllItemsTask):
-
-    @staticmethod
-    def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
-             task_config: DictConfig) -> list[Path]:
-        """
-        Find individual correlations and strengths between subject data and PCA components
-
-        Parameters
-        ----------
-        dataloc
-            Dataset Locator
-        dirs_list
-            List of relative paths to the source directories
-        output_directory
-            Absolute path of the directory in which to save results of the work function
-        dataset_config
-            Dataset config
-        task_config
-            **source_directory_pca**
-                source directory of the PCA model
-            **results_directory**:
-                Name of the results folder (Stem of output_directory)
-            **params**
-                None implemented
-
-        """
-
-        pca_directory = dataloc.abs_pooled_derivative / task_config.source_directory_pca
-        embedder = PCA_Embbeder.from_directory(pca_directory)
-        scores_df = pd.read_csv(glob(str(pca_directory / "original_PCA_scores*"))[0])
-
-        # This should be incorporated into PCA_Embedder. i.e., we want to save all the scores, but later compute
-        # how many to use to preserve a given percent_variability. so a method for num_dim from percent_variability
-        # also maybe access cumDst so we can plot compactness
-        # task_config.params.percent_variability = 0.7
-        cumDst = np.cumsum(embedder.eigen_values) / np.sum(embedder.eigen_values)
-        num_dim = np.where(np.logical_or(cumDst > float(task_config.params.percent_variability),
-                                         np.isclose(cumDst, float(task_config.params.percent_variability))))[0][0] + 1
-
-        data_file = dataloc.abs_pooled_primary / task_config.source_directory_subject_data / task_config.subject_data_filename
-        data = pd.read_csv(data_file, sep="\t")
-
-        # task_config.subject_data_keys = ['gender', 'age_visit', 'Height_CM', 'Weight_KG']
-        subject_data = data.loc[data.sid.isin(scores_df.id)].loc[data.Phase_study == task_config.study_phase][
-            task_config.subject_data_keys]
-        scores = scores_df.filter(like="mode").iloc[:, :num_dim]
-
-        # Drop rows where we don't have all subject data
-        # (otherwise see https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-values)
-        subject_data = subject_data.dropna()
-        scores = scores.loc[scores_df.id.isin(data.loc[subject_data.index].sid)]
-
-        p_value_df = pd.DataFrame(index=scores.columns, columns=subject_data.columns)
-        slope_df = pd.DataFrame(index=scores.columns, columns=subject_data.columns)
-        for subject_col in subject_data:
-            for mode_col in scores:
-                slope, intercept, r_value, p_value, std_err = stats.linregress(subject_data[subject_col],
-                                                                               scores[mode_col])
-                p_value_df.at[mode_col, subject_col] = p_value
-                slope_df.at[mode_col, subject_col] = slope
-
-        significant = p_value_df < 0.05
-        extra_significant = p_value_df < 0.01
-        print("hello")
-
-
 class SubjectDataPCACorrelationSW(AllItemsTask):
 
     @staticmethod
     def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
              task_config: DictConfig) -> list[Path]:
         """
-        Find correlations between subject data and PCA components
+        Find correlations between subject data and PCA components. Each mode analysed separately. First, RFECV is used
+        to find the highest scoring set of subject data parameters for each mode. Then the f test is run to determine
+        statistical significance of the model. Significant models are written as pickles, along with the regression
+        analysis statistics.
 
         Parameters
         ----------
@@ -844,10 +821,22 @@ class SubjectDataPCACorrelationSW(AllItemsTask):
         task_config
             **source_directory_pca**
                 source directory of the PCA model
+            **source_directory_subject_data**
+                source directory in which to find subject data
             **results_directory**:
                 Name of the results folder (Stem of output_directory)
+            **subject_data_filename**
+                Filename of the subject data file
+            **subject_data_keys**
+                List of keys in the subject data to test for correlation with PCA modes
+            **study_phase**
+                Phase of the COPDGene study to draw subject data from
             **params**
-                None implemented
+                **percent_variability**
+                    Threshold for cumulative proportion of variability. The lowest N modes that meet this threshold are
+                    selected for inclusion
+                **ftest_significance**
+                    Significance threshold for f test. (Test of statistical significance for each linear regression model)
 
         """
         if not os.path.exists(output_directory):
@@ -912,7 +901,8 @@ class SubjectDataPCACorrelationSW(AllItemsTask):
 
         all_feature_names_flat = list(set(list(itertools.chain.from_iterable(all_feature_names))))
         mode_weighting = embedder.eigen_values / np.sum(embedder.eigen_values)
-        total_weighted_score = sum([reg_scores[i] * mode_weighting[i] for i in range(len(f_pvalues)) if f_pvalues[i] < task_config.params.ftest_significance])
+        total_weighted_score = sum([reg_scores[i] * mode_weighting[i] for i in range(len(f_pvalues)) if
+                                    f_pvalues[i] < task_config.params.ftest_significance])
 
         all_feature_names_str = [", ".join(feature_names) for feature_names in all_feature_names]
 
@@ -950,7 +940,8 @@ class GenerateMeshesMatchingSubjectsSW(AllItemsTask):
 
         """
         Use pre built PCA and Linear Regression models to generate meshes that estimate the current subjects in dirs_list
-        using the specified subject data.
+        using the specified subject data. Then calculate the RMS error between reference and predicted meshes, and
+        between reference and mean meshes, for each domain.
 
         Note: this could be an each item task with an initialize if initialize got the dirs list
 
@@ -967,10 +958,25 @@ class GenerateMeshesMatchingSubjectsSW(AllItemsTask):
         task_config
             **source_directory_pca**
                 source directory of the PCA model
+            **source_directory_subject_data**
+                Source directory in which to find subject data
+            **source_directory_linear_model**
+                Source directory in which to find linear regression model pickles
+            **source_directories_reference_mesh**
+                List of directory names in which to search for reference meshes
+            **mesh_file_domain_name_regex**:
+                Regex pattern to match domain name within mesh file name
             **results_directory**:
                 Name of the results folder (Stem of output_directory)
+            **subject_data_filename**
+                Filename of the subject data file
+            **subject_data_keys**
+                List of keys in the subject data to test for correlation with PCA modes
+            **study_phase**
+                Phase of the COPDGene study to draw subject data from
             **params**
-                None implemented
+                **alignment_iterations**
+                    Iterations for rigid alignment between reference meshes and predicted and mean meshes
 
         """
         if not os.path.exists(output_directory):
@@ -1023,7 +1029,7 @@ class GenerateMeshesMatchingSubjectsSW(AllItemsTask):
         last_mode_index = max(mode_indices.keys())
 
         all_predicted_scores_filled = []
-        for i in range(last_mode_index+1):
+        for i in range(last_mode_index + 1):
             if i in mode_indices.keys():
                 all_predicted_scores_filled.append(all_predicted_scores[mode_indices[i]])
 
@@ -1217,6 +1223,8 @@ class GenerateMeshesWithSubjectDataSW(AllItemsTask):
         """
         Use subject data regression model and PCA model to generate meshes based on subject data.
 
+        # TODO: finish
+
         Parameters
         ----------
         dataloc
@@ -1244,5 +1252,4 @@ class GenerateMeshesWithSubjectDataSW(AllItemsTask):
 
 
 all_tasks = [ExtractLungLobesSW, CreateMeshesSW, ExtractWholeLungsSW, ReferenceSelectionMeshSW, MeshTransformSW,
-             OptimizeMeshesSW, ComputePCASW, SubjectDataPCACorrelationSW, SubjectDataPCAIndividualCorrelationsSW,
-             GenerateMeshesMatchingSubjectsSW]
+             OptimizeMeshesSW, ComputePCASW, SubjectDataPCACorrelationSW, GenerateMeshesMatchingSubjectsSW]

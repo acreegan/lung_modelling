@@ -6,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>Workflow App &#8212; Lung Modelling  documentation</title>
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b3523f8e" />
-    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=039e1c02" />
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=61cd365c" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=12dfc556" />
     <script src="_static/documentation_options.js?v=5929fcd5"></script>
     <script src="_static/doctools.js?v=888ff710"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
@@ -18,8 +18,9 @@
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
+
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+  
 
   </head><body>
   
@@ -90,13 +91,14 @@ dataset must be specified in a file named dataset_config.json. An example of thi
 <span class="w">  </span><span class="nt">&quot;pooled_derivative_directory&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pooled_derivative&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;directory_index_glob&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;directory_index*.csv&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;data_folder_depth&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;subject_id_folder_depth&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;lung_image_glob&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;*.nii&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;lobe_mapping&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;rul&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;rml&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;rll&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;lul&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
 <span class="w">                    </span><span class="nt">&quot;lll&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">}</span>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>In the above example, the first 6 items are generic and the final 2 are dataset specific, which can
+<p>In the above example, the first 6 items are generic and the final 3 are dataset specific, which can
 be added as necessary and accessed by the workflow tasks.</p>
 <p><strong>primary_directory</strong> refers to the name of the directory holding the primary
 data in the dataset.</p>
@@ -111,6 +113,9 @@ index of the dataset if it exists.</p>
 <p><strong>data_folder_depth</strong> is the number of folders between the top level dataset
 folder and the data files. (e.g., the dataset structure may be: primary -&gt; subject_id -&gt; study_phase -&gt; imaging_mode,
 with data residing in the imaging mode folder, a depth of 4)</p>
+<p><strong>subject_id_folder_depth</strong> is the number of folders between the top level dataset
+folder and a folder with a name that can be used as a unique identifier for a single
+subject</p>
 <p><strong>lung_image_glob</strong> refers to a glob used to find lung image data files</p>
 <p><strong>lobe_mapping</strong> specifies the value used to indicate each lung lobe in the
 lung lobe image files.</p>
@@ -293,11 +298,11 @@ identification of which commit was used during the logged run.</p>
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2023, Andrew Creegan.
+      &#169;2023, Andrew Creegan.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.2.6</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.2.6</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
       
       |
       <a href="_sources/app.rst.txt"

@@ -1,0 +1,255 @@
+dataset_root: null
+log_level: "INFO"
+use_multiprocessing: False
+
+tasks:
+  initialize:
+    dataset_config_filename: "dataset_config.json"
+    use_directory_index: True
+    skip_dirs: [ ]
+    select_dirs: [
+                  '16032X/COPD2/16032X_INSP_B31f_363_COPD2', # First 100 selected subjects (COPDGene Phase 2)
+                  '16496N/COPD2/16496N_INSP_B31f_349_COPD2',
+                  '16499T/COPD2/16499T_INSP_B31f_293_COPD2',
+                  '17094Y/COPD2/17094Y_INSP_B31f_277_COPD2',
+                  '17135M/COPD2/17135M_INSP_B31f_285_COPD2',
+                  '17888J/COPD2/17888J_INSP_B31f_294_COPD2',
+                  '17929X/COPD2/17929X_INSP_B31f_330_COPD2',
+                  '18398X/COPD2/18398X_INSP_B31f_381_COPD2',
+                  '18586Y/COPD2/18586Y_INSP_Bf40d_315_COPD2',
+                  '18615F/COPD2/18615F_INSP_STD_380_COPD2',
+                  '18663Q/COPD2/18663Q_INSP_B31f_360_COPD2',
+                  '18747W/COPD2/18747W_INSP_Bf40d_310_COPD2',
+                  '18765Y/COPD2/18765Y_INSP_B31f_384_COPD2',
+                  '18775B/COPD2/18775B_INSP_B31f_330_COPD2',
+                  '18802E/COPD2/18802E_INSP_Bf40d_285_COPD2',
+                  '18822K/COPD2/18822K_INSP_B31f_320_COPD2',
+                  '18825Q/COPD2/18825Q_INSP_Bf40d_345_COPD2',
+                  '18826S/COPD2/18826S_INSP_Bf40d_371_COPD2',
+                  '18877J/COPD2/18877J_INSP_B31f_356_COPD2',
+                  '18918X/COPD2/18918X_INSP_B31f_365_COPD2',
+                  '18954B/COPD2/18954B_INSP_B31f_360_COPD2',
+                  '18959L/COPD2/18959L_INSP_Bf40d_369_COPD2',
+                  '18964E/COPD2/18964E_INSP_Bf40d_265_COPD2',
+                  '18965G/COPD2/18965G_INSP_B31f_310_COPD2',
+                  '19043R/COPD2/19043R_INSP_Bf40d_300_COPD2',
+                  '19066D/COPD2/19066D_INSP_B31f_368_COPD2',
+                  '19084F/COPD2/19084F_INSP_B31f_301_COPD2',
+                  '19266L/COPD2/19266L_INSP_B31f_350_COPD2',
+                  '19288V/COPD2/19288V_INSP_B31f_320_COPD2',
+                  '19564T/COPD2/19564T_INSP_B31f_326_COPD2',
+                  '19985R/COPD2/19985R_INSP_B_343_COPD2',
+                  '20222E/COPD2/20222E_INSP_B31f_360_COPD2',
+                  '20303E/COPD2/20303E_INSP_STD_340_COPD2',
+                  '20387K/COPD2/20387K_INSP_STD_360_COPD2',
+                  '20388M/COPD2/20388M_INSP_STD_360_COPD2',
+                  '21139W/COPD2/21139W_INSP_STD_360_COPD2',
+                  '30032F/COPD2/30032F_INSP_B31f_309_COPD2',
+                  '30034J/COPD2/30034J_INSP_B31f_287_COPD2',
+                  '30036N/COPD2/30036N_INSP_B31f_292_COPD2',
+                  '30038R/COPD2/30038R_INSP_B31f_320_COPD2',
+                  '30048U/COPD2/30048U_INSP_B31f_299_COPD2',
+                  '30055R/COPD2/30055R_INSP_B31f_300_COPD2',
+                  '30056T/COPD2/30056T_INSP_B31f_310_COPD2',
+                  '30065U/COPD2/30065U_INSP_B31f_320_COPD2',
+                  '30068A/COPD2/30068A_INSP_B31f_280_COPD2',
+                  '30069C/COPD2/30069C_INSP_B31f_390_COPD2',
+                  '30072R/COPD2/30072R_INSP_B31f_340_COPD2',
+                  '30076Z/COPD2/30076Z_INSP_B31f_300_COPD2',
+                  '30078D/COPD2/30078D_INSP_B31f_290_COPD2',
+                  '30080Q/COPD2/30080Q_INSP_B_394_COPD2',
+                  '30081S/COPD2/30081S_INSP_B_350_COPD2',
+                  '30082U/COPD2/30082U_INSP_B_350_COPD2',
+                  '30083W/COPD2/30083W_INSP_B_350_COPD2',
+                  '30086C/COPD2/30086C_INSP_B_347_COPD2',
+                  '30095D/COPD2/30095D_INSP_B_340_COPD2',
+                  '30096F/COPD2/30096F_INSP_B_350_COPD2',
+                  '30098J/COPD2/30098J_INSP_B_360_COPD2',
+                  '30107K/COPD2/30107K_INSP_STD_320_COPD2',
+                  '30108M/COPD2/30108M_INSP_STD_350_COPD2',
+                  '30112D/COPD2/30112D_INSP_STD_380_COPD2',
+                  '30113F/COPD2/30113F_INSP_STD_400_COPD2',
+                  '30122G/COPD2/30122G_INSP_STD_390_COPD2',
+                  '30124K/COPD2/30124K_INSP_STD_340_COPD2',
+                  '30132J/COPD2/30132J_INSP_B31f_332_COPD2',
+                  '30136R/COPD2/30136R_INSP_B31f_345_COPD2',
+                  '30138V/COPD2/30138V_INSP_B31f_352_COPD2',
+                  '30139X/COPD2/30139X_INSP_B31f_338_COPD2',
+                  '30147W/COPD2/30147W_INSP_B31f_355_COPD2',
+                  '30150L/COPD2/30150L_INSP_B31f_287_COPD2',
+                  '30154T/COPD2/30154T_INSP_B31f_337_COPD2',
+                  '30155V/COPD2/30155V_INSP_B31f_312_COPD2',
+                  '30164W/COPD2/30164W_INSP_STD_280_COPD2',
+                  '30165Y/COPD2/30165Y_INSP_STD_280_COPD2',
+                  '30171T/COPD2/30171T_INSP_STD_340_COPD2',
+                  '30181W/COPD2/30181W_INSP_STD_360_COPD2',
+                  '30183A/COPD2/30183A_INSP_B31f_300_COPD2',
+                  '30211F/COPD2/30211F_INSP_STD_360_COPD2',
+                  '30212H/COPD2/30212H_INSP_STD_382_COPD2',
+                  '30236V/COPD2/30236V_INSP_B31f_290_COPD2',
+                  '30237X/COPD2/30237X_INSP_B31f_320_COPD2',
+                  '30243S/COPD2/30243S_INSP_B31f_314_COPD2',
+                  '30244U/COPD2/30244U_INSP_B31f_310_COPD2',
+                  '30248C/COPD2/30248C_INSP_B31f_320_COPD2',
+                  '30249E/COPD2/30249E_INSP_B31f_320_COPD2',
+                  '30251R/COPD2/30251R_INSP_B31f_320_COPD2',
+                  '30252T/COPD2/30252T_INSP_B31f_267_COPD2',
+                  '30253V/COPD2/30253V_INSP_B31f_360_COPD2',
+                  '30254X/COPD2/30254X_INSP_B31f_300_COPD2',
+                  '30255Z/COPD2/30255Z_INSP_B31f_308_COPD2',
+                  '30256B/COPD2/30256B_INSP_B31f_320_COPD2',
+                  '30260S/COPD2/30260S_INSP_B31f_280_COPD2',
+                  '30263Y/COPD2/30263Y_INSP_STD_380_COPD2',
+                  '30313N/COPD2/30313N_INSP_STD_358_COPD2',
+                  '30314P/COPD2/30314P_INSP_STD_330_COPD2',
+                  '30317V/COPD2/30317V_INSP_STD_390_COPD2',
+                  '30319Z/COPD2/30319Z_INSP_STD_315_COPD2',
+                  '30321M/COPD2/30321M_INSP_STD_310_COPD2',
+                  '30323Q/COPD2/30323Q_INSP_STD_308_COPD2',
+                  '30327Y/COPD2/30327Y_INSP_STD_390_COPD2',
+                  '30331P/COPD2/30331P_INSP_STD_330_COPD2',
+]
+
+  extract_torso:
+    task: "ExtractTorso"
+    source_directory: "dicom"
+    results_directory: "extract_torso"
+    output_filename: "torso"
+    params: { threshold: -320 }
+
+  extract_whole_lungs_sw:
+    task: "ExtractWholeLungsSW"
+    results_directory: "extract_whole_lungs_sw"
+    output_filenames: { left_lung: [ "lul", "lll" ], right_lung: [ "rul", "rml", "rll" ] }
+    params: { maximumRMSError: 0.009999999776482582, numberOfIterations: 30 }
+
+  create_meshes_sw:
+    task: "CreateMeshesSW"
+    source_directory: "extract_whole_lungs_sw"
+    results_directory: "create_meshes_whole_lungs_sw"
+    image_glob: "*.mhd"
+    params: {
+      pad: True,
+      step_size: 1,
+      fix_first: False,
+      decimate: False,
+      decimate_target_faces: 100000,
+      subdivide_passes: 0,
+      volume_preservation: True,
+      remesh: True,
+      remesh_target_points: 40000,
+      adaptivity: 0,
+      smooth: True,
+      smooth_iterations: 5,
+      relaxation: 1,
+      fill_holes: True,
+      hole_size: 100,
+      remove_shared_faces: True,
+      isolate_mesh: True }
+
+  create_meshes_torso_sw:
+    task: "CreateMeshesSW"
+    source_directory: "extract_torso"
+    results_directory: "create_meshes_torso_sw"
+    image_glob: "*.nii"
+    params: {
+      pad: True,
+      step_size: 3,
+      fix_first: True,
+      decimate: False,
+      decimate_target_faces: 100000,
+      subdivide_passes: 0,
+      volume_preservation: True,
+      remesh: True,
+      remesh_target_points: 40000,
+      adaptivity: 0,
+      smooth: True,
+      smooth_iterations: 5,
+      relaxation: 1,
+      fill_holes: True,
+      hole_size: 100,
+      remove_shared_faces: True,
+      isolate_mesh: True }
+
+  reference_selection_mesh_sw:
+    task: "ReferenceSelectionMeshSW"
+    source_directories: [ "create_meshes_whole_lungs_sw", "create_meshes_torso_sw" ]
+    results_directory: "reference_selection_mesh_whole_lungs_sw_NS_INSP"
+
+  mesh_transform_sw:
+    task: "MeshTransformSW"
+    source_directory_initialize: "reference_selection_mesh_whole_lungs_sw_NS_INSP"
+    source_directories: [ "create_meshes_whole_lungs_sw", "create_meshes_torso_sw" ]
+    results_directory: "mesh_transform_sw_NS_INSP"
+    params: { iterations: 100 }
+
+  mesh_landmarks_lungs:
+    task: "MeshLandmarksCoarse"
+    source_directory: "create_meshes_whole_lungs_sw"
+    results_directory: "mesh_landmarks_coarse_lungs"
+    params: { }
+
+  mesh_landmarks_torso:
+    task: "MeshLandmarksCoarse"
+    source_directory: "create_meshes_torso_sw"
+    results_directory: "mesh_landmarks_coarse_torso"
+    params: { }
+
+  optimize_meshes_sw:
+    task: "OptimizeMeshesSW"
+    source_directory_transform: "mesh_transform_sw_NS_INSP"
+    source_directories_mesh: [ "create_meshes_whole_lungs_sw", "create_meshes_torso_sw" ]
+    source_directories_original: [ "extract_whole_lungs_sw", "extract_torso" ]
+    source_directories_landmarks: [ "mesh_landmarks_coarse_lungs", "mesh_landmarks_coarse_torso" ]
+    image_globs: [ "*.nii","*.mhd" ]
+    results_directory: "optimize_meshes_sw_NS_INSP"
+    params: {
+      checkpointing_interval: 200,
+      keep_checkpoints: 0,
+      iterations_per_split: 2000,
+      optimization_iterations: 2000,
+      starting_regularization: 2000,
+      ending_regularization: 100,
+      relative_weighting: 4,
+      initial_relative_weighting: 0.03,
+      save_init_splits: 0,
+      verbosity: 0,
+      use_normals: 1,
+      normals_strength: 10.0,
+      procrustes: 0,
+      procrustes_scaling: 1,
+      procrustes_rotation_translation: 1,
+      number_of_particles: [ 128, 128, 256 ],
+      use_geodesic_distance: 0,
+      use_landmarks: 1
+    }
+
+  compute_pca_sw:
+    task: "ComputePCASW"
+    source_directory: "optimize_meshes_sw_NS_INSP"
+    source_directory_reference: "reference_selection_mesh_whole_lungs_sw_NS_INSP"
+    results_directory: "pca_sw_NS_INSP"
+    mesh_file_domain_name_regex: ".+?(?=-)" # First one or more characters until dash. (Dash being the delimiter of CreateMeshesSW)
+    params: {
+      warp_mesh_subject_id: 1
+    }
+
+  subject_data_pca_correlation_sw:
+    task: "SubjectDataPCACorrelationSW"
+    source_directory_pca: "pca_sw_NS_INSP"
+    source_directory_subject_data: "subject_data"
+    results_directory: "subject_data_pca_correlation_sw_NS_INSP"
+    subject_data_filename: "COPDGene_P1P2_SM_NS_25OCT21.txt"
+#    subject_data_keys: ["gender", "age_visit", "Height_CM", "Weight_KG", "BMI", "Waist_CM","Arm_Span_CM", "FEV1_pre", "FEV6_pre", "FVC_pre",
+#                          "FEV1_FVC_pre","PEF_pre", "FEF2575_pre", "DLco_GLI_tr_pb_adjusted", "sysBP", "diasBP", "HR",
+#                        "RBC","hemoglobin", "hematocrit","MCV","MCH","MCHC", "SF36_PF_score", "SF36_VT_score", "SF36_GH_score"]
+    subject_data_keys: [ "gender", "age_visit", "Height_CM", "Weight_KG", "BMI", "Waist_CM","Arm_Span_CM", "FEV1_pre", "FEV1_FVC_pre", "sysBP", "diasBP"]
+    study_phase: 2
+    params: { percent_variability: 0.75,
+              ftest_significance: 0.05}
+
+  logging:
+
+run_tasks: [ "extract_whole_lungs_sw", "extract_torso", "create_meshes_sw", "create_meshes_torso_sw",
+             "reference_selection_mesh_sw", "mesh_transform_sw", "mesh_landmarks_lungs", "mesh_landmarks_torso",
+             "optimize_meshes_sw", "compute_pca_sw", "subject_data_pca_correlation_sw"]

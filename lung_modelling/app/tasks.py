@@ -34,6 +34,18 @@ class ExtractLungLobes(EachItemTask):
 
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        """
+
+        Parameters
+        ----------
+        dataloc
+        dataset_config
+        task_config
+
+        Returns
+        -------
+
+        """
         pass
 
     @staticmethod
@@ -96,6 +108,18 @@ class ExtractWholeLungs(EachItemTask):
 
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        """
+
+        Parameters
+        ----------
+        dataloc
+        dataset_config
+        task_config
+
+        Returns
+        -------
+
+        """
         pass
 
     @staticmethod
@@ -161,6 +185,18 @@ class CreateMeshes(EachItemTask):
 
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        """
+
+        Parameters
+        ----------
+        dataloc
+        dataset_config
+        task_config
+
+        Returns
+        -------
+
+        """
         pass
 
     @staticmethod
@@ -263,6 +299,18 @@ class ExtractTorso(EachItemTask):
 
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        """
+
+        Parameters
+        ----------
+        dataloc
+        dataset_config
+        task_config
+
+        Returns
+        -------
+
+        """
         pass
 
     @staticmethod
@@ -319,6 +367,18 @@ class MeshLandmarksCoarse(EachItemTask):
 
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        """
+
+        Parameters
+        ----------
+        dataloc
+        dataset_config
+        task_config
+
+        Returns
+        -------
+
+        """
         pass
 
     @staticmethod
@@ -759,6 +819,18 @@ class TetrahedralizeMeshes(EachItemTask):
 
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        """
+
+        Parameters
+        ----------
+        dataloc
+        dataset_config
+        task_config
+
+        Returns
+        -------
+
+        """
 
         if not os.path.exists(dataloc.abs_pooled_derivative / task_config.results_directory):
             os.makedirs(dataloc.abs_pooled_derivative / task_config.results_directory)
@@ -801,7 +873,8 @@ class TetrahedralizeMeshes(EachItemTask):
     def work(source_directory_primary: Path, source_directory_derivative: Path, output_directory: Path,
              dataset_config: DictConfig, task_config: DictConfig, initialize_result=None) -> list[Path]:
         """
-        Convert surface meshes to 3D finite element meshes suitable for EIT using tetrahedralizer.
+        Convert surface meshes to 3D finite element meshes suitable for EIT using tetrahedralizer. Generates tetrahedralization
+        for mean, reference, and predicted meshes.
 
         Parameters
         ----------
@@ -814,11 +887,19 @@ class TetrahedralizeMeshes(EachItemTask):
         dataset_config
             Config relating to the entire dataset
         task_config
-            **source_directory**: subdirectory within derivative source folder to find source files
-
+            **source_directories_reference_mesh**: subdirectory within derivative source folder to find source files
+            **source_directory_mean_mesh**: Source directory for the mean mesh
+            **mesh_file_domain_regex**: Regex to match domain name within mesh filename
+            **outer_mesh_domain_name**: Domain name for mesh to use as outer mesh in tetrahedralizer
             **results_directory**: Name of the results folder (Stem of output_directory)
 
-            **params**: (Dict): No params currently used for this task
+            **params**: (Dict):
+                **remesh**
+                    Number of points to remesh input meshes to before tetrahedralizing.
+                **mesh_repair_kwargs**
+                    Dict of kwargs for mesh repair (See tetrahedralizer)
+                **gmsh_options**
+                    Dict of kwargs for gmesh (See tetrahedralizer)
 
         initialize_result
             Return dict from the initialize function
@@ -879,7 +960,7 @@ class TetrahedralizeMeshes(EachItemTask):
         #
         # p.link_views()
         # p.show()
-
+        #
         # cmap = colormaps["Set1"]
         # p = pv.Plotter(shape=(1, 3))
         # titles = ["Reference", "Predicted", "Mean"]
@@ -888,10 +969,9 @@ class TetrahedralizeMeshes(EachItemTask):
         #     p.subplot(0, i)
         #     for j, d in enumerate([reference_mesh_dict, predicted_mesh_dict, mean_mesh_dict]):
         #         p.add_mesh(d[k].extract_all_edges(), color=cmap(j), label=titles[j])
-        #     p.add_legend()
-        #     p.add_text(k)
+        #     p.add_legend(bcolor="w", face=None, size=(0.25,0.2))
+        #     p.add_text(f"{str(source_directory_primary.stem).split('_')[0]} {k}", font_size=10)
         #
-        # p.link_views()
         # p.show()
 
         outer_mesh_label = task_config.outer_mesh_domain_name
@@ -920,6 +1000,18 @@ class TetrahedralizeMeshes(EachItemTask):
 class EITSimulation(EachItemTask):
     @staticmethod
     def initialize(dataloc: DatasetLocator, dataset_config: DictConfig, task_config: DictConfig) -> dict:
+        """
+
+        Parameters
+        ----------
+        dataloc
+        dataset_config
+        task_config
+
+        Returns
+        -------
+
+        """
         mean_mesh = pv.read(glob(str(dataloc.abs_pooled_derivative / task_config.source_directory / "*mean*.vtu"))[0])
 
         return {"mean_mesh": mean_mesh}
@@ -945,7 +1037,13 @@ class EITSimulation(EachItemTask):
 
             **results_directory**: Name of the results folder (Stem of output_directory)
 
-            **params**: (Dict): No params currently used for this task
+            **params**: (Dict):
+                **n_electrodes**: number of electrodes to use in EIT simulation
+                **lambda**: Lambda parameter for eit reconstruction
+                **r_lung_deflated**: Resistivity of deflated lung
+                **r_lung_inflated**: Resistivity of inflated lung
+                **r_surrounding_tissue**: Resistivity of surrounding tissue in torso
+                **lung_slice_ratio**: Ratio from bottom of lungs to place electrodes (TODO: this currently goes from bottom of torso)
 
         initialize_result
             Return dict from the initialize function

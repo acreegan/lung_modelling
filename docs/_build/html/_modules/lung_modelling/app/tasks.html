@@ -5,8 +5,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>lung_modelling.app.tasks &#8212; Lung Modelling  documentation</title>
-    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b3523f8e" />
-    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=039e1c02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=61cd365c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=12dfc556" />
     <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
     <script src="../../../_static/doctools.js?v=888ff710"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
@@ -15,8 +15,9 @@
    
   <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
   
+
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+  
 
   </head><body>
   
@@ -36,7 +37,7 @@
 <span class="kn">from</span> <span class="nn">omegaconf</span> <span class="kn">import</span> <span class="n">DictConfig</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">from</span> <span class="nn">glob</span> <span class="kn">import</span> <span class="n">glob</span>
-<span class="kn">from</span> <span class="nn">lung_modelling</span> <span class="kn">import</span> <span class="n">extract_section</span><span class="p">,</span> <span class="n">voxel_to_mesh</span><span class="p">,</span> <span class="n">refine_mesh</span><span class="p">,</span> <span class="n">parse_discrete</span>
+<span class="kn">from</span> <span class="nn">lung_modelling</span> <span class="kn">import</span> <span class="n">extract_section</span><span class="p">,</span> <span class="n">voxel_to_mesh</span><span class="p">,</span> <span class="n">refine_mesh</span><span class="p">,</span> <span class="n">parse_discrete</span><span class="p">,</span> <span class="n">load_with_category</span>
 <span class="kn">import</span> <span class="nn">medpy.io</span>
 <span class="kn">import</span> <span class="nn">SimpleITK</span> <span class="k">as</span> <span class="nn">sitk</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -48,6 +49,17 @@
 <span class="kn">import</span> <span class="nn">csv</span>
 <span class="kn">from</span> <span class="nn">medpy.io</span> <span class="kn">import</span> <span class="n">load</span>
 <span class="kn">import</span> <span class="nn">fnmatch</span>
+<span class="kn">from</span> <span class="nn">tetrahedralizer.mesh_lib</span> <span class="kn">import</span> <span class="n">preprocess_and_tetrahedralize</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">colormaps</span>
+<span class="kn">from</span> <span class="nn">pyeit.mesh.wrapper</span> <span class="kn">import</span> <span class="n">PyEITMesh</span>
+<span class="kn">from</span> <span class="nn">pyeit.mesh.external</span> <span class="kn">import</span> <span class="n">place_electrodes_3d</span>
+<span class="kn">import</span> <span class="nn">pyeit.eit.protocol</span> <span class="k">as</span> <span class="nn">protocol</span>
+<span class="kn">from</span> <span class="nn">pyeit.eit.jac</span> <span class="kn">import</span> <span class="n">JAC</span>
+<span class="kn">from</span> <span class="nn">pyeit.eit.fem</span> <span class="kn">import</span> <span class="n">EITForward</span>
+<span class="kn">from</span> <span class="nn">pyeit.visual.plot</span> <span class="kn">import</span> <span class="n">create_3d_plot_with_slice</span>
+<span class="kn">from</span> <span class="nn">vtkmodules.util.vtkConstants</span> <span class="kn">import</span> <span class="n">VTK_TETRA</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
 
 
 <div class="viewcode-block" id="ExtractLungLobes">
@@ -58,6 +70,18 @@
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.ExtractLungLobes.initialize">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataloc</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">        task_config</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">pass</span></div>
 
 
@@ -129,6 +153,18 @@
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.ExtractWholeLungs.initialize">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataloc</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">        task_config</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">pass</span></div>
 
 
@@ -203,6 +239,18 @@
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.CreateMeshes.initialize">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataloc</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">        task_config</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">pass</span></div>
 
 
@@ -320,6 +368,18 @@
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.ExtractTorso.initialize">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataloc</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">        task_config</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">pass</span></div>
 
 
@@ -385,6 +445,18 @@
 <a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.MeshLandmarksCoarse.initialize">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataloc</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">        task_config</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">pass</span></div>
 
 
@@ -525,7 +597,8 @@
         <span class="n">group_data_header</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;dir&quot;</span><span class="p">,</span> <span class="o">*</span><span class="n">task_config</span><span class="o">.</span><span class="n">groups</span><span class="p">]</span>
         <span class="n">group_values</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="nb">dir</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">dirs_list</span><span class="p">:</span>
-            <span class="n">sid</span> <span class="o">=</span> <span class="nb">dir</span><span class="o">.</span><span class="n">stem</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">sid</span> <span class="o">=</span> <span class="nb">dir</span><span class="o">.</span><span class="n">parts</span><span class="p">[</span>
+                <span class="n">dataset_config</span><span class="o">.</span><span class="n">subject_id_folder_depth</span> <span class="o">-</span> <span class="mi">2</span><span class="p">]</span>  <span class="c1"># -1 because dirs start after primary/derivative, -1 again to zero index</span>
             <span class="n">subject_group_values</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="n">subject_group_values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">PurePosixPath</span><span class="p">(</span><span class="nb">dir</span><span class="p">)))</span>
             <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">task_config</span><span class="o">.</span><span class="n">groups</span><span class="p">:</span>
@@ -604,35 +677,57 @@
         <span class="n">data_file</span> <span class="o">=</span> <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_pooled_primary</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">subject_data_filename</span>
         <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data_file</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">)</span>
 
-        <span class="c1"># Match desired values in the subject data</span>
-        <span class="c1"># -------------------------------------------------------------------------------------------------------------</span>
-        <span class="n">match</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">dict</span><span class="p">(</span><span class="n">task_config</span><span class="o">.</span><span class="n">search_values</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="n">match</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">match</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">==</span> <span class="n">value</span><span class="p">]</span>
-
         <span class="n">dirpaths</span> <span class="o">=</span> <span class="p">[</span><span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">dirs_list</span><span class="p">]</span>
-        <span class="n">dirpaths</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">path</span><span class="o">.</span><span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">dirpaths</span><span class="p">],</span> <span class="n">dirpaths</span><span class="p">])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
-                                <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;sid&quot;</span><span class="p">,</span> <span class="s2">&quot;dirpath&quot;</span><span class="p">])</span>
+        <span class="n">dirpaths</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">path</span><span class="o">.</span><span class="n">parts</span><span class="p">[</span><span class="n">dataset_config</span><span class="o">.</span><span class="n">subject_id_folder_depth</span> <span class="o">-</span> <span class="mi">2</span><span class="p">]</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">dirpaths</span><span class="p">],</span> <span class="n">dirpaths</span><span class="p">])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;sid&quot;</span><span class="p">,</span> <span class="s2">&quot;dirpath&quot;</span><span class="p">])</span>
+
+        <span class="c1"># Filter for desired values in the subject data</span>
+        <span class="c1"># -------------------------------------------------------------------------------------------------------------</span>
+        <span class="c1"># Filter desired study phase</span>
+        <span class="n">selected</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">selected</span> <span class="o">=</span> <span class="n">selected</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">selected</span><span class="p">[</span><span class="s2">&quot;Phase_study&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">task_config</span><span class="o">.</span><span class="n">study_phase</span><span class="p">]</span>
+
+        <span class="c1"># Filter desired column values</span>
+        <span class="k">for</span> <span class="n">data_column</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">dict</span><span class="p">(</span><span class="n">task_config</span><span class="o">.</span><span class="n">search_values</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">selected</span> <span class="o">=</span> <span class="n">selected</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">selected</span><span class="p">[</span><span class="n">data_column</span><span class="p">]</span> <span class="o">==</span> <span class="n">value</span><span class="p">]</span>
+
+        <span class="c1"># Filter for desired existing data</span>
+        <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">task_config</span><span class="o">.</span><span class="n">data_columns_exist</span><span class="p">:</span>
+            <span class="n">selected</span> <span class="o">=</span> <span class="n">selected</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">selected</span><span class="p">[</span><span class="n">column</span><span class="p">]</span><span class="o">.</span><span class="n">notna</span><span class="p">()]</span>
 
         <span class="c1"># Filter selected subjects checking that data exists and is labelled as good</span>
         <span class="c1"># -------------------------------------------------------------------------------------------------------------</span>
         <span class="c1"># Make sure we are only using subjects that are present in the filesystem</span>
-        <span class="n">match</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">match</span><span class="o">.</span><span class="n">sid</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">dirpaths</span><span class="o">.</span><span class="n">sid</span><span class="p">)]</span>
+        <span class="n">selected</span> <span class="o">=</span> <span class="n">selected</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">selected</span><span class="o">.</span><span class="n">sid</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">dirpaths</span><span class="o">.</span><span class="n">sid</span><span class="p">)]</span>
         <span class="c1"># Only use subjects that have good CT data</span>
-        <span class="n">match</span> <span class="o">=</span> <span class="n">match</span><span class="p">[</span><span class="n">match</span><span class="o">.</span><span class="n">CTMissing_Reason</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span>
-        <span class="k">match</span><span class="p">[</span><span class="s2">&quot;kernel_label&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;STD&quot;</span> <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="s2">&quot;STANDARD&quot;</span> <span class="k">else</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">match</span><span class="o">.</span><span class="n">kernel</span><span class="p">]</span>
-        <span class="n">match</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;sid&quot;</span><span class="p">)</span>
-        <span class="n">dirpaths_match</span> <span class="o">=</span> <span class="n">dirpaths</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">dirpaths</span><span class="o">.</span><span class="n">sid</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">index</span><span class="p">)]</span>
-        <span class="n">dirpaths_match</span> <span class="o">=</span> <span class="n">dirpaths_match</span><span class="p">[[</span><span class="nb">len</span><span class="p">(</span><span class="n">fnmatch</span><span class="o">.</span><span class="n">filter</span><span class="p">([</span><span class="n">i</span><span class="p">],</span> <span class="sa">f</span><span class="s2">&quot;*_</span><span class="si">{</span><span class="n">match</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">kernel_label</span><span class="si">}</span><span class="s2">_*&quot;</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">0</span>
-                                         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">dirpaths_match</span><span class="o">.</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">dirpaths_match</span><span class="o">.</span><span class="n">sid</span><span class="p">)]]</span>
+        <span class="n">selected</span> <span class="o">=</span> <span class="n">selected</span><span class="p">[</span><span class="n">selected</span><span class="o">.</span><span class="n">CTMissing_Reason</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Select directories based on selected subjects and filter selected directories by kernel as specified in</span>
+        <span class="c1"># subject data (This should be the one with pre-segmented lobes and airways</span>
+        <span class="c1"># --------------------------------------------------------------------------------------------------------------</span>
+        <span class="c1"># Map kernel column of subject data to the folder naming convention in the dataset</span>
+        <span class="n">selected</span><span class="p">[</span><span class="s2">&quot;kernel_label&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;STD&quot;</span> <span class="k">if</span> <span class="n">l</span> <span class="o">==</span> <span class="s2">&quot;STANDARD&quot;</span> <span class="k">else</span> <span class="n">l</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">selected</span><span class="o">.</span><span class="n">kernel</span><span class="p">]</span>
+        <span class="n">selected</span> <span class="o">=</span> <span class="n">selected</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;sid&quot;</span><span class="p">)</span>
+        <span class="n">dirpaths_selected</span> <span class="o">=</span> <span class="n">dirpaths</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">dirpaths</span><span class="o">.</span><span class="n">sid</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">selected</span><span class="o">.</span><span class="n">index</span><span class="p">)]</span>
+        <span class="n">dirpaths_selected</span> <span class="o">=</span> <span class="n">dirpaths_selected</span><span class="p">[[</span><span class="nb">len</span><span class="p">(</span><span class="n">fnmatch</span><span class="o">.</span><span class="n">filter</span><span class="p">([</span><span class="n">i</span><span class="p">],</span> <span class="sa">f</span><span class="s2">&quot;*_</span><span class="si">{</span><span class="n">selected</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">kernel_label</span><span class="si">}</span><span class="s2">_*&quot;</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">0</span>
+                                               <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">dirpaths_selected</span><span class="o">.</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">dirpaths_selected</span><span class="o">.</span><span class="n">sid</span><span class="p">)]]</span>
+
+        <span class="c1"># Final check that desired data is present in the file system</span>
+        <span class="c1"># --------------------------------------------------------------------------------------------------------------</span>
         <span class="c1"># All directories that match the kernel label of a subject should have Lobes.mhd file</span>
-        <span class="n">dirpaths_match</span> <span class="o">=</span> <span class="n">dirpaths_match</span><span class="p">[[</span><span class="nb">len</span><span class="p">(</span><span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_primary</span> <span class="o">/</span> <span class="n">i</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;*Lobes.mhd&quot;</span><span class="p">)))</span> <span class="o">&gt;</span> <span class="mi">0</span>
-                                         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">dirpaths_match</span><span class="o">.</span><span class="n">dirpath</span><span class="p">]]</span>
+        <span class="n">dirpaths_selected</span> <span class="o">=</span> <span class="n">dirpaths_selected</span><span class="p">[[</span><span class="nb">len</span><span class="p">(</span><span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_primary</span> <span class="o">/</span> <span class="n">i</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;*Lobes.mhd&quot;</span><span class="p">)))</span> <span class="o">&gt;</span> <span class="mi">0</span>
+                                               <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">dirpaths_selected</span><span class="o">.</span><span class="n">dirpath</span><span class="p">]]</span>
 
         <span class="c1"># Filter selected directories using desired ventilation state</span>
         <span class="c1"># --------------------------------------------------------------------------------------------------------------</span>
-        <span class="n">dirpaths_match</span> <span class="o">=</span> <span class="n">dirpaths_match</span><span class="p">[</span>
-            <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">fnmatch</span><span class="o">.</span><span class="n">filter</span><span class="p">([</span><span class="n">i</span><span class="p">],</span> <span class="sa">f</span><span class="s2">&quot;*_</span><span class="si">{</span><span class="n">task_config</span><span class="o">.</span><span class="n">insp_exp</span><span class="si">}</span><span class="s2">_*&quot;</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">dirpaths_match</span><span class="o">.</span><span class="n">dirpath</span><span class="p">]]</span>
+        <span class="n">dirpaths_selected</span> <span class="o">=</span> <span class="n">dirpaths_selected</span><span class="p">[</span>
+            <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">fnmatch</span><span class="o">.</span><span class="n">filter</span><span class="p">([</span><span class="n">i</span><span class="p">],</span> <span class="sa">f</span><span class="s2">&quot;*_</span><span class="si">{</span><span class="n">task_config</span><span class="o">.</span><span class="n">insp_exp</span><span class="si">}</span><span class="s2">_*&quot;</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">dirpaths_selected</span><span class="o">.</span><span class="n">dirpath</span><span class="p">]]</span>
+
+        <span class="c1"># Remove &quot;LD&quot; (Low dose?) folders</span>
+        <span class="c1"># --------------------------------------------------------------------------------------------------------------</span>
+        <span class="n">dirpaths_selected</span> <span class="o">=</span> <span class="n">dirpaths_selected</span><span class="p">[</span>
+            <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">fnmatch</span><span class="o">.</span><span class="n">filter</span><span class="p">([</span><span class="n">i</span><span class="p">],</span> <span class="sa">f</span><span class="s2">&quot;*_LD_*&quot;</span><span class="p">))</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">dirpaths_selected</span><span class="o">.</span><span class="n">dirpath</span><span class="p">]]</span>
 
         <span class="c1"># Write Results</span>
         <span class="c1"># ---------------------------------------------------------------------------------------------------------------</span>
@@ -641,8 +736,8 @@
             <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">ref_dir_file</span><span class="p">)</span>
             <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="s2">&quot;sid&quot;</span><span class="p">,</span> <span class="s2">&quot;dirpath&quot;</span><span class="p">])</span>
 
-            <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dirpaths_match</span><span class="p">)):</span>
-                <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="n">dirpaths_match</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">row</span><span class="p">]</span><span class="o">.</span><span class="n">sid</span><span class="p">,</span> <span class="n">PurePosixPath</span><span class="p">(</span><span class="n">dirpaths_match</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">row</span><span class="p">]</span><span class="o">.</span><span class="n">dirpath</span><span class="p">)])</span>
+            <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dirpaths_selected</span><span class="p">)):</span>
+                <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="n">dirpaths_selected</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">row</span><span class="p">]</span><span class="o">.</span><span class="n">sid</span><span class="p">,</span> <span class="n">PurePosixPath</span><span class="p">(</span><span class="n">dirpaths_selected</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">row</span><span class="p">]</span><span class="o">.</span><span class="n">dirpath</span><span class="p">)])</span>
 
         <span class="k">return</span> <span class="p">[</span><span class="n">Path</span><span class="p">(</span><span class="n">selected_subjects_filename</span><span class="p">)]</span></div>
 </div>
@@ -827,9 +922,355 @@
 
 
 
+<div class="viewcode-block" id="TetrahedralizeMeshes">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.TetrahedralizeMeshes">[docs]</a>
+<span class="k">class</span> <span class="nc">TetrahedralizeMeshes</span><span class="p">(</span><span class="n">EachItemTask</span><span class="p">):</span>
+
+<div class="viewcode-block" id="TetrahedralizeMeshes.initialize">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.TetrahedralizeMeshes.initialize">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataloc</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">        task_config</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_pooled_derivative</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">results_directory</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_pooled_derivative</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">results_directory</span><span class="p">)</span>
+
+        <span class="n">mean_mesh_dict</span> <span class="o">=</span> <span class="n">load_with_category</span><span class="p">(</span><span class="n">search_dirs</span><span class="o">=</span><span class="p">[</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_pooled_derivative</span> <span class="o">/</span>
+                                                         <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory_mean_mesh</span><span class="p">],</span>
+                                            <span class="n">category_regex</span><span class="o">=</span><span class="n">task_config</span><span class="o">.</span><span class="n">mesh_file_domain_name_regex</span><span class="p">,</span>
+                                            <span class="n">load_glob</span><span class="o">=</span><span class="s2">&quot;*.vtk&quot;</span><span class="p">,</span>
+                                            <span class="n">loader</span><span class="o">=</span><span class="n">pv</span><span class="o">.</span><span class="n">read</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s2">&quot;remesh&quot;</span> <span class="ow">in</span> <span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">mean_mesh_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">clus</span> <span class="o">=</span> <span class="n">pyacvd</span><span class="o">.</span><span class="n">Clustering</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+                <span class="n">clus</span><span class="o">.</span><span class="n">cluster</span><span class="p">(</span><span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;remesh&quot;</span><span class="p">])</span>
+                <span class="n">remesh</span> <span class="o">=</span> <span class="n">clus</span><span class="o">.</span><span class="n">create_mesh</span><span class="p">()</span>
+
+                <span class="n">clus2</span> <span class="o">=</span> <span class="n">pyacvd</span><span class="o">.</span><span class="n">Clustering</span><span class="p">(</span><span class="n">remesh</span><span class="p">)</span>
+                <span class="n">clus2</span><span class="o">.</span><span class="n">subdivide</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+                <span class="n">clus2</span><span class="o">.</span><span class="n">cluster</span><span class="p">(</span><span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;remesh&quot;</span><span class="p">])</span>
+                <span class="n">remesh2</span> <span class="o">=</span> <span class="n">clus2</span><span class="o">.</span><span class="n">create_mesh</span><span class="p">()</span>
+
+                <span class="n">mean_mesh_dict</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">remesh2</span>
+
+        <span class="n">outer_mesh_label</span> <span class="o">=</span> <span class="n">task_config</span><span class="o">.</span><span class="n">outer_mesh_domain_name</span>
+        <span class="n">inner_mesh_labels</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">mean_mesh_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">if</span> <span class="n">name</span> <span class="o">!=</span> <span class="n">task_config</span><span class="o">.</span><span class="n">outer_mesh_domain_name</span><span class="p">]</span>
+
+        <span class="n">mean_tet</span> <span class="o">=</span> <span class="n">preprocess_and_tetrahedralize</span><span class="p">(</span><span class="n">outer_mesh</span><span class="o">=</span><span class="n">mean_mesh_dict</span><span class="p">[</span><span class="n">task_config</span><span class="o">.</span><span class="n">outer_mesh_domain_name</span><span class="p">],</span>
+                                                 <span class="n">inner_meshes</span><span class="o">=</span><span class="p">[</span><span class="n">mean_mesh_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">inner_mesh_labels</span><span class="p">],</span>
+                                                 <span class="n">mesh_repair_kwargs</span><span class="o">=</span><span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">mesh_repair_kwargs</span><span class="p">,</span>
+                                                 <span class="n">gmsh_options</span><span class="o">=</span><span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">gmsh_options</span><span class="p">,</span>
+                                                 <span class="n">outer_mesh_element_label</span><span class="o">=</span><span class="n">outer_mesh_label</span><span class="p">,</span>
+                                                 <span class="n">inner_mesh_element_labels</span><span class="o">=</span><span class="n">inner_mesh_labels</span><span class="p">)</span>
+
+        <span class="n">mean_tet_file</span> <span class="o">=</span> <span class="n">dataloc</span><span class="o">.</span><span class="n">abs_pooled_derivative</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">results_directory</span> <span class="o">/</span> <span class="s2">&quot;mean_meshes_tetrahedralized.vtu&quot;</span>
+        <span class="n">mean_tet</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">mean_tet_file</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">mean_mesh_dict</span></div>
+
+
+<div class="viewcode-block" id="TetrahedralizeMeshes.work">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.TetrahedralizeMeshes.work">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">source_directory_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+             <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">initialize_result</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Convert surface meshes to 3D finite element meshes suitable for EIT using tetrahedralizer. Generates tetrahedralization</span>
+<span class="sd">        for mean, reference, and predicted meshes.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        source_directory_primary</span>
+<span class="sd">            Absolute path of the source directory in the primary folder of the dataset</span>
+<span class="sd">        source_directory_derivative</span>
+<span class="sd">            Absolute path of the source directory in the derivative folder of the dataset</span>
+<span class="sd">        output_directory</span>
+<span class="sd">            Absolute path of the directory in which to save results of the work function</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">            Config relating to the entire dataset</span>
+<span class="sd">        task_config</span>
+<span class="sd">            **source_directories_reference_mesh**: subdirectory within derivative source folder to find source files</span>
+<span class="sd">            **source_directory_mean_mesh**: Source directory for the mean mesh</span>
+<span class="sd">            **mesh_file_domain_regex**: Regex to match domain name within mesh filename</span>
+<span class="sd">            **outer_mesh_domain_name**: Domain name for mesh to use as outer mesh in tetrahedralizer</span>
+<span class="sd">            **results_directory**: Name of the results folder (Stem of output_directory)</span>
+
+<span class="sd">            **params**: (Dict):</span>
+<span class="sd">                **remesh**</span>
+<span class="sd">                    Number of points to remesh input meshes to before tetrahedralizing.</span>
+<span class="sd">                **mesh_repair_kwargs**</span>
+<span class="sd">                    Dict of kwargs for mesh repair (See tetrahedralizer)</span>
+<span class="sd">                **gmsh_options**</span>
+<span class="sd">                    Dict of kwargs for gmesh (See tetrahedralizer)</span>
+
+<span class="sd">        initialize_result</span>
+<span class="sd">            Return dict from the initialize function</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># For each set of input folders (e.g., From CT with lobes, From PCA estimated)</span>
+        <span class="c1"># Outer and inner surfaces should be specified</span>
+        <span class="c1"># From CT  is the reference for simulation</span>
+        <span class="c1"># From PCA, specify a set with and without lungs (for a priori forward, and reconstruction respectively</span>
+        <span class="c1"># Run tetrahedralizer on them.</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_directory</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_directory</span><span class="p">)</span>
+
+        <span class="c1"># Load reference meshes that have been aligned to mean. The alignment is only for plotting purposes</span>
+        <span class="n">reference_mesh_dict</span> <span class="o">=</span> <span class="n">load_with_category</span><span class="p">(</span><span class="n">search_dirs</span><span class="o">=</span><span class="p">[</span><span class="n">source_directory_derivative</span> <span class="o">/</span> <span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span>
+                                                              <span class="n">task_config</span><span class="o">.</span><span class="n">source_directories_reference_mesh</span><span class="p">],</span>
+                                                 <span class="n">category_regex</span><span class="o">=</span><span class="n">task_config</span><span class="o">.</span><span class="n">mesh_file_domain_name_regex</span><span class="p">,</span>
+                                                 <span class="n">load_glob</span><span class="o">=</span><span class="s2">&quot;*reference_aligned_to_mean*.vtk&quot;</span><span class="p">,</span>
+                                                 <span class="n">loader</span><span class="o">=</span><span class="n">pv</span><span class="o">.</span><span class="n">read</span><span class="p">)</span>
+
+        <span class="n">predicted_mesh_dict</span> <span class="o">=</span> <span class="n">load_with_category</span><span class="p">(</span><span class="n">search_dirs</span><span class="o">=</span><span class="p">[</span><span class="n">source_directory_derivative</span> <span class="o">/</span>
+                                                              <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory_predicted_mesh</span><span class="p">],</span>
+                                                 <span class="n">category_regex</span><span class="o">=</span><span class="n">task_config</span><span class="o">.</span><span class="n">mesh_file_domain_name_regex</span><span class="p">,</span>
+                                                 <span class="n">load_glob</span><span class="o">=</span><span class="s2">&quot;*predicted*.vtk&quot;</span><span class="p">,</span>
+                                                 <span class="n">loader</span><span class="o">=</span><span class="n">pv</span><span class="o">.</span><span class="n">read</span><span class="p">)</span>
+
+        <span class="n">mean_mesh_dict</span> <span class="o">=</span> <span class="n">initialize_result</span>
+
+        <span class="k">if</span> <span class="s2">&quot;remesh&quot;</span> <span class="ow">in</span> <span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="p">[</span><span class="n">reference_mesh_dict</span><span class="p">,</span> <span class="n">predicted_mesh_dict</span><span class="p">]:</span>
+                <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">d</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">clus</span> <span class="o">=</span> <span class="n">pyacvd</span><span class="o">.</span><span class="n">Clustering</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+                    <span class="n">clus</span><span class="o">.</span><span class="n">cluster</span><span class="p">(</span><span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;remesh&quot;</span><span class="p">])</span>
+                    <span class="n">remesh</span> <span class="o">=</span> <span class="n">clus</span><span class="o">.</span><span class="n">create_mesh</span><span class="p">()</span>
+
+                    <span class="n">clus2</span> <span class="o">=</span> <span class="n">pyacvd</span><span class="o">.</span><span class="n">Clustering</span><span class="p">(</span><span class="n">remesh</span><span class="p">)</span>
+                    <span class="n">clus2</span><span class="o">.</span><span class="n">subdivide</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+                    <span class="n">clus2</span><span class="o">.</span><span class="n">cluster</span><span class="p">(</span><span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;remesh&quot;</span><span class="p">])</span>
+                    <span class="n">remesh2</span> <span class="o">=</span> <span class="n">clus2</span><span class="o">.</span><span class="n">create_mesh</span><span class="p">()</span>
+
+                    <span class="n">d</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">remesh2</span>
+
+        <span class="c1"># cmap = colormaps[&quot;Set1&quot;]</span>
+        <span class="c1"># p = pv.Plotter(shape=(1, 3))</span>
+        <span class="c1"># titles = [&quot;Reference Meshes&quot;, &quot;Predicted Meshes&quot;, &quot;Mean Meshes&quot;]</span>
+        <span class="c1"># for i, d in enumerate([reference_mesh_dict, predicted_mesh_dict, mean_mesh_dict]):</span>
+        <span class="c1">#     p.subplot(0, i)</span>
+        <span class="c1">#     for j, k in enumerate(reference_mesh_dict.keys()):</span>
+        <span class="c1">#         p.add_mesh(d[k].extract_all_edges(), color=cmap(j), label=k)</span>
+        <span class="c1">#     p.add_legend()</span>
+        <span class="c1">#     p.add_text(titles[i])</span>
+        <span class="c1">#</span>
+        <span class="c1"># p.link_views()</span>
+        <span class="c1"># p.show()</span>
+        <span class="c1">#</span>
+        <span class="c1"># cmap = colormaps[&quot;Set1&quot;]</span>
+        <span class="c1"># p = pv.Plotter(shape=(1, 3))</span>
+        <span class="c1"># titles = [&quot;Reference&quot;, &quot;Predicted&quot;, &quot;Mean&quot;]</span>
+        <span class="c1">#</span>
+        <span class="c1"># for i, k in enumerate(reference_mesh_dict.keys()):</span>
+        <span class="c1">#     p.subplot(0, i)</span>
+        <span class="c1">#     for j, d in enumerate([reference_mesh_dict, predicted_mesh_dict, mean_mesh_dict]):</span>
+        <span class="c1">#         p.add_mesh(d[k].extract_all_edges(), color=cmap(j), label=titles[j])</span>
+        <span class="c1">#     p.add_legend(bcolor=&quot;w&quot;, face=None, size=(0.25,0.2))</span>
+        <span class="c1">#     p.add_text(f&quot;{str(source_directory_primary.stem).split(&#39;_&#39;)[0]} {k}&quot;, font_size=10)</span>
+        <span class="c1">#</span>
+        <span class="c1"># p.show()</span>
+
+        <span class="n">outer_mesh_label</span> <span class="o">=</span> <span class="n">task_config</span><span class="o">.</span><span class="n">outer_mesh_domain_name</span>
+        <span class="n">inner_mesh_labels</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">reference_mesh_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">if</span> <span class="n">name</span> <span class="o">!=</span> <span class="n">task_config</span><span class="o">.</span><span class="n">outer_mesh_domain_name</span><span class="p">]</span>
+        <span class="n">ref_tet</span> <span class="o">=</span> <span class="n">preprocess_and_tetrahedralize</span><span class="p">(</span><span class="n">outer_mesh</span><span class="o">=</span><span class="n">reference_mesh_dict</span><span class="p">[</span><span class="n">task_config</span><span class="o">.</span><span class="n">outer_mesh_domain_name</span><span class="p">],</span>
+                                                <span class="n">inner_meshes</span><span class="o">=</span><span class="p">[</span><span class="n">reference_mesh_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">inner_mesh_labels</span><span class="p">],</span>
+                                                <span class="n">mesh_repair_kwargs</span><span class="o">=</span><span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">mesh_repair_kwargs</span><span class="p">,</span>
+                                                <span class="n">gmsh_options</span><span class="o">=</span><span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">gmsh_options</span><span class="p">,</span>
+                                                <span class="n">outer_mesh_element_label</span><span class="o">=</span><span class="n">outer_mesh_label</span><span class="p">,</span>
+                                                <span class="n">inner_mesh_element_labels</span><span class="o">=</span><span class="n">inner_mesh_labels</span><span class="p">)</span>
+
+        <span class="n">pred_tet</span> <span class="o">=</span> <span class="n">preprocess_and_tetrahedralize</span><span class="p">(</span><span class="n">outer_mesh</span><span class="o">=</span><span class="n">predicted_mesh_dict</span><span class="p">[</span><span class="n">task_config</span><span class="o">.</span><span class="n">outer_mesh_domain_name</span><span class="p">],</span>
+                                                 <span class="n">inner_meshes</span><span class="o">=</span><span class="p">[</span><span class="n">predicted_mesh_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">inner_mesh_labels</span><span class="p">],</span>
+                                                 <span class="n">mesh_repair_kwargs</span><span class="o">=</span><span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">mesh_repair_kwargs</span><span class="p">,</span>
+                                                 <span class="n">gmsh_options</span><span class="o">=</span><span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">gmsh_options</span><span class="p">,</span>
+                                                 <span class="n">outer_mesh_element_label</span><span class="o">=</span><span class="n">outer_mesh_label</span><span class="p">,</span>
+                                                 <span class="n">inner_mesh_element_labels</span><span class="o">=</span><span class="n">inner_mesh_labels</span><span class="p">)</span>
+
+        <span class="n">ref_tet_file</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="s2">&quot;reference_meshes_tetrahedralized.vtu&quot;</span>
+        <span class="n">pred_tet_file</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="s2">&quot;predicted_meshes_tetrahedralized.vtu&quot;</span>
+
+        <span class="n">ref_tet</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">ref_tet_file</span><span class="p">)</span>
+        <span class="n">pred_tet</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">pred_tet_file</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="EITSimulation">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.EITSimulation">[docs]</a>
+<span class="k">class</span> <span class="nc">EITSimulation</span><span class="p">(</span><span class="n">EachItemTask</span><span class="p">):</span>
+<div class="viewcode-block" id="EITSimulation.initialize">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.EITSimulation.initialize">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">dataloc</span><span class="p">:</span> <span class="n">DatasetLocator</span><span class="p">,</span> <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataloc</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">        task_config</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">mean_mesh</span> <span class="o">=</span> <span class="n">pv</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">dataloc</span><span class="o">.</span><span class="n">abs_pooled_derivative</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory</span> <span class="o">/</span> <span class="s2">&quot;*mean*.vtu&quot;</span><span class="p">))[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;mean_mesh&quot;</span><span class="p">:</span> <span class="n">mean_mesh</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="EITSimulation.work">
+<a class="viewcode-back" href="../../../task_reference.html#lung_modelling.app.tasks.EITSimulation.work">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="n">source_directory_primary</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source_directory_derivative</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+             <span class="n">dataset_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">task_config</span><span class="p">:</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">initialize_result</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Run an EIT simulation in pyEIT for meshes in each subject directory</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        source_directory_primary</span>
+<span class="sd">            Absolute path of the source directory in the primary folder of the dataset</span>
+<span class="sd">        source_directory_derivative</span>
+<span class="sd">            Absolute path of the source directory in the derivative folder of the dataset</span>
+<span class="sd">        output_directory</span>
+<span class="sd">            Absolute path of the directory in which to save results of the work function</span>
+<span class="sd">        dataset_config</span>
+<span class="sd">            Config relating to the entire dataset</span>
+<span class="sd">        task_config</span>
+<span class="sd">            **source_directory**: subdirectory within derivative source folder to find source files</span>
+
+<span class="sd">            **results_directory**: Name of the results folder (Stem of output_directory)</span>
+
+<span class="sd">            **params**: (Dict):</span>
+<span class="sd">                **n_electrodes**: number of electrodes to use in EIT simulation</span>
+<span class="sd">                **lambda**: Lambda parameter for eit reconstruction</span>
+<span class="sd">                **r_lung_deflated**: Resistivity of deflated lung</span>
+<span class="sd">                **r_lung_inflated**: Resistivity of inflated lung</span>
+<span class="sd">                **r_surrounding_tissue**: Resistivity of surrounding tissue in torso</span>
+<span class="sd">                **lung_slice_ratio**: Ratio from bottom of lungs to place electrodes (TODO: this currently goes from bottom of torso)</span>
+
+<span class="sd">        initialize_result</span>
+<span class="sd">            Return dict from the initialize function</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_directory</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_directory</span><span class="p">)</span>
+
+        <span class="n">lung_deflated</span> <span class="o">=</span> <span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">r_lung_deflated</span>
+        <span class="n">lung_inflated</span> <span class="o">=</span> <span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">r_lung_inflated</span>
+        <span class="n">surrounding_tissue</span> <span class="o">=</span> <span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">r_surrounding_tissue</span>
+        <span class="n">n_el</span> <span class="o">=</span> <span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">n_electrodes</span>
+        <span class="n">lung_slice_ratio</span> <span class="o">=</span> <span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">lung_slice_ratio</span>
+        <span class="n">lamb</span> <span class="o">=</span> <span class="n">task_config</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;lambda&quot;</span><span class="p">]</span>
+
+        <span class="n">pv_reference_mesh</span> <span class="o">=</span> <span class="n">pv</span><span class="o">.</span><span class="n">read</span><span class="p">(</span>
+            <span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">source_directory_derivative</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory</span> <span class="o">/</span> <span class="s2">&quot;*reference*.vtu&quot;</span><span class="p">))[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">pv_predicted_mesh</span> <span class="o">=</span> <span class="n">pv</span><span class="o">.</span><span class="n">read</span><span class="p">(</span>
+            <span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">source_directory_derivative</span> <span class="o">/</span> <span class="n">task_config</span><span class="o">.</span><span class="n">source_directory</span> <span class="o">/</span> <span class="s2">&quot;*predicted*.vtu&quot;</span><span class="p">))[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">pv_mean_mesh</span> <span class="o">=</span> <span class="n">initialize_result</span><span class="p">[</span><span class="s2">&quot;mean_mesh&quot;</span><span class="p">]</span>
+
+        <span class="c1"># Simulate</span>
+        <span class="c1"># --------------------------------------------------------------------------------------------------------------</span>
+        <span class="n">reference_mesh</span> <span class="o">=</span> <span class="n">PyEITMesh</span><span class="p">(</span><span class="n">node</span><span class="o">=</span><span class="n">pv_reference_mesh</span><span class="o">.</span><span class="n">points</span><span class="p">,</span> <span class="n">element</span><span class="o">=</span><span class="n">pv_reference_mesh</span><span class="o">.</span><span class="n">cells_dict</span><span class="p">[</span><span class="n">VTK_TETRA</span><span class="p">])</span>
+
+        <span class="n">perm_deflated</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">lung_deflated</span> <span class="k">if</span> <span class="n">label</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;left_lung&quot;</span><span class="p">,</span> <span class="s2">&quot;right_lung&quot;</span><span class="p">]</span> <span class="k">else</span> <span class="n">surrounding_tissue</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span>
+             <span class="n">pv_reference_mesh</span><span class="p">[</span><span class="s2">&quot;Element Label&quot;</span><span class="p">]])</span>
+        <span class="n">perm_inflated</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">lung_inflated</span> <span class="k">if</span> <span class="n">label</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;left_lung&quot;</span><span class="p">,</span> <span class="s2">&quot;right_lung&quot;</span><span class="p">]</span> <span class="k">else</span> <span class="n">surrounding_tissue</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span>
+             <span class="n">pv_reference_mesh</span><span class="p">[</span><span class="s2">&quot;Element Label&quot;</span><span class="p">]])</span>
+
+        <span class="c1"># Todo actually slice by lung height, not overall height</span>
+        <span class="n">electrode_nodes_reference</span> <span class="o">=</span> <span class="n">place_electrodes_3d</span><span class="p">(</span><span class="n">pv_reference_mesh</span><span class="p">,</span> <span class="n">n_el</span><span class="p">,</span> <span class="s2">&quot;z&quot;</span><span class="p">,</span> <span class="n">lung_slice_ratio</span><span class="p">)</span>
+        <span class="n">reference_mesh</span><span class="o">.</span><span class="n">el_pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">electrode_nodes_reference</span><span class="p">)</span>
+
+        <span class="n">protocol_obj</span> <span class="o">=</span> <span class="n">protocol</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+            <span class="n">n_el</span><span class="o">=</span><span class="n">n_el</span><span class="p">,</span> <span class="n">dist_exc</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">step_meas</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">parser_meas</span><span class="o">=</span><span class="s2">&quot;std&quot;</span>
+        <span class="p">)</span>
+        <span class="n">fwd</span> <span class="o">=</span> <span class="n">EITForward</span><span class="p">(</span><span class="n">reference_mesh</span><span class="p">,</span> <span class="n">protocol_obj</span><span class="p">)</span>
+        <span class="n">v0</span> <span class="o">=</span> <span class="n">fwd</span><span class="o">.</span><span class="n">solve_eit</span><span class="p">(</span><span class="n">perm</span><span class="o">=</span><span class="n">perm_deflated</span><span class="p">)</span>
+        <span class="n">v1</span> <span class="o">=</span> <span class="n">fwd</span><span class="o">.</span><span class="n">solve_eit</span><span class="p">(</span><span class="n">perm</span><span class="o">=</span><span class="n">perm_inflated</span><span class="p">)</span>
+
+        <span class="c1"># Reconstruct with predicted mesh</span>
+        <span class="c1"># --------------------------------------------------------------------------------------------------------------</span>
+        <span class="n">predicted_mesh</span> <span class="o">=</span> <span class="n">PyEITMesh</span><span class="p">(</span><span class="n">node</span><span class="o">=</span><span class="n">pv_predicted_mesh</span><span class="o">.</span><span class="n">points</span><span class="p">,</span> <span class="n">element</span><span class="o">=</span><span class="n">pv_predicted_mesh</span><span class="o">.</span><span class="n">cells_dict</span><span class="p">[</span><span class="n">VTK_TETRA</span><span class="p">],</span>
+                                   <span class="n">perm</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                                       <span class="p">[</span><span class="n">lung_deflated</span> <span class="k">if</span> <span class="n">label</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;left_lung&quot;</span><span class="p">,</span> <span class="s2">&quot;right_lung&quot;</span><span class="p">]</span> <span class="k">else</span> <span class="n">surrounding_tissue</span>
+                                        <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">pv_predicted_mesh</span><span class="p">[</span><span class="s2">&quot;Element Label&quot;</span><span class="p">]]))</span>
+        <span class="n">electrode_nodes_predicted</span> <span class="o">=</span> <span class="n">place_electrodes_3d</span><span class="p">(</span><span class="n">pv_predicted_mesh</span><span class="p">,</span> <span class="n">n_el</span><span class="p">,</span> <span class="s2">&quot;z&quot;</span><span class="p">,</span> <span class="n">lung_slice_ratio</span><span class="p">)</span>
+        <span class="n">predicted_mesh</span><span class="o">.</span><span class="n">el_pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">electrode_nodes_predicted</span><span class="p">)</span>
+
+        <span class="c1"># Recon</span>
+        <span class="c1"># Set up eit object</span>
+        <span class="n">pyeit_obj</span> <span class="o">=</span> <span class="n">JAC</span><span class="p">(</span><span class="n">predicted_mesh</span><span class="p">,</span> <span class="n">protocol_obj</span><span class="p">)</span>
+        <span class="n">pyeit_obj</span><span class="o">.</span><span class="n">setup</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">lamb</span><span class="o">=</span><span class="n">lamb</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;kotre&quot;</span><span class="p">,</span> <span class="n">perm</span><span class="o">=</span><span class="n">predicted_mesh</span><span class="o">.</span><span class="n">perm</span><span class="p">)</span>
+
+        <span class="c1"># # Dynamic solve simulated data</span>
+        <span class="n">ds_sim</span> <span class="o">=</span> <span class="n">pyeit_obj</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">v1</span><span class="p">,</span> <span class="n">v0</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">solution</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">ds_sim</span><span class="p">)</span>
+
+        <span class="n">pv_predicted_mesh</span><span class="p">[</span><span class="s2">&quot;Reconstructed Impedance&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">solution</span>
+
+        <span class="c1"># Reconstruct with mean mesh</span>
+        <span class="c1"># --------------------------------------------------------------------------------------------------------------</span>
+        <span class="n">mean_mesh</span> <span class="o">=</span> <span class="n">PyEITMesh</span><span class="p">(</span><span class="n">node</span><span class="o">=</span><span class="n">pv_mean_mesh</span><span class="o">.</span><span class="n">points</span><span class="p">,</span> <span class="n">element</span><span class="o">=</span><span class="n">pv_mean_mesh</span><span class="o">.</span><span class="n">cells_dict</span><span class="p">[</span><span class="n">VTK_TETRA</span><span class="p">],</span>
+                              <span class="n">perm</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                                  <span class="p">[</span><span class="n">lung_deflated</span> <span class="k">if</span> <span class="n">label</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;left_lung&quot;</span><span class="p">,</span> <span class="s2">&quot;right_lung&quot;</span><span class="p">]</span> <span class="k">else</span> <span class="n">surrounding_tissue</span>
+                                   <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">pv_mean_mesh</span><span class="p">[</span><span class="s2">&quot;Element Label&quot;</span><span class="p">]]))</span>
+        <span class="n">electrode_nodes_mean</span> <span class="o">=</span> <span class="n">place_electrodes_3d</span><span class="p">(</span><span class="n">pv_mean_mesh</span><span class="p">,</span> <span class="n">n_el</span><span class="p">,</span> <span class="s2">&quot;z&quot;</span><span class="p">,</span> <span class="n">lung_slice_ratio</span><span class="p">)</span>
+        <span class="n">mean_mesh</span><span class="o">.</span><span class="n">el_pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">electrode_nodes_mean</span><span class="p">)</span>
+
+        <span class="c1"># Recon</span>
+        <span class="c1"># Set up eit object</span>
+        <span class="n">pyeit_obj</span> <span class="o">=</span> <span class="n">JAC</span><span class="p">(</span><span class="n">mean_mesh</span><span class="p">,</span> <span class="n">protocol_obj</span><span class="p">)</span>
+        <span class="n">pyeit_obj</span><span class="o">.</span><span class="n">setup</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">lamb</span><span class="o">=</span><span class="n">lamb</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;kotre&quot;</span><span class="p">,</span> <span class="n">perm</span><span class="o">=</span><span class="n">mean_mesh</span><span class="o">.</span><span class="n">perm</span><span class="p">)</span>
+
+        <span class="c1"># # Dynamic solve simulated data</span>
+        <span class="n">ds_sim</span> <span class="o">=</span> <span class="n">pyeit_obj</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">v1</span><span class="p">,</span> <span class="n">v0</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">solution</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">ds_sim</span><span class="p">)</span>
+
+        <span class="n">pv_mean_mesh</span><span class="p">[</span><span class="s2">&quot;Reconstructed Impedance&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">solution</span>
+
+        <span class="c1"># Save</span>
+        <span class="n">pv_predicted_mesh_output_file</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="s2">&quot;predicted_mesh_solved.vtu&quot;</span>
+        <span class="n">pv_predicted_mesh</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">pv_predicted_mesh_output_file</span><span class="p">)</span>
+
+        <span class="n">pv_mean_mesh_output_file</span> <span class="o">=</span> <span class="n">output_directory</span> <span class="o">/</span> <span class="s2">&quot;mean_mesh_solved.vtu&quot;</span>
+        <span class="n">pv_mean_mesh</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">pv_mean_mesh_output_file</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="n">pv_predicted_mesh_output_file</span><span class="p">,</span> <span class="n">pv_mean_mesh_output_file</span><span class="p">]</span></div>
+</div>
+
+
+
+<span class="c1"># Todo maybe one more AllItemsTask to generate summary report on EIT simulation results</span>
+
 <span class="n">all_tasks</span> <span class="o">=</span> <span class="p">[</span><span class="n">ExtractLungLobes</span><span class="p">,</span> <span class="n">CreateMeshes</span><span class="p">,</span> <span class="n">ExtractWholeLungs</span><span class="p">,</span> <span class="n">ReferenceSelectionMesh</span><span class="p">,</span> <span class="n">ExtractTorso</span><span class="p">,</span>
-             <span class="n">MeshLandmarksCoarse</span><span class="p">,</span>
-             <span class="n">ParseCOPDGeneSubjectGroups</span><span class="p">,</span> <span class="n">SelectCOPDGeneSubjectsByValue</span><span class="p">,</span> <span class="n">FormatSubjects</span><span class="p">,</span> <span class="n">InspectMeshes</span><span class="p">]</span>
+             <span class="n">MeshLandmarksCoarse</span><span class="p">,</span> <span class="n">ParseCOPDGeneSubjectGroups</span><span class="p">,</span> <span class="n">SelectCOPDGeneSubjectsByValue</span><span class="p">,</span> <span class="n">FormatSubjects</span><span class="p">,</span>
+             <span class="n">InspectMeshes</span><span class="p">,</span> <span class="n">TetrahedralizeMeshes</span><span class="p">,</span> <span class="n">EITSimulation</span><span class="p">]</span>
 </pre></div>
 
           </div>
@@ -872,11 +1313,11 @@
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2023, Andrew Creegan.
+      &#169;2023, Andrew Creegan.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.2.6</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.2.6</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
       
     </div>
 
