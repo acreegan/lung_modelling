@@ -1,5 +1,4 @@
 import math
-
 from lung_modelling.workflow_manager import EachItemTask, DatasetLocator, AllItemsTask
 from pathlib import Path, PurePosixPath
 from omegaconf import DictConfig
@@ -25,9 +24,14 @@ from pyeit.mesh.external import place_electrodes_3d
 import pyeit.eit.protocol as protocol
 from pyeit.eit.jac import JAC
 from pyeit.eit.fem import EITForward
-from pyeit.visual.plot import create_3d_plot_with_slice
+from pyeit.visual.plot import create_3d_plot_with_slice, create_image_plot
+from pyeit.eit.render import render_2d_mesh, render_2d
+from pyeit.quality.merit import calc_greit_figures_of_merit
 from vtkmodules.util.vtkConstants import VTK_TETRA
 import datetime
+from pyvista_tools import pyvista_faces_to_2d
+import matplotlib.pyplot as plt
+import matplotlib
 
 
 class ExtractLungLobes(EachItemTask):
@@ -1043,7 +1047,7 @@ class EITSimulation(EachItemTask):
                 **r_lung_deflated**: Resistivity of deflated lung
                 **r_lung_inflated**: Resistivity of inflated lung
                 **r_surrounding_tissue**: Resistivity of surrounding tissue in torso
-                **lung_slice_ratio**: Ratio from bottom of lungs to place electrodes (TODO: this currently goes from bottom of torso)
+                **lung_slice_ratio**: Ratio from bottom of lungs to place electrodes
 
         initialize_result
             Return dict from the initialize function
@@ -1056,9 +1060,10 @@ class EITSimulation(EachItemTask):
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
 
-        lung_deflated = task_config.params.r_lung_deflated
-        lung_inflated = task_config.params.r_lung_inflated
-        surrounding_tissue = task_config.params.r_surrounding_tissue
+        r_lung_deflated = task_config.params.r_lung_deflated
+        r_lung_inflated = task_config.params.r_lung_inflated
+        r_surrounding_tissue = task_config.params.r_surrounding_tissue
+        r_target = task_config.params.r_target
         n_el = task_config.params.n_electrodes
         lung_slice_ratio = task_config.params.lung_slice_ratio
         lamb = task_config.params["lambda"]
@@ -1069,36 +1074,43 @@ class EITSimulation(EachItemTask):
             glob(str(source_directory_derivative / task_config.source_directory / "*predicted*.vtu"))[0])
         pv_mean_mesh = initialize_result["mean_mesh"]
 
+        # Prepare meshes
+        for mesh in [pv_reference_mesh, pv_predicted_mesh, pv_mean_mesh]:
+            lungs = mesh.extract_cells(np.where(mesh["Element Label"] != "torso"))
+            lung_slice_height = lungs.bounds[4] + lung_slice_ratio * (lungs.bounds[5] - lungs.bounds[4])
+            torso_slice_ratio = (lung_slice_height - mesh.bounds[4]) / (mesh.bounds[5] - mesh.bounds[4])
+            mesh["electrodes"] = np.isin(np.arange(mesh.n_points),
+                                         place_electrodes_3d(mesh, n_el, "z", torso_slice_ratio))
+            mesh["conductivity_background"] = [1 / r_surrounding_tissue] * mesh.n_cells
+            mesh["conductivity_background"][np.where(mesh["Element Label"] != "torso")] = 1 / r_lung_deflated
+
+        # Place a small target
+        reference_left_lung = pv_reference_mesh.extract_cells(
+            np.where(pv_reference_mesh["Element Label"] == "left_lung"))
+        target_pos = [reference_left_lung.center[0], reference_left_lung.center[1], lung_slice_height]
+        target = pv.Sphere(center=target_pos, radius=25)
+        target_cells = \
+            np.where(pv_reference_mesh.cell_centers().compute_implicit_distance(target)["implicit_distance"] <= 0)[0]
+        pv_reference_mesh["conductivity_with_target"] = pv_reference_mesh["conductivity_background"].copy()
+        pv_reference_mesh["conductivity_with_target"][target_cells] = 1 / r_target
+
         # Simulate
         # --------------------------------------------------------------------------------------------------------------
         reference_mesh = PyEITMesh(node=pv_reference_mesh.points, element=pv_reference_mesh.cells_dict[VTK_TETRA])
-
-        perm_deflated = np.array(
-            [lung_deflated if label in ["left_lung", "right_lung"] else surrounding_tissue for label in
-             pv_reference_mesh["Element Label"]])
-        perm_inflated = np.array(
-            [lung_inflated if label in ["left_lung", "right_lung"] else surrounding_tissue for label in
-             pv_reference_mesh["Element Label"]])
-
-        # Todo actually slice by lung height, not overall height
-        electrode_nodes_reference = place_electrodes_3d(pv_reference_mesh, n_el, "z", lung_slice_ratio)
-        reference_mesh.el_pos = np.array(electrode_nodes_reference)
+        reference_mesh.el_pos = np.where(pv_reference_mesh["electrodes"])[0]
 
         protocol_obj = protocol.create(
             n_el=n_el, dist_exc=3, step_meas=1, parser_meas="std"
         )
         fwd = EITForward(reference_mesh, protocol_obj)
-        v0 = fwd.solve_eit(perm=perm_deflated)
-        v1 = fwd.solve_eit(perm=perm_inflated)
+        v0 = fwd.solve_eit(perm=pv_reference_mesh["conductivity_background"])
+        v1 = fwd.solve_eit(perm=pv_reference_mesh["conductivity_with_target"])
 
         # Reconstruct with predicted mesh
         # --------------------------------------------------------------------------------------------------------------
         predicted_mesh = PyEITMesh(node=pv_predicted_mesh.points, element=pv_predicted_mesh.cells_dict[VTK_TETRA],
-                                   perm=np.array(
-                                       [lung_deflated if label in ["left_lung", "right_lung"] else surrounding_tissue
-                                        for label in pv_predicted_mesh["Element Label"]]))
-        electrode_nodes_predicted = place_electrodes_3d(pv_predicted_mesh, n_el, "z", lung_slice_ratio)
-        predicted_mesh.el_pos = np.array(electrode_nodes_predicted)
+                                   perm=pv_predicted_mesh["conductivity_background"])
+        predicted_mesh.el_pos = np.where(pv_predicted_mesh["electrodes"])[0]
 
         # Recon
         # Set up eit object
@@ -1114,11 +1126,8 @@ class EITSimulation(EachItemTask):
         # Reconstruct with mean mesh
         # --------------------------------------------------------------------------------------------------------------
         mean_mesh = PyEITMesh(node=pv_mean_mesh.points, element=pv_mean_mesh.cells_dict[VTK_TETRA],
-                              perm=np.array(
-                                  [lung_deflated if label in ["left_lung", "right_lung"] else surrounding_tissue
-                                   for label in pv_mean_mesh["Element Label"]]))
-        electrode_nodes_mean = place_electrodes_3d(pv_mean_mesh, n_el, "z", lung_slice_ratio)
-        mean_mesh.el_pos = np.array(electrode_nodes_mean)
+                              perm=pv_mean_mesh["conductivity_background"])
+        mean_mesh.el_pos = np.where(pv_mean_mesh["electrodes"])[0]
 
         # Recon
         # Set up eit object
@@ -1138,11 +1147,105 @@ class EITSimulation(EachItemTask):
         pv_mean_mesh_output_file = output_directory / "mean_mesh_solved.vtu"
         pv_mean_mesh.save(pv_mean_mesh_output_file)
 
-        return [pv_predicted_mesh_output_file, pv_mean_mesh_output_file]
+        pv_reference_mesh_output_file = output_directory / "reference_mesh.vtu"
+        pv_reference_mesh.save(pv_reference_mesh_output_file)
+
+        return [pv_predicted_mesh_output_file, pv_mean_mesh_output_file, pv_reference_mesh_output_file]
+
+
+class AnalyseEITSimulation(AllItemsTask):
+
+    @staticmethod
+    def work(dataloc: DatasetLocator, dirs_list: list, output_directory: Path, dataset_config: DictConfig,
+             task_config: DictConfig) -> list[Path]:
+        """
+        Analyse EIT reconstructions
+
+        Parameters
+        ----------
+        dataloc
+            Dataset locator for the dataset
+        dirs_list
+            List of relative paths to the source directories
+        output_directory
+            Absolute path of the directory in which to save results of the work function
+        dataset_config
+            Config relating to the entire dataset
+        task_config
+            **source_directory**
+                subdirectory within derivative source folder to find source files
+            **results_directory**:
+                Name of the results folder (Stem of output_directory)
+            **params**: (Dict):
+                No params currently used for this task
+
+
+        Returns
+        -------
+        """
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
+
+        reference_meshes = []
+        predicted_meshes_solved = []
+        mean_meshes_solved = []
+        for dir_path, _, _ in [dirs_list[0]]:
+            reference_mesh = pv.read(glob(str(dataloc.abs_derivative / dir_path /
+                                              task_config.source_directory / "reference_mesh.vtu"))[0])
+            predicted_mesh_solved = pv.read(glob(str(dataloc.abs_derivative / dir_path /
+                                                     task_config.source_directory / "predicted_mesh_solved.vtu"))[0])
+            mean_mesh_solved = pv.read(str(glob(str(dataloc.abs_derivative / dir_path /
+                                                    task_config.source_directory / "mean_mesh_solved.vtu"))[0]))
+
+            reference_meshes.append(reference_mesh)
+            predicted_meshes_solved.append(predicted_mesh_solved)
+            mean_meshes_solved.append(mean_mesh_solved)
+
+        # predicted_meshes_solved[0].set_active_scalars("Reconstructed Impedance")
+        # p = pv.Plotter(shape=(1,2))
+        # p.subplot(0,0)
+        # s = create_3d_plot_with_slice(p, predicted_meshes_solved[0], title="predicted mesh")
+        # p.subplot(0,1)
+        #
+        # mean_meshes_solved[0].set_active_scalars("Reconstructed Impedance")
+        # s = create_3d_plot_with_slice(p, mean_meshes_solved[0], title="mean mesh")
+        # p.link_views()
+        # p.show()
+        lung_slice_ratio = task_config.params.lung_slice_ratio
+
+        mesh = predicted_meshes_solved[0]
+        lungs = mesh.extract_cells(np.where(mesh["Element Label"] != "torso"))
+        lung_slice_height = lungs.bounds[4] + lung_slice_ratio * (lungs.bounds[5] - lungs.bounds[4])
+        predicted_slice = mesh.slice(normal="z", origin=[0, 0, lung_slice_height], generate_triangles=True)
+
+        predicted_render = render_2d(pyvista_faces_to_2d(predicted_slice.faces), predicted_slice.points[:, :2],
+                                     predicted_slice["Reconstructed Impedance"])
+
+        bounds = reference_meshes[0].bounds
+        center = reference_meshes[0].center
+        slice_origin = (center[0], center[1], bounds[4] + task_config.params.lung_slice_ratio * (bounds[5] - bounds[4]))
+        reference_slice = reference_meshes[0].slice(normal="z", origin=slice_origin, generate_triangles=True)
+        reference_render = render_2d(pyvista_faces_to_2d(reference_slice.faces), reference_slice.points[:, :2],
+                                     reference_slice["perm_inflated"] - reference_slice["perm_deflated"])
+
+        results = calc_greit_figures_of_merit(reference_render, predicted_render, conductive_target=True,
+                                              return_extras=True)
+
+        matplotlib.use('TkAgg')
+        plt.imshow(predicted_render)
+        # plt.show()
+        # plt.pause(1)
+
+        # fig, ax = plt.subplots()
+        # create_image_plot(ax, r, title="EIT Image Plot")
+        # plt.show()
+
+        print("hello")
+        pass
 
 
 # Todo maybe one more AllItemsTask to generate summary report on EIT simulation results
 
 all_tasks = [ExtractLungLobes, CreateMeshes, ExtractWholeLungs, ReferenceSelectionMesh, ExtractTorso,
              MeshLandmarksCoarse, ParseCOPDGeneSubjectGroups, SelectCOPDGeneSubjectsByValue, FormatSubjects,
-             InspectMeshes, TetrahedralizeMeshes, EITSimulation]
+             InspectMeshes, TetrahedralizeMeshes, EITSimulation, AnalyseEITSimulation]
