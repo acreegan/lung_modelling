@@ -248,3 +248,47 @@ This includes the workflow configuration file and a list of all installed python
 The lung_modelling package uses setuptools-scm to provide up to date version numbers.
 If the package is installed from github or run unedited from a cloned github repository, the version number will allow
 identification of which commit was used during the logged run.
+
+------------------------------------------------------------------------------------------------------------------------
+
+App Dataflow Diagrams
+---------------------
+
+The following diagrams illustrate the main functions of the workflow app and workflow manager.
+
+Initialization
+**************
+
+When the workflow app is run, a workflow manager class is instantiated, and the initialization task is run. This takes
+information from the workflow configuration file to build a list of directories that the tasks will make use of.
+
+.. image:: _static/initialization_no_title.png
+   :class: rst-image
+
+Task Registration
+*****************
+
+The tasks specified in the workflow configuration file are found in the task library, and instantiated using the
+specified parameters.
+
+.. image:: _static/task_registration_no_title.png
+   :class: rst-image
+
+Running Parallel Tasks
+**********************
+
+If multiprocessing is enabled, tasks which only need access to one directory (those implementing the each_item_task
+interface) can be dispatched to parallel processes. The work methods of these tasks are wrapped in an exception monitor
+decorator so that any exceptions can be reported to the parent process.
+
+.. image:: _static/running_parallel_tasks_no_title.png
+   :class: rst-image
+
+Running Non-Parallel Tasks
+**************************
+
+Tasks which need access to all directories (all_items_tasks) have their work functions run. These are also done in a
+try/catch block so errors can be logged.
+
+.. image:: _static/running_non_parallel_tasks_no_title.png
+   :class: rst-image

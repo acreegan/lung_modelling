@@ -244,6 +244,36 @@ This includes the workflow configuration file and a list of all installed python
 If the package is installed from github or run unedited from a cloned github repository, the version number will allow
 identification of which commit was used during the logged run.</p>
 </section>
+<hr class="docutils" />
+<section id="app-dataflow-diagrams">
+<h2>App Dataflow Diagrams<a class="headerlink" href="#app-dataflow-diagrams" title="Link to this heading">¶</a></h2>
+<p>The following diagrams illustrate the main functions of the workflow app and workflow manager.</p>
+<section id="initialization">
+<h3>Initialization<a class="headerlink" href="#initialization" title="Link to this heading">¶</a></h3>
+<p>When the workflow app is run, a workflow manager class is instantiated, and the initialization task is run. This takes
+information from the workflow configuration file to build a list of directories that the tasks will make use of.</p>
+<img alt="_images/initialization_no_title.png" class="rst-image" src="_images/initialization_no_title.png" />
+</section>
+<section id="task-registration">
+<h3>Task Registration<a class="headerlink" href="#task-registration" title="Link to this heading">¶</a></h3>
+<p>The tasks specified in the workflow configuration file are found in the task library, and instantiated using the
+specified parameters.</p>
+<img alt="_images/task_registration_no_title.png" class="rst-image" src="_images/task_registration_no_title.png" />
+</section>
+<section id="running-parallel-tasks">
+<h3>Running Parallel Tasks<a class="headerlink" href="#running-parallel-tasks" title="Link to this heading">¶</a></h3>
+<p>If multiprocessing is enabled, tasks which only need access to one directory (those implementing the each_item_task
+interface) can be dispatched to parallel processes. The work methods of these tasks are wrapped in an exception monitor
+decorator so that any exceptions can be reported to the parent process.</p>
+<img alt="_images/running_parallel_tasks_no_title.png" class="rst-image" src="_images/running_parallel_tasks_no_title.png" />
+</section>
+<section id="running-non-parallel-tasks">
+<h3>Running Non-Parallel Tasks<a class="headerlink" href="#running-non-parallel-tasks" title="Link to this heading">¶</a></h3>
+<p>Tasks which need access to all directories (all_items_tasks) have their work functions run. These are also done in a
+try/catch block so errors can be logged.</p>
+<img alt="_images/running_non_parallel_tasks_no_title.png" class="rst-image" src="_images/running_non_parallel_tasks_no_title.png" />
+</section>
+</section>
 </section>
 
 
@@ -273,6 +303,7 @@ identification of which commit was used during the logged run.</p>
 <li class="toctree-l3"><a class="reference internal" href="#dataset-configuration">Dataset Configuration</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#workflow-configuration">Workflow Configuration</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#workflow-run-logs">Workflow Run Logs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#app-dataflow-diagrams">App Dataflow Diagrams</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="workflow_manager.html">Workflow Manager</a></li>
