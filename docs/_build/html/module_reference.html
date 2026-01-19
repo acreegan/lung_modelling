@@ -55,10 +55,8 @@ derivative directories</p>
 <em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lung_modelling/workflow_manager/workflow_manager.html#EachItemTask.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lung_modelling.workflow_manager.EachItemTask.initialize" title="Link to this definition">¶</a></dt>
 <dd><p>A method to be called before multiprocessing to load data required by all items. This should only be used to
 load data to avoid multiple simultaneous file access by the work function. It should not create or modify any files.
-TODO: this should get the dirs_list too, just so we know which dirs are in use, (e.g., if we need to look up</p>
-<blockquote>
-<div><p>data for all the subjects)</p>
-</div></blockquote>
+TODO: this should get the dirs_list too, just so we know which dirs are in use, (e.g., if we need to look up
+data for all the subjects)</p>
 <dl class="field-list simple">
 </dl>
 </dd></dl>
