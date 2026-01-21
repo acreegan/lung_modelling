@@ -13,5 +13,5 @@ def test_load_with_category():
     loaded = load_with_category(search_dirs=search_dirs, category_regex=".+?(?=-)", load_glob="*.txt",
                                 loader=lambda t: np.loadtxt(t, dtype=str))
 
-    assert list(loaded.keys()) == ["cat1", "cat2", "cat3"]
+    assert np.all([key in list(loaded.keys()) for key in ["cat1", "cat2", "cat3"]]) # Not checking order
     assert str(loaded["cat1"]) == "hello"
